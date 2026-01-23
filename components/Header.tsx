@@ -28,7 +28,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "../components/ui/dropdown-menu"
 import { usePathname } from "next/navigation"
 import { useMusic } from "../lib/music-context"
 import { motion, AnimatePresence } from "framer-motion"
