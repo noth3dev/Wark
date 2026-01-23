@@ -57,8 +57,15 @@ export default function RecordPage() {
 
             if (activeSessions && activeSessions.length > 0) {
                 const session = activeSessions[0];
-                const startTime = new Date(session.start_time).getTime();
-                const elapsed = Date.now() - startTime;
+                const startTime = new Date(session.start_time);
+                const now = new Date();
+
+                // If the session started on a previous day, only count from midnight of today
+                const EffectiveStartTime = (isToday && startTime.toDateString() !== now.toDateString())
+                    ? new Date(now.setHours(0, 0, 0, 0)).getTime()
+                    : startTime.getTime();
+
+                const elapsed = Date.now() - EffectiveStartTime;
                 setActiveSessionElapsed(elapsed);
                 setActiveTagId(session.tag_id);
             } else {

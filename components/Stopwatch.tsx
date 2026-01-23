@@ -161,25 +161,82 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
             .single();
 
         if (session) {
-            const startTime = new Date(session.start_time).getTime();
-            const duration = Date.now() - startTime;
+            const startTime = new Date(session.start_time);
+            const endTime = new Date();
 
-            // Only save if duration > 1 second
-            if (duration >= 1000) {
-                await supabase.from('study_sessions').insert({
-                    user_id: user.id,
-                    tag_id: activeTagId,
-                    duration: duration
-                });
+            // Check if session spanned multiple days
+            if (startTime.toDateString() !== endTime.toDateString()) {
+                const sessionsToInsert = [];
 
-                // Update daily times
-                setDailyTimes(prev => ({
-                    ...prev,
-                    [activeTagId]: (prev[activeTagId] || 0) + duration
-                }));
+                // 1. First Day: startTime to 23:59:59.999
+                const endOfFirstDay = new Date(startTime);
+                endOfFirstDay.setHours(23, 59, 59, 999);
+                const durationDay1 = endOfFirstDay.getTime() - startTime.getTime();
+                if (durationDay1 > 1000) {
+                    sessionsToInsert.push({
+                        user_id: user.id,
+                        tag_id: activeTagId,
+                        duration: durationDay1,
+                        created_at: startTime.toISOString()
+                    });
+                }
 
-                if (onSave) onSave();
+                // 2. Intermediate Days (if any, for sessions > 24h)
+                let currentDay = new Date(startTime);
+                currentDay.setDate(currentDay.getDate() + 1);
+                currentDay.setHours(0, 0, 0, 0);
+
+                while (currentDay.toDateString() !== endTime.toDateString()) {
+                    sessionsToInsert.push({
+                        user_id: user.id,
+                        tag_id: activeTagId,
+                        duration: 24 * 60 * 60 * 1000, // Full day
+                        created_at: new Date(currentDay).toISOString()
+                    });
+                    currentDay.setDate(currentDay.getDate() + 1);
+                }
+
+                // 3. Last Day (Today): 00:00:00 to endTime
+                const startOfLastDay = new Date(endTime);
+                startOfLastDay.setHours(0, 0, 0, 0);
+                const durationLastDay = endTime.getTime() - startOfLastDay.getTime();
+                if (durationLastDay > 1000) {
+                    sessionsToInsert.push({
+                        user_id: user.id,
+                        tag_id: activeTagId,
+                        duration: durationLastDay,
+                        created_at: startOfLastDay.toISOString()
+                    });
+
+                    // Update UI total for today
+                    setDailyTimes(prev => ({
+                        ...prev,
+                        [activeTagId]: (prev[activeTagId] || 0) + durationLastDay
+                    }));
+                }
+
+                if (sessionsToInsert.length > 0) {
+                    await supabase.from('study_sessions').insert(sessionsToInsert);
+                }
+            } else {
+                // Normal case: Same day
+                const duration = endTime.getTime() - startTime.getTime();
+                if (duration >= 1000) {
+                    await supabase.from('study_sessions').insert({
+                        user_id: user.id,
+                        tag_id: activeTagId,
+                        duration: duration,
+                        created_at: startTime.toISOString()
+                    });
+
+                    setDailyTimes(prev => ({
+                        ...prev,
+                        [activeTagId]: (prev[activeTagId] || 0) + duration
+                    }));
+                }
             }
+
+            if (onSave) onSave();
         }
 
         // Delete active session
