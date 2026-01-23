@@ -54,18 +54,26 @@ export function Header() {
         const updateHeader = () => {
             const savedSession = localStorage.getItem('active_study_session');
             if (savedSession) {
-                const { startTime, color, name, sessionId, icon } = JSON.parse(savedSession);
+                const { startTime, color, name, icon, accumulated } = JSON.parse(savedSession);
 
-                // startTime is already DB timestamp converted to milliseconds
-                const elapsed = Date.now() - startTime;
+                const sessionStart = new Date(startTime);
+                const now = new Date();
+
+                // If started before today, only count from 00:00:00 today
+                const effectiveStartTime = (sessionStart.toDateString() !== now.toDateString())
+                    ? new Date(now.setHours(0, 0, 0, 0)).getTime()
+                    : sessionStart.getTime();
+
+                const elapsed = Date.now() - effectiveStartTime;
+                const total = (accumulated || 0) + elapsed;
 
                 setHeaderColor(color || "#22d3ee");
                 setHeaderTag(name || "");
                 setHeaderIcon(icon || "Moon");
 
-                const h = Math.floor(elapsed / 3600000);
-                const m = Math.floor((elapsed % 3600000) / 60000);
-                const s = Math.floor((elapsed % 60000) / 1000);
+                const h = Math.floor(total / 3600000);
+                const m = Math.floor((total % 3600000) / 60000);
+                const s = Math.floor((total % 60000) / 1000);
                 setHeaderTime(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
             } else {
                 setHeaderTime("00:00:00");

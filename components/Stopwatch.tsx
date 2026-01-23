@@ -85,7 +85,8 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                     color: tag?.color || '#22d3ee',
                     name: tag?.name,
                     icon: tag?.icon || 'Moon',
-                    sessionId: session.id
+                    sessionId: session.id,
+                    accumulated: totals[session.tag_id] || 0
                 }));
             } else if (tagsData.length > 0) {
                 // Auto-start first tag
@@ -100,8 +101,15 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
             if (timerRef.current) clearInterval(timerRef.current);
 
             timerRef.current = setInterval(() => {
-                const startTime = new Date(activeSession.start_time).getTime();
-                const elapsed = Date.now() - startTime;
+                const startTime = new Date(activeSession.start_time);
+                const now = new Date();
+
+                // If started before today, only count from 00:00:00 today
+                const effectiveStartTime = (startTime.toDateString() !== now.toDateString())
+                    ? new Date(now.setHours(0, 0, 0, 0)).getTime()
+                    : startTime.getTime();
+
+                const elapsed = Date.now() - effectiveStartTime;
                 const accumulated = dailyTimes[activeTagId] || 0;
                 setTime(accumulated + elapsed);
             }, 100);
@@ -142,7 +150,8 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                 color: tag?.color || '#22d3ee',
                 name: tag?.name,
                 icon: tag?.icon || 'Moon',
-                sessionId: newSession.id
+                sessionId: newSession.id,
+                accumulated: dailyTimes[tagId] || 0
             }));
         }
     };
