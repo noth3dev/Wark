@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "../../lib/auth-context";
+import { supabase } from "../../lib/supabase";
 import { Loader2, BarChart2, Calendar, Clock, ArrowLeft, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";

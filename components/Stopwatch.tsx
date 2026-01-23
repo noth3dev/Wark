@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Settings, Plus, LayoutGrid } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { TimerDisplay } from "./stopwatch/TimerDisplay";
 import { TagItem } from "./stopwatch/TagItem";

@@ -1,9 +1,9 @@
 "use client";
 
-import Stopwatch from "@/components/Stopwatch";
-import Auth from "@/components/Auth";
+import Stopwatch from "../components/Stopwatch";
+import Auth from "../components/Auth";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function Home() {

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { useMusic, Playlist, Song } from "@/lib/music-context";
+import { useAuth } from "../../lib/auth-context";
+import { useMusic, Playlist, Song } from "../../lib/music-context";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
     Music, Play, Plus, X, ListPlus, Link as LinkIcon,
-    Repeat, SkipBack, SkipForward, Volume2, Pause, GripVertical, Youtube, Loader2, Headphones, Trash2, Search, 
+    Repeat, SkipBack, SkipForward, Volume2, Pause, GripVertical, Youtube, Loader2, Headphones, Trash2, Search,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../../lib/supabase";
 
 export default function PlaylistPage() {
     const { user } = useAuth();
@@ -341,8 +341,8 @@ export default function PlaylistPage() {
                                                     <button
                                                         onClick={() => playPlaylist(selectedPlaylist, i)}
                                                         className={`p-2 rounded-xl transition-colors ${currentSong?.id === song.id && isPlaying
-                                                                ? 'text-cyan-400 bg-cyan-400/10'
-                                                                : 'text-neutral-500 hover:text-white hover:bg-white/10'
+                                                            ? 'text-cyan-400 bg-cyan-400/10'
+                                                            : 'text-neutral-500 hover:text-white hover:bg-white/10'
                                                             }`}
                                                     >
                                                         {currentSong?.id === song.id && isPlaying ? (

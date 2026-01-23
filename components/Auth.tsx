@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import { LogIn, UserPlus, Mail, Lock } from "lucide-react";
 
 export default function Auth() {

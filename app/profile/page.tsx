@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "../../lib/auth-context";
+import { supabase } from "../../lib/supabase";
 import { User, Check, Loader2, Shield, Mail, BadgeCheck, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 

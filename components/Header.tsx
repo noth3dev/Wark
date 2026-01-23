@@ -3,7 +3,7 @@
 import React from "react"
 import * as Icons from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "../lib/auth-context"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -30,7 +30,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { usePathname } from "next/navigation"
-import { useMusic } from "@/lib/music-context"
+import { useMusic } from "../lib/music-context"
 import { motion, AnimatePresence } from "framer-motion"
 
 export function Header() {
