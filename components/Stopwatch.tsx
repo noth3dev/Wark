@@ -19,12 +19,18 @@ interface StopwatchProps {
     onSave?: () => void;
 }
 
+interface ActiveSession {
+    id: string;
+    tag_id: string;
+    start_time: string;
+}
+
 export default function Stopwatch({ onSave }: StopwatchProps) {
     const [time, setTime] = useState(0);
     const [tags, setTags] = useState<Tag[]>([]);
     const [activeTagId, setActiveTagId] = useState<string | null>(null);
+    const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
     const [dailyTimes, setDailyTimes] = useState<Record<string, number>>({});
-    const [isSaving, setIsSaving] = useState(false);
     const [showAddTag, setShowAddTag] = useState(false);
     const [newTagName, setNewTagName] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
@@ -37,11 +43,14 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
     }, []);
 
     const fetchTags = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
         const { data: tagsData } = await supabase.from('tags').select('*');
         if (tagsData) {
             setTags(tagsData);
 
-            // Fetch daily totals
+            // Fetch daily totals from study_sessions
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
 
@@ -56,92 +65,142 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
             });
             setDailyTimes(totals);
 
-            // Resume or initialize session
-            const savedSession = localStorage.getItem('active_study_session');
-            if (savedSession) {
-                const { tagId } = JSON.parse(savedSession);
-                setActiveTagId(tagId);
-            } else if (tagsData.length > 0) {
-                const firstTag = tagsData[0];
-                setActiveTagId(firstTag.id);
+            // Check for existing active session
+            const { data: activeSessions } = await supabase
+                .from('active_sessions')
+                .select('*')
+                .eq('user_id', user.id)
+                .limit(1);
+
+            if (activeSessions && activeSessions.length > 0) {
+                const session = activeSessions[0];
+                setActiveSession(session);
+                setActiveTagId(session.tag_id);
+
+                // Update localStorage for header sync
+                const tag = tagsData.find(t => t.id === session.tag_id);
                 localStorage.setItem('active_study_session', JSON.stringify({
-                    tagId: firstTag.id,
-                    startTime: Date.now(),
-                    color: firstTag.color || '#22d3ee',
-                    name: firstTag.name,
-                    icon: firstTag.icon || 'Moon',
-                    accumulated: totals[firstTag.id] || 0
+                    tagId: session.tag_id,
+                    startTime: new Date(session.start_time).getTime(),
+                    color: tag?.color || '#22d3ee',
+                    name: tag?.name,
+                    icon: tag?.icon || 'Moon',
+                    sessionId: session.id
                 }));
+            } else if (tagsData.length > 0) {
+                // Auto-start first tag
+                await startSession(tagsData[0].id);
             }
         }
     };
 
+    // Timer update based on DB start_time
     useEffect(() => {
-        if (activeTagId) {
+        if (activeSession && activeTagId) {
             if (timerRef.current) clearInterval(timerRef.current);
+
             timerRef.current = setInterval(() => {
-                const savedSession = localStorage.getItem('active_study_session');
-                if (savedSession) {
-                    const { startTime, tagId } = JSON.parse(savedSession);
-                    if (tagId === activeTagId) {
-                        const elapsed = Date.now() - startTime;
-                        const accumulated = dailyTimes[activeTagId] || 0;
-                        setTime(accumulated + elapsed);
-                    }
-                }
+                const startTime = new Date(activeSession.start_time).getTime();
+                const elapsed = Date.now() - startTime;
+                const accumulated = dailyTimes[activeTagId] || 0;
+                setTime(accumulated + elapsed);
             }, 100);
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
             setTime(0);
         }
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [activeTagId, dailyTimes]);
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [activeSession, activeTagId, dailyTimes]);
+
+    const startSession = async (tagId: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const tag = tags.find(t => t.id === tagId);
+
+        // Insert new active session - DB will set start_time automatically
+        const { data: newSession, error } = await supabase
+            .from('active_sessions')
+            .insert({
+                user_id: user.id,
+                tag_id: tagId
+            })
+            .select()
+            .single();
+
+        if (!error && newSession) {
+            setActiveSession(newSession);
+            setActiveTagId(tagId);
+
+            // Update localStorage for header sync
+            localStorage.setItem('active_study_session', JSON.stringify({
+                tagId,
+                startTime: new Date(newSession.start_time).getTime(),
+                color: tag?.color || '#22d3ee',
+                name: tag?.name,
+                icon: tag?.icon || 'Moon',
+                sessionId: newSession.id
+            }));
+        }
+    };
+
+    const endSession = async () => {
+        if (!activeSession || !activeTagId) return;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Calculate duration from DB timestamps
+        const { data: session } = await supabase
+            .from('active_sessions')
+            .select('start_time')
+            .eq('id', activeSession.id)
+            .single();
+
+        if (session) {
+            const startTime = new Date(session.start_time).getTime();
+            const duration = Date.now() - startTime;
+
+            // Only save if duration > 1 second
+            if (duration >= 1000) {
+                await supabase.from('study_sessions').insert({
+                    user_id: user.id,
+                    tag_id: activeTagId,
+                    duration: duration
+                });
+
+                // Update daily times
+                setDailyTimes(prev => ({
+                    ...prev,
+                    [activeTagId]: (prev[activeTagId] || 0) + duration
+                }));
+
+                if (onSave) onSave();
+            }
+        }
+
+        // Delete active session
+        await supabase
+            .from('active_sessions')
+            .delete()
+            .eq('id', activeSession.id);
+
+        setActiveSession(null);
+    };
 
     const handleTagClick = async (tagId: string) => {
         if (activeTagId === tagId) return;
 
-        const savedSession = localStorage.getItem('active_study_session');
-        if (savedSession && activeTagId) {
-            const { startTime } = JSON.parse(savedSession);
-            const finalDuration = Date.now() - startTime;
-            await saveSession(activeTagId, finalDuration);
-
-            setDailyTimes(prev => ({
-                ...prev,
-                [activeTagId]: (prev[activeTagId] || 0) + finalDuration
-            }));
+        // End current session and save
+        if (activeSession) {
+            await endSession();
         }
 
-        const tag = tags.find(t => t.id === tagId);
-        const startTime = Date.now();
-        localStorage.setItem('active_study_session', JSON.stringify({
-            tagId,
-            startTime,
-            color: tag?.color || '#22d3ee',
-            name: tag?.name,
-            icon: tag?.icon || 'Moon',
-            accumulated: dailyTimes[tagId] || 0
-        }));
-        setActiveTagId(tagId);
-    };
-
-    const saveSession = async (tagId: string, duration: number) => {
-        if (duration < 1000) return;
-        setIsSaving(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            await supabase.from('study_sessions').insert([{
-                user_id: user.id,
-                tag_id: tagId,
-                duration: duration
-            }]);
-            if (onSave) onSave();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSaving(false);
-        }
+        // Start new session
+        await startSession(tagId);
     };
 
     const addTag = async (e: React.FormEvent) => {

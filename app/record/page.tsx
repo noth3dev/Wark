@@ -37,7 +37,7 @@ export default function RecordPage() {
 
     const isToday = new Date().toDateString() === selectedDate.toDateString();
 
-    // Real-time update for active session
+    // Real-time update for active session (DB-based)
     useEffect(() => {
         if (!isToday) {
             setActiveSessionElapsed(0);
@@ -45,22 +45,35 @@ export default function RecordPage() {
             return;
         }
 
-        const updateActiveSession = () => {
-            const savedSession = localStorage.getItem('active_study_session');
-            if (savedSession) {
-                const { startTime, tagId } = JSON.parse(savedSession);
+        const updateActiveSession = async () => {
+            if (!user) return;
+
+            // Fetch active session from DB
+            const { data: activeSessions } = await supabase
+                .from('active_sessions')
+                .select('tag_id, start_time')
+                .eq('user_id', user.id)
+                .limit(1);
+
+            if (activeSessions && activeSessions.length > 0) {
+                const session = activeSessions[0];
+                const startTime = new Date(session.start_time).getTime();
                 const elapsed = Date.now() - startTime;
                 setActiveSessionElapsed(elapsed);
-                setActiveTagId(tagId);
+                setActiveTagId(session.tag_id);
             } else {
                 setActiveSessionElapsed(0);
                 setActiveTagId(null);
             }
         };
 
+        // Initial update
+        updateActiveSession();
+
+        // Update every second
         const interval = setInterval(updateActiveSession, 1000);
         return () => clearInterval(interval);
-    }, [isToday]);
+    }, [isToday, user]);
 
     const fetchData = async () => {
         setLoading(true);
