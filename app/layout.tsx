@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "../lib/auth-context";
 import { MusicProvider } from "../lib/music-context";
-import { Header } from "@/components/Header";
+import { Header } from "../components/Header";
 
 export const metadata: Metadata = {
   title: "WArk",
