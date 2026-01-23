@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../lib/auth-context";
 import { supabase } from "../../lib/supabase";
 import { Loader2, BarChart2, Calendar, Clock, ArrowLeft, History, ChevronLeft, ChevronRight } from "lucide-react";
@@ -28,6 +28,7 @@ export default function RecordPage() {
 
     const [activeSessionElapsed, setActiveSessionElapsed] = useState(0);
     const [activeTagId, setActiveTagId] = useState<string | null>(null);
+    const [activeStartTime, setActiveStartTime] = useState<number | null>(null);
 
     useEffect(() => {
         if (!authLoading && user) {
@@ -68,9 +69,11 @@ export default function RecordPage() {
                 const elapsed = Date.now() - EffectiveStartTime;
                 setActiveSessionElapsed(elapsed);
                 setActiveTagId(session.tag_id);
+                setActiveStartTime(startTime.getTime());
             } else {
                 setActiveSessionElapsed(0);
                 setActiveTagId(null);
+                setActiveStartTime(null);
             }
         };
 
@@ -122,7 +125,12 @@ export default function RecordPage() {
         const h = Math.floor(ms / 3600000);
         const m = Math.floor((ms % 3600000) / 60000);
         const s = Math.floor((ms % 60000) / 1000);
-        return `${h}h ${m}m ${s}s`;
+
+        const parts = [];
+        if (h > 0) parts.push(`${h}시간`);
+        if (m > 0) parts.push(`${m}분`);
+        if (s > 0 || (h === 0 && m === 0)) parts.push(`${s}초`);
+        return parts.join(' ');
     };
 
     const getTagTotal = (tagId: string) => {
@@ -135,16 +143,49 @@ export default function RecordPage() {
 
     const totalToday = sessions.reduce((acc, curr) => acc + curr.duration, 0) + activeSessionElapsed;
 
-    // Timeline logic: 24 slots representing 24 hours
-    const hours = Array.from({ length: 24 }, (_, i) => i);
+    // Unified distribution logic for 24h Protocol
+    const hourData = useMemo(() => {
+        const startMs = new Date(selectedDate).setHours(0, 0, 0, 0);
+        const endMs = startMs + 24 * 3600000;
 
-    // Find sessions that fall into each hour
-    const getSessionsInHour = (hour: number) => {
-        return sessions.filter(s => {
-            const date = new Date(s.created_at);
-            return date.getHours() === hour;
-        });
-    };
+        const distribution = Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            total: 0,
+            tagDurations: {} as Record<string, number>
+        }));
+
+        const processSession = (tagId: string, sStart: number, duration: number) => {
+            const sEnd = sStart + duration;
+            const effectiveStart = Math.max(sStart, startMs);
+            const effectiveEnd = Math.min(sEnd, endMs);
+
+            if (effectiveStart < effectiveEnd) {
+                for (let h = 0; h < 24; h++) {
+                    const hStart = startMs + h * 3600000;
+                    const hEnd = hStart + 3600000;
+                    const overlap = Math.max(0, Math.min(effectiveEnd, hEnd) - Math.max(effectiveStart, hStart));
+                    if (overlap > 0) {
+                        distribution[h].total += overlap;
+                        distribution[h].tagDurations[tagId] = (distribution[h].tagDurations[tagId] || 0) + overlap;
+                    }
+                }
+            }
+        };
+
+        sessions.forEach(s => processSession(s.tag_id, new Date(s.created_at).getTime(), s.duration));
+
+        if (isToday && activeStartTime && activeTagId) {
+            processSession(activeTagId, activeStartTime, Date.now() - activeStartTime);
+        }
+
+        return distribution.map(d => ({
+            ...d,
+            segments: Object.entries(d.tagDurations).map(([tagId, duration]) => ({
+                tagId,
+                duration
+            }))
+        }));
+    }, [sessions, selectedDate, isToday, activeStartTime, activeTagId]);
 
     if (authLoading || loading) {
         return (
@@ -259,56 +300,42 @@ export default function RecordPage() {
                     {/* Right: Daily Timetable */}
                     <div className="lg:col-span-8 space-y-8">
                         <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500 border-b border-white/5 pb-4">24H Protocol Execution</h2>
-                        <div className="grid grid-cols-1 gap-1">
-                            {hours.map(hour => {
-                                const hourSessions = getSessionsInHour(hour);
-                                let totalInHour = hourSessions.reduce((acc, curr) => acc + curr.duration, 0);
-
-                                // Add active session if it's currently in this hour
-                                const now = new Date();
-                                if (isToday && now.getHours() === hour && activeSessionElapsed > 0) {
-                                    totalInHour += activeSessionElapsed;
-                                }
-
-                                const intensity = Math.min(totalInHour / 3600000, 1); // 0 to 1
-
-                                return (
-                                    <div key={hour} className="group flex items-center gap-6 py-2">
-                                        <div className="w-12 text-[10px] font-mono font-bold text-neutral-700 tabular-nums">
-                                            {hour.toString().padStart(2, '0')}:00
-                                        </div>
-                                        <div className="relative flex-1 h-12 bg-white/5 rounded-xl overflow-hidden border border-white/[0.02] group-hover:border-white/10 transition-colors">
-                                            {/* Fill based on intensity */}
-                                            {totalInHour > 0 && (
+                        {hourData.map(({ hour, total: totalInHour, segments: hourSegments }) => {
+                            return (
+                                <div key={hour} className="group flex items-center gap-6 py-2">
+                                    <div className="w-12 text-[10px] font-mono font-bold text-neutral-700 tabular-nums">
+                                        {hour.toString().padStart(2, '0')}:00
+                                    </div>
+                                    <div className="relative flex-1 h-12 bg-white/5 rounded-xl overflow-hidden border border-white/[0.02] group-hover:border-white/10 transition-colors flex">
+                                        {/* Segmented Fill */}
+                                        {hourSegments.map((seg, i) => {
+                                            const tag = tags.find(t => t.id === seg.tagId);
+                                            return (
                                                 <div
-                                                    className="absolute inset-y-0 left-0 bg-cyan-400/20 backdrop-blur-sm border-r border-cyan-400/30"
-                                                    style={{ width: `${intensity * 100}%` }}
+                                                    key={i}
+                                                    className="h-full border-r border-white/5 last:border-r-0"
+                                                    style={{
+                                                        width: `${(seg.duration / 3600000) * 100}%`,
+                                                        backgroundColor: `${tag?.color || '#22d3ee'}33`, // 20% opacity hex
+                                                        borderColor: `${tag?.color || '#22d3ee'}44`
+                                                    }}
+                                                    title={`${tag?.name}: ${formatTime(seg.duration)}`}
                                                 />
+                                            );
+                                        })}
+
+                                        {/* Details on Hover */}
+                                        <div className="absolute inset-0 flex items-center px-4 pointer-events-none">
+                                            {totalInHour > 0 && (
+                                                <span className="ml-auto text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-neutral-500 font-mono">
+                                                    {Math.floor(totalInHour / 60000)}분 / 60분
+                                                </span>
                                             )}
-                                            {/* Session Details on Hover */}
-                                            <div className="absolute inset-0 flex items-center px-4 gap-2">
-                                                {hourSessions.map((s, i) => {
-                                                    const tag = tags.find(t => t.id === s.tag_id);
-                                                    return (
-                                                        <div
-                                                            key={i}
-                                                            className="w-1.5 h-1.5 rounded-full"
-                                                            style={{ backgroundColor: tag?.color || '#22d3ee' }}
-                                                            title={`${tag?.name}: ${formatTime(s.duration)}`}
-                                                        />
-                                                    );
-                                                })}
-                                                {totalInHour > 0 && (
-                                                    <span className="ml-auto text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-neutral-500 font-mono">
-                                                        {((totalInHour / 3600000) * 60).toFixed(0)}m / 60m
-                                                    </span>
-                                                )}
-                                            </div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
