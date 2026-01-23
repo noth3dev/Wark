@@ -230,7 +230,7 @@ export default function RecordPage() {
                             })}
                             {sessions.length === 0 && (
                                 <div className="p-12 text-center border border-dashed border-white/10 rounded-3xl">
-                                    <p className="text-xs text-neutral-600">No protocol data recorded today.</p>
+                                    <p className="text-xs text-neutral-600">No data recorded today.</p>
                                 </div>
                             )}
                         </div>
