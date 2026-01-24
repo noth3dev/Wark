@@ -3,16 +3,28 @@
 import * as Icons from "lucide-react";
 import { motion } from "framer-motion";
 
+import { Tag } from "../../lib/types";
+
 interface TagItemProps {
-    tag: { id: string; name: string; color?: string; icon?: string };
+    tag: Tag;
     isActive: boolean;
     isEditMode: boolean;
+    dailyTime: number;
     onClick: () => void;
 }
 
-export function TagItem({ tag, isActive, isEditMode, onClick }: TagItemProps) {
+export function TagItem({ tag, isActive, isEditMode, dailyTime, onClick }: TagItemProps) {
     const themeColor = tag.color || '#22d3ee';
     const IconComponent = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
+
+    const formatTimeShort = (ms: number) => {
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        if (h === 0 && m === 0) return "";
+        return `${h > 0 ? `${h}h ` : ""}${m}m`;
+    };
+
+    const formattedDailyTime = formatTimeShort(dailyTime);
 
     return (
         <button
@@ -41,9 +53,16 @@ export function TagItem({ tag, isActive, isEditMode, onClick }: TagItemProps) {
                     }}
                 />
             )}
-            <span className={`text-[13px] font-bold tracking-tight transition-colors duration-300 ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>
-                {tag.name}
-            </span>
+            <div className="flex items-baseline gap-2">
+                <span className={`text-[13px] font-bold tracking-tight transition-colors duration-300 ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>
+                    {tag.name}
+                </span>
+                {formattedDailyTime && (
+                    <span className={`text-[10px] font-mono font-medium opacity-60 tabular-nums ${isActive ? 'text-white' : 'text-neutral-600'}`}>
+                        {formattedDailyTime}
+                    </span>
+                )}
+            </div>
 
             {isEditMode && (
                 <motion.div

@@ -308,28 +308,55 @@ export function Header() {
 
                 {/* 모바일 햄버거 메뉴 버튼 */}
                 <button
-                    className="p-2 -mr-2 text-muted-foreground hover:text-foreground md:hidden transition-colors cursor-pointer"
+                    className="p-2 -mr-2 text-foreground md:hidden transition-colors cursor-pointer"
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                 >
-                    <div className="relative w-4 h-4 overflow-visible" />
+                    {isMenuOpen ? (
+                        <Icons.X className="w-6 h-6" />
+                    ) : (
+                        <Icons.Menu className="w-6 h-6" />
+                    )}
                 </button>
             </div>
 
             {/* 모바일 메뉴 (간소화) */}
-            {isMenuOpen && (
-                <nav className="absolute top-full left-0 w-full bg-background/95 backdrop-blur-2xl border-b border-border md:hidden animate-in slide-in-from-top-4 duration-300 shadow-2xl overflow-hidden z-[40]">
-                    <div className="flex flex-col p-2 space-y-1">
-                        <Link
-                            href="/"
-                            className="flex items-center gap-3 px-6 py-4 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl transition-all"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm font-medium font-suit">Timer</span>
-                        </Link>
-                    </div>
-                </nav>
-            )}
+            <AnimatePresence>
+                {isMenuOpen && (
+                    <motion.nav
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="absolute top-full left-0 w-full bg-background/95 backdrop-blur-2xl border-b border-border md:hidden overflow-hidden z-[40]"
+                    >
+                        <div className="flex flex-col p-4 space-y-2">
+                            <Link
+                                href="/"
+                                className="flex items-center gap-4 px-6 py-4 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-2xl transition-all"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                <Clock className="w-5 h-5 text-foreground" />
+                                <span className="text-base font-bold font-suit">Timer</span>
+                            </Link>
+                            <Link
+                                href="/record"
+                                className="flex items-center gap-4 px-6 py-4 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-2xl transition-all"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                <BarChart2 className="w-5 h-5 text-foreground" />
+                                <span className="text-base font-bold font-suit">Records</span>
+                            </Link>
+                            <Link
+                                href="/playlist"
+                                className="flex items-center gap-4 px-6 py-4 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-2xl transition-all"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                <Music className="w-5 h-5 text-foreground" />
+                                <span className="text-base font-bold font-suit">Playlist</span>
+                            </Link>
+                        </div>
+                    </motion.nav>
+                )}
+            </AnimatePresence>
         </header>
     )
 }

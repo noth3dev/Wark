@@ -4,10 +4,12 @@ import { X, Trash2 } from "lucide-react";
 
 import { useState } from "react";
 
+import { Tag } from "../../lib/types";
+
 interface TagModalProps {
-    tag: { id: string; name: string; color?: string; icon?: string };
+    tag: Tag;
     onClose: () => void;
-    onUpdate: (id: string, name: string, color: string, icon: string) => void;
+    onUpdate: (id: string, name: string, color: string, icon: string) => Promise<boolean>;
     onDelete: (id: string) => void;
 }
 
