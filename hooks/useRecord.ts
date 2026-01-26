@@ -58,16 +58,21 @@ export function useRecord() {
         }
     }, [mounted, authLoading, user, selectedDate, fetchData]);
 
-    // Real-time update for active session
+    // Real-time synchronization for data and active session
     useEffect(() => {
-        if (!isToday) {
-            setActiveSessionElapsed(0);
-            setActiveTagId(null);
-            return;
-        }
+        if (!user || !mounted) return;
+
+        const syncData = () => {
+            fetchData();
+        };
 
         const updateActiveSession = async () => {
-            if (!user) return;
+            if (!isToday) {
+                setActiveSessionElapsed(0);
+                setActiveTagId(null);
+                setActiveStartTime(null);
+                return;
+            }
 
             const { data: activeSessions } = await supabase
                 .from('active_sessions')
@@ -80,12 +85,11 @@ export function useRecord() {
                 const startTime = new Date(session.start_time);
                 const now = new Date();
 
-                const EffectiveStartTime = (isToday && startTime.toDateString() !== now.toDateString())
+                const effectiveStartTime = (startTime.toDateString() !== now.toDateString())
                     ? new Date(now.setHours(0, 0, 0, 0)).getTime()
                     : startTime.getTime();
 
-                const elapsed = Date.now() - EffectiveStartTime;
-                setActiveSessionElapsed(elapsed);
+                setActiveSessionElapsed(Date.now() - effectiveStartTime);
                 setActiveTagId(session.tag_id);
                 setActiveStartTime(startTime.getTime());
             } else {
@@ -95,10 +99,40 @@ export function useRecord() {
             }
         };
 
+        const channel = supabase
+            .channel(`record_sync_${user.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'active_sessions', filter: `user_id=eq.${user.id}` },
+                () => updateActiveSession()
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'study_sessions', filter: `user_id=eq.${user.id}` },
+                () => syncData()
+            )
+            .subscribe();
+
+        // Initial fetch
         updateActiveSession();
-        const interval = setInterval(updateActiveSession, 1000);
-        return () => clearInterval(interval);
-    }, [isToday, user]);
+
+        // Still need a local interval to update the "elapsed" time visually for active sessions
+        const timerInterval = setInterval(() => {
+            if (activeStartTime && isToday) {
+                const now = new Date();
+                const startTime = new Date(activeStartTime);
+                const effectiveStartTime = (startTime.toDateString() !== now.toDateString())
+                    ? new Date(now.setHours(0, 0, 0, 0)).getTime()
+                    : startTime.getTime();
+                setActiveSessionElapsed(Date.now() - effectiveStartTime);
+            }
+        }, 1000);
+
+        return () => {
+            supabase.removeChannel(channel);
+            clearInterval(timerInterval);
+        };
+    }, [user, mounted, isToday, activeStartTime, fetchData]);
 
     const changeDate = (days: number) => {
         const newDate = new Date(selectedDate);
