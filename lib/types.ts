@@ -10,3 +10,10 @@ export interface ActiveSession {
     tag_id: string;
     start_time: string;
 }
+
+export interface Session {
+    id: string;
+    tag_id: string;
+    duration: number;
+    created_at: string;
+}
