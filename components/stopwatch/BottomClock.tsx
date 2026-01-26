@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 
 export function BottomClock() {
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
     useEffect(() => {
+        setCurrentTime(new Date());
         const interval = setInterval(() => {
             setCurrentTime(new Date());
         }, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    if (!currentTime) return null;
 
     return (
         <div className="fixed bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50">

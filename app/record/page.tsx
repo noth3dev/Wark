@@ -24,17 +24,22 @@ export default function RecordPage() {
     const [tags, setTags] = useState<Tag[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [mounted, setMounted] = useState(false);
 
     const [activeSessionElapsed, setActiveSessionElapsed] = useState(0);
     const [activeTagId, setActiveTagId] = useState<string | null>(null);
     const [activeStartTime, setActiveStartTime] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!authLoading && user) {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted && !authLoading && user) {
             fetchData();
         }
-    }, [authLoading, user, selectedDate]);
+    }, [mounted, authLoading, user, selectedDate]);
 
     const isToday = new Date().toDateString() === selectedDate.toDateString();
 
@@ -187,7 +192,7 @@ export default function RecordPage() {
         }));
     }, [sessions, selectedDate, isToday, activeStartTime, activeTagId]);
 
-    if (authLoading || loading) {
+    if (!mounted || authLoading || loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-white/20" />

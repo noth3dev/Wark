@@ -7,6 +7,11 @@ import { useAuth } from "../lib/auth-context"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
+    Battery,
+    BatteryCharging,
+    BatteryFull,
+    BatteryLow,
+    BatteryMedium,
     LogOut,
     Settings,
     User,
@@ -32,6 +37,7 @@ import {
 import { usePathname } from "next/navigation"
 import { useMusic } from "../lib/music-context"
 import { motion, AnimatePresence } from "framer-motion"
+import { useBattery } from "../hooks/useBattery"
 
 export function Header() {
     const { user, signOut, profileName } = useAuth()
@@ -48,6 +54,7 @@ export function Header() {
         currentTime, duration, seekTo
     } = useMusic()
     const [isPlayerOpen, setIsPlayerOpen] = useState(false)
+    const { level, charging, supported } = useBattery()
 
     // Sync stopwatch data for header display (synced from DB via localStorage)
     useEffect(() => {
@@ -279,6 +286,22 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-3">
+                {/* Battery Status */}
+                {supported && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 border border-border rounded-full text-muted-foreground transition-colors hover:text-foreground">
+                        {charging ? (
+                            <BatteryCharging className="w-3.5 h-3.5" />
+                        ) : level <= 0.2 ? (
+                            <BatteryLow className="w-3.5 h-3.5" />
+                        ) : level <= 0.6 ? (
+                            <BatteryMedium className="w-3.5 h-3.5" />
+                        ) : (
+                            <BatteryFull className="w-3.5 h-3.5" />
+                        )}
+                        <span className="text-[10px] font-mono font-bold">{Math.round(level * 100)}%</span>
+                    </div>
+                )}
+
                 {/* 유저 배지 (드롭다운 메뉴) */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
