@@ -12,6 +12,7 @@ import { TagDistribution } from "@/components/record/TagDistribution";
 import { DailyTimetable } from "@/components/record/DailyTimetable";
 import { SessionLogs } from "@/components/record/SessionLogs";
 import { SessionModal } from "@/components/record/SessionModal";
+import { SolvedProblemsStats } from "@/components/record/SolvedProblemsStats";
 
 export default function RecordPage() {
     const {
@@ -49,7 +50,8 @@ export default function RecordPage() {
         const day = date.getDate().toString().padStart(2, '0');
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}`);
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
     };
 
     const handleAddStart = () => {
@@ -70,7 +72,8 @@ export default function RecordPage() {
         const day = date.getDate().toString().padStart(2, '0');
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}`);
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
 
         setEditingSession({ id: 'new', tag_id: defaultTagId, duration: 3600000, created_at: date.toISOString() });
     };
@@ -99,14 +102,16 @@ export default function RecordPage() {
         if (!editingSession || !user) return;
 
         const newDuration = (editDuration.h * 3600000) + (editDuration.m * 60000) + (editDuration.s * 1000);
-        const newStart = new Date(editCreatedAt).getTime();
+        const newStart = Math.floor(new Date(editCreatedAt).getTime() / 1000) * 1000;
         const newEnd = newStart + newDuration;
 
         // Overlap defense
         const isOverlap = sessions.some(s => {
             if (editingSession.id !== 'new' && s.id === editingSession.id) return false;
-            const sStart = new Date(s.created_at).getTime();
+            const sStart = Math.floor(new Date(s.created_at).getTime() / 1000) * 1000;
             const sEnd = sStart + s.duration;
+            // Use a 1-second margin or just strictly check. 
+            // The user complained about ms, so rounding to seconds should fix it.
             return Math.max(sStart, newStart) < Math.min(sEnd, newEnd);
         });
 
@@ -199,6 +204,11 @@ export default function RecordPage() {
                         onFillGap={handleFillGap}
                     />
                 </div>
+
+                <SolvedProblemsStats
+                    date={selectedDate}
+                    tags={tags}
+                />
 
                 <SessionLogs
                     sessions={sessions}
