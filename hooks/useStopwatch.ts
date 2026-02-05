@@ -5,6 +5,7 @@ import { useActiveSession } from "./useActiveSession";
 import { useDailyTotals } from "./useDailyTotals";
 import { useTimer } from "./useTimer";
 import { useStopwatchSync } from "./useStopwatchSync";
+import { persistenceService } from "../lib/services/persistenceService";
 
 export function useStopwatch(onSave?: () => void) {
     const { user } = useAuth();
@@ -19,7 +20,7 @@ export function useStopwatch(onSave?: () => void) {
         endSession,
         cleanupOrphanedSessions
     } = useActiveSession(user?.id);
-    const { dailyTimes, fetchDailyTotals, setDailyTimes } = useDailyTotals();
+    const { dailyTimes, fetchDailyTotals } = useDailyTotals();
     const time = useTimer(activeSession?.start_time || null, activeSession ? (dailyTimes[activeSession.tag_id] || 0) : 0);
 
     const refreshAll = useCallback(async () => {
@@ -30,17 +31,17 @@ export function useStopwatch(onSave?: () => void) {
 
         if (session && currentTags) {
             const tag = currentTags.find(t => t.id === session.tag_id);
-            localStorage.setItem('active_study_session', JSON.stringify({
+            persistenceService.setActiveSession({
                 tagId: session.tag_id,
                 startTime: new Date(session.start_time).getTime(),
                 color: tag?.color || '#22d3ee',
-                name: tag?.name,
+                name: tag?.name || "Unknown",
                 icon: tag?.icon || 'Moon',
                 sessionId: session.id,
                 accumulated: totals[session.tag_id] || 0
-            }));
+            });
         } else {
-            localStorage.removeItem('active_study_session');
+            persistenceService.clearActiveSession();
         }
     }, [user, fetchTags, fetchDailyTotals, fetchActiveSession]);
 
@@ -56,21 +57,21 @@ export function useStopwatch(onSave?: () => void) {
 
         switchingRef.current = true;
         try {
-            localStorage.removeItem('active_study_session');
+            persistenceService.clearActiveSession();
             await cleanupOrphanedSessions();
             const newSession = await startSession(tagId);
 
             if (newSession) {
                 const tag = tags.find(t => t.id === tagId);
-                localStorage.setItem('active_study_session', JSON.stringify({
+                persistenceService.setActiveSession({
                     tagId,
                     startTime: new Date(newSession.start_time).getTime(),
                     color: tag?.color || '#22d3ee',
-                    name: tag?.name,
+                    name: tag?.name || "Unknown",
                     icon: tag?.icon || 'Moon',
                     sessionId: newSession.id,
                     accumulated: dailyTimes[tagId] || 0
-                }));
+                });
             }
         } catch (error) {
             console.error("Error switching tags:", error);
@@ -88,14 +89,11 @@ export function useStopwatch(onSave?: () => void) {
     const updateTag = async (id: string, name: string, color: string, icon: string) => {
         const success = await updateTagBase(id, { name, color, icon });
         if (success) {
-            const savedSession = localStorage.getItem('active_study_session');
-            if (savedSession) {
-                const session = JSON.parse(savedSession);
-                if (session.tagId === id) {
-                    localStorage.setItem('active_study_session', JSON.stringify({
-                        ...session, name, color, icon
-                    }));
-                }
+            const session = persistenceService.getActiveSession();
+            if (session && session.tagId === id) {
+                persistenceService.setActiveSession({
+                    ...session, name, color, icon
+                });
             }
         }
         return success;
@@ -103,9 +101,12 @@ export function useStopwatch(onSave?: () => void) {
 
     const deleteTag = async (id: string) => {
         const success = await deleteTagBase(id);
-        if (success && activeSession?.tag_id === id) {
-            localStorage.removeItem('active_study_session');
-            await cleanupOrphanedSessions();
+        if (success) {
+            const session = persistenceService.getActiveSession();
+            if (session && session.tagId === id) {
+                persistenceService.clearActiveSession();
+                await cleanupOrphanedSessions();
+            }
         }
         return success;
     };

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/auth-context";
 import { LogIn, UserPlus, Mail, Lock } from "lucide-react";
 
 export default function Auth() {
+    const { signIn, signUp } = useAuth();
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -18,18 +19,10 @@ export default function Auth() {
 
         try {
             if (!isLogin) {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                });
-                if (error) throw error;
+                await signUp(email, password);
                 setMessage({ type: "success", text: "가입 확인 이메일을 확인해주세요" });
             } else {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
+                await signIn(email, password);
             }
         } catch (error: any) {
             setMessage({ type: "error", text: error.message });

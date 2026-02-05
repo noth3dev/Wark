@@ -11,6 +11,7 @@ interface SolvedProblemsPanelProps {
     decrement: () => void;
     tagId: string | null;
     dailyTimes?: Record<string, number>;
+    activeSeconds?: number;
 }
 
 const formatDuration = (seconds: number) => {
@@ -26,9 +27,15 @@ export function SolvedProblemsPanel({
     increment,
     decrement,
     tagId,
-    dailyTimes
+    dailyTimes,
+    activeSeconds
 }: SolvedProblemsPanelProps) {
-    const duration = tagId && dailyTimes ? dailyTimes[tagId] || 0 : 0;
+    // If we are currently studying this tag, use the live timer (activeSeconds)
+    // Otherwise fallback to dailyTimes fetched from the DB
+    const duration = (tagId && activeSeconds && activeSeconds > 0)
+        ? activeSeconds
+        : (tagId && dailyTimes ? dailyTimes[tagId] || 0 : 0);
+
     const avgSeconds = count > 0 ? duration / count : 0;
 
     return (

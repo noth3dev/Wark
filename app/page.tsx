@@ -2,27 +2,10 @@
 
 import Stopwatch from "../components/Stopwatch";
 import Auth from "../components/Auth";
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { User as SupabaseUser } from "@supabase/supabase-js";
+import { useAuth } from "../lib/auth-context";
 
 export default function Home() {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { user, loading } = useAuth();
 
   if (!user && !loading) {
     return (
