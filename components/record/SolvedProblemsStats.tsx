@@ -6,14 +6,25 @@ import { Tag } from "@/lib/types";
 import { useSolvedProblems } from "@/hooks/useSolvedProblems";
 import { SolvedProblemsGraph } from "./CumulativeSolvedGraph";
 
+import { useAuth } from "@/lib/auth-context";
+import { useDailyTotals } from "@/hooks/useDailyTotals";
+
 interface SolvedProblemsStatsProps {
     date: Date;
     tags: Tag[];
 }
 
 export function SolvedProblemsStats({ date, tags }: SolvedProblemsStatsProps) {
+    const { user } = useAuth();
     const dateStr = date.toLocaleDateString('sv-SE');
     const { totalCount, logs } = useSolvedProblems(null, dateStr);
+    const { dailyTimes, fetchDailyTotals } = useDailyTotals();
+
+    React.useEffect(() => {
+        if (user) {
+            fetchDailyTotals(user.id, dateStr);
+        }
+    }, [user, dateStr, fetchDailyTotals]);
 
     return (
         <div className="space-y-10">
@@ -31,7 +42,7 @@ export function SolvedProblemsStats({ date, tags }: SolvedProblemsStatsProps) {
                         unit="Problems"
                     />
                 </div>
-                <SolvedProblemsGraph logs={logs} tags={tags} />
+                <SolvedProblemsGraph logs={logs} tags={tags} dailyTimes={dailyTimes} />
             </div>
         </div>
     );

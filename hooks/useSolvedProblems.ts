@@ -75,6 +75,18 @@ export function useSolvedProblems(activeTagId: string | null, customDate?: strin
         const newVal = currentVal - 1;
         setTagCounts(prev => ({ ...prev, [key]: newVal }));
 
+        // Optimistic log removal (local only)
+        setLogs(prev => {
+            const newLogs = [...prev];
+            // Find the last index of a log with the matching tag_id
+            const lastIndex = [...newLogs].reverse().findIndex(log => log.tag_id === activeTagId);
+            if (lastIndex !== -1) {
+                const actualIndex = newLogs.length - 1 - lastIndex;
+                newLogs.splice(actualIndex, 1);
+            }
+            return newLogs;
+        });
+
         try {
             await solvedProblemService.updateCount(user.id, targetDate, activeTagId, newVal, false);
         } catch (e) {

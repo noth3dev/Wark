@@ -4,8 +4,8 @@ import { sessionService } from '../lib/services/sessionService';
 export function useDailyTotals() {
     const [dailyTimes, setDailyTimes] = useState<Record<string, number>>({});
 
-    const fetchDailyTotals = useCallback(async (userId: string) => {
-        const startOfDay = new Date();
+    const fetchDailyTotals = useCallback(async (userId: string, date?: string) => {
+        const startOfDay = date ? new Date(date) : new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
         const { data } = await sessionService.fetchDailyTotals(userId, startOfDay.toISOString());

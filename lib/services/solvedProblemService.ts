@@ -56,7 +56,7 @@ export const solvedProblemService = {
 
         if (summaryError) throw summaryError;
 
-        // 2. If it's an increment, add a log entry
+        // 2. Log management
         if (isIncrement) {
             const { error: logError } = await supabase
                 .from('solved_problem_logs')
@@ -65,6 +65,32 @@ export const solvedProblemService = {
                     tag_id: tagId
                 });
             if (logError) throw logError;
+        } else {
+            // If it's a decrement, remove the most recent log entry for this tag today
+            const start = `${date}T00:00:00Z`;
+            const end = `${date}T23:59:59Z`;
+
+            // First find the ID of the most recent log
+            const { data: latestLog, error: findError } = await supabase
+                .from('solved_problem_logs')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('tag_id', tagId)
+                .gte('created_at', start)
+                .lte('created_at', end)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (findError && findError.code !== 'PGRST116') throw findError;
+
+            if (latestLog) {
+                const { error: deleteError } = await supabase
+                    .from('solved_problem_logs')
+                    .delete()
+                    .eq('id', latestLog.id);
+                if (deleteError) throw deleteError;
+            }
         }
     },
 

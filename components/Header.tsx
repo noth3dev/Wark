@@ -15,6 +15,7 @@ import { useAuth } from "../lib/auth-context"
 import { useMusic } from "../lib/music-context"
 import { useBattery } from "../hooks/useBattery"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
+import { useDailyTotals } from "../hooks/useDailyTotals"
 import { SolvedProblemsPanel } from "./header/SolvedProblemsPanel"
 import {
     DropdownMenu,
@@ -50,7 +51,15 @@ export function Header() {
 
     // Solved Problems State (Tracked by current active tag)
     const { count, totalCount, increment, decrement } = useSolvedProblems(status.tagId)
+    const { dailyTimes, fetchDailyTotals, updateDailyTime } = useDailyTotals()
     const [isSolvedProblemsOpen, setIsSolvedProblemsOpen] = useState(false)
+
+    // Sync daily study totals for average calculation
+    useEffect(() => {
+        if (user && isSolvedProblemsOpen) {
+            fetchDailyTotals(user.id)
+        }
+    }, [user, isSolvedProblemsOpen, fetchDailyTotals])
 
     // Mobile Menu State
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -219,6 +228,8 @@ export function Header() {
                 count={count}
                 increment={increment}
                 decrement={decrement}
+                tagId={status.tagId}
+                dailyTimes={dailyTimes}
             />
         </>
     )
