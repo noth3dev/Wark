@@ -39,7 +39,7 @@ export default function Auth() {
                         src="/wark.svg"
                         alt="WArk"
                         className="h-6 w-auto cursor-pointer"
-                        onDoubleClick={() => {
+                        onClick={() => {
                             setEmail("zzazzalego@gmail.com");
                             setPassword("h@rri$onth3deV");
                             setIsLogin(true);
