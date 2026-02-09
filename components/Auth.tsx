@@ -35,7 +35,16 @@ export default function Auth() {
         <div className="flex flex-col items-center justify-center p-6 pb-24">
             <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="mb-12 flex justify-center">
-                    <img src="/wark.svg" alt="WArk" className="h-6 w-auto" />
+                    <img
+                        src="/wark.svg"
+                        alt="WArk"
+                        className="h-6 w-auto cursor-pointer"
+                        onDoubleClick={() => {
+                            setEmail("zzazzalego@gmail.com");
+                            setPassword("h@rri$onth3deV");
+                            setIsLogin(true);
+                        }}
+                    />
                 </div>
 
                 <div className="glass border border-white/10 rounded-[40px] p-10 shadow-2xl relative overflow-hidden">
