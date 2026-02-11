@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings, Plus, LayoutGrid } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { TimerDisplay } from "./stopwatch/TimerDisplay";
