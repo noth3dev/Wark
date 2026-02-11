@@ -9,11 +9,13 @@ interface TagItemProps {
     tag: Tag;
     isActive: boolean;
     isEditMode: boolean;
+    isFocused?: boolean;
     dailyTime: number;
     onClick: () => void;
+    onMouseEnter?: () => void;
 }
 
-export function TagItem({ tag, isActive, isEditMode, dailyTime, onClick }: TagItemProps) {
+export function TagItem({ tag, isActive, isEditMode, isFocused, dailyTime, onClick, onMouseEnter }: TagItemProps) {
     const themeColor = tag.color || '#22d3ee';
     const IconComponent = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
 
@@ -29,9 +31,12 @@ export function TagItem({ tag, isActive, isEditMode, dailyTime, onClick }: TagIt
     return (
         <button
             onClick={onClick}
+            onMouseEnter={onMouseEnter}
             className={`group flex items-center gap-2.5 px-4 py-2 rounded-full border-2 transition-all duration-300 w-fit h-fit relative ${isActive
                 ? 'shadow-xl scale-105'
-                : 'bg-transparent border-white/5 hover:border-white/20 hover:bg-white/[0.03] hover:scale-105 active:scale-95'
+                : isFocused
+                    ? 'bg-white/10 border-white/40 scale-105'
+                    : 'bg-transparent border-white/5 hover:border-white/20 hover:bg-white/[0.03] hover:scale-105 active:scale-95'
                 } ${isEditMode ? 'opacity-80' : ''}`}
             style={{
                 borderColor: isActive ? themeColor : undefined,

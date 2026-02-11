@@ -2,8 +2,23 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ListMusic, Repeat, SkipBack, SkipForward, Play, Pause } from "lucide-react";
-import { useMusic } from "../../lib/music-context";
+import { ChevronDown, ListMusic, Repeat, SkipBack, SkipForward, Play, Pause, Music } from "lucide-react";
+import { useMusic, Song, Playlist } from "../../lib/music-context";
+
+interface MusicPlayerDropdownProps {
+    currentSong: Song;
+    currentPlaylist: Playlist | null;
+    isPlaying: boolean;
+    isLooping: boolean;
+    togglePlay: () => void;
+    toggleLoop: () => void;
+    nextTrack: () => void;
+    prevTrack: () => void;
+    playSongByIndex: (index: number) => void;
+    currentTime: number;
+    duration: number;
+    seekTo: (seconds: number) => void;
+}
 
 export function MusicPlayer() {
     const {
@@ -17,15 +32,28 @@ export function MusicPlayer() {
 
     return (
         <div className="relative hidden sm:block">
-            <button
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-4 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors group"
+                className={`flex items-center gap-3 px-3 py-1.5 rounded-full border transition-all duration-300 ${isOpen
+                    ? 'bg-cyan-500/10 border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]'
+                    : 'bg-white/5 border-white/10 hover:bg-white/[0.08] hover:border-white/20'
+                    }`}
             >
-                <div className="flex flex-col items-start max-w-[120px]">
-                    <span className="text-[10px] font-bold text-white truncate w-full">{currentSong.title}</span>
+                <div className="relative">
+                    <Music className={`w-3.5 h-3.5 ${isOpen ? 'text-cyan-400' : 'text-neutral-500'}`} />
+                    {isPlaying && (
+                        <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                    )}
                 </div>
-                <ChevronDown className={`w-3 h-3 text-neutral-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
+                <div className="flex flex-col items-start max-w-[80px]">
+                    <span className={`text-[10px] font-black uppercase tracking-tight truncate w-full ${isOpen ? 'text-cyan-400' : 'text-neutral-300'}`}>
+                        {currentSong.title}
+                    </span>
+                </div>
+                <ChevronDown className={`w-3 h-3 text-neutral-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+            </motion.button>
             <AnimatePresence>
                 {isOpen && (
                     <MusicPlayerDropdown
@@ -48,12 +76,44 @@ export function MusicPlayer() {
     );
 }
 
-function MusicPlayerDropdown(props: any) {
+function MusicPlayerDropdown(props: MusicPlayerDropdownProps) {
+    const [focusedIndex, setFocusedIndex] = useState<number>(props.currentPlaylist?.songs?.findIndex((s) => s.id === props.currentSong.id) ?? 0);
+    const listRef = React.useRef<HTMLDivElement>(null);
+
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
+
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!props.currentPlaylist?.songs) return;
+            const len = props.currentPlaylist.songs.length;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocusedIndex(prev => (prev + 1) % len);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocusedIndex(prev => (prev - 1 + len) % len);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                props.playSongByIndex(focusedIndex);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [props.currentPlaylist, focusedIndex, props.playSongByIndex]);
+
+    // Scroll focused item into view
+    React.useEffect(() => {
+        const focusedElement = listRef.current?.children[focusedIndex] as HTMLElement;
+        if (focusedElement) {
+            focusedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [focusedIndex]);
 
     return (
         <motion.div
@@ -73,14 +133,21 @@ function MusicPlayerDropdown(props: any) {
                     </button>
                 </div>
 
-                <div className="space-y-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {props.currentPlaylist?.songs?.map((song: any, idx: number) => (
+                <div
+                    ref={listRef}
+                    className="space-y-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar"
+                >
+                    {props.currentPlaylist?.songs?.map((song, idx) => (
                         <button
                             key={song.id}
-                            onClick={() => props.playSongByIndex(idx)}
-                            className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${props.currentSong.id === song.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                            onClick={() => {
+                                setFocusedIndex(idx);
+                                props.playSongByIndex(idx);
+                            }}
+                            onMouseEnter={() => setFocusedIndex(idx)}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${focusedIndex === idx ? 'bg-white/10' : 'hover:bg-white/5'}`}
                         >
-                            <span className={`text-[11px] font-medium truncate flex-1 text-left ${props.currentSong.id === song.id ? 'text-white' : 'text-neutral-500'}`}>
+                            <span className={`text-[11px] font-medium truncate flex-1 text-left ${props.currentSong.id === song.id ? 'text-cyan-400' : focusedIndex === idx ? 'text-white' : 'text-neutral-500'}`}>
                                 {song.title}
                             </span>
                         </button>

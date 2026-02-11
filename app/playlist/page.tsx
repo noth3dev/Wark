@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../lib/music-context";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
@@ -8,12 +8,30 @@ import {
     Music, Play, Plus, X, ListPlus, Link as LinkIcon,
     Repeat, SkipBack, SkipForward, Volume2, Pause, GripVertical, Youtube, Loader2, Headphones, Trash2, Search,
 } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "../../components/ui/dialog";
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "../../components/ui/tabs";
+import { ScrollArea } from "../../components/ui/scroll-area";
+import { Card } from "../../components/ui/card";
 import { supabase } from "../../lib/supabase";
 
 export default function PlaylistPage() {
     const { user } = useAuth();
     const {
         playPlaylist, currentSong, isPlaying,
+        playPlaylist: playPlaylistFn, // check if we need this, useMusic returns playPlaylist
         togglePlay, nextTrack, prevTrack,
         isLooping, toggleLoop, currentTime, duration, seekTo
     } = useMusic();
@@ -31,13 +49,89 @@ export default function PlaylistPage() {
     const [isSearching, setIsSearching] = useState(false);
     const [activeTab, setActiveTab] = useState<'search' | 'manual'>('search');
 
+    // Keyboard Navigation State
+    const [focusedPlaylistIndex, setFocusedPlaylistIndex] = useState(0);
+    const [focusedSongIndex, setFocusedSongIndex] = useState(-1);
+    const [activeSection, setActiveSection] = useState<'playlists' | 'songs'>('playlists');
+
+    const playlistRef = useRef<HTMLDivElement>(null);
+    const songContainerRef = useRef<HTMLDivElement>(null);
+
     const YOUTUBE_API_KEY = "AIzaSyDhjIZh1xAGfghUrUZkA8vzX5iYDPxgLm8";
+
+    // Scroll effect
+    useEffect(() => {
+        if (activeSection === 'playlists' && playlistRef.current) {
+            const focusedEl = playlistRef.current.children[focusedPlaylistIndex] as HTMLElement;
+            if (focusedEl) focusedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [focusedPlaylistIndex, activeSection]);
+
+    useEffect(() => {
+        if (activeSection === 'songs' && songContainerRef.current) {
+            // Find the active song item within the Reorder.Group
+            const group = songContainerRef.current.querySelector('.space-y-1');
+            if (group) {
+                const focusedEl = group.children[focusedSongIndex] as HTMLElement;
+                if (focusedEl) focusedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+    }, [focusedSongIndex, activeSection]);
 
     useEffect(() => {
         if (user) {
             fetchPlaylists();
         }
     }, [user]);
+
+    // Keyboard Navigation Effect
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't intercept if user is typing in an input
+            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+            if (activeSection === 'playlists') {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setFocusedPlaylistIndex(prev => Math.min(prev + 1, playlists.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setFocusedPlaylistIndex(prev => Math.max(prev - 1, 0));
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (playlists[focusedPlaylistIndex]) {
+                        setSelectedPlaylist(playlists[focusedPlaylistIndex]);
+                        setActiveSection('songs');
+                        setFocusedSongIndex(0);
+                    }
+                } else if (e.key === 'ArrowRight' && selectedPlaylist) {
+                    e.preventDefault();
+                    setActiveSection('songs');
+                    setFocusedSongIndex(0);
+                }
+            } else if (activeSection === 'songs' && selectedPlaylist) {
+                const songs = selectedPlaylist.songs || [];
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setFocusedSongIndex(prev => Math.min(prev + 1, songs.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setFocusedSongIndex(prev => Math.max(prev - 1, 0));
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (songs[focusedSongIndex]) {
+                        playPlaylist(selectedPlaylist, focusedSongIndex);
+                    }
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    setActiveSection('playlists');
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeSection, focusedPlaylistIndex, focusedSongIndex, playlists, selectedPlaylist, playPlaylist]);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -209,73 +303,92 @@ export default function PlaylistPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white selection:bg-white/10 selection:text-white">
+        <main className="min-h-screen bg-black text-white selection:bg-cyan-500/20 selection:text-cyan-400">
             <div className="max-w-6xl mx-auto px-6 py-24 space-y-24">
                 {/* Header */}
-                <header className="space-y-4">
+                <header className="space-y-6">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/5 border border-white/10"
                     >
-                        <Headphones className="w-3 h-3 text-pink-400" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-pink-400/80">Auditory Protocol DB</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400/80">Auditory Protocol DB v4</span>
                     </motion.div>
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
+
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="text-6xl md:text-8xl font-extralight tracking-tighter"
                         >
-                            Sound Library
-                        </motion.h1>
-                        <button
+                            <h1 className="text-6xl md:text-8xl font-extralight tracking-tighter leading-none">
+                                Sound <br />
+                                <span className="text-neutral-800">Library</span>
+                            </h1>
+                        </motion.div>
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.2 }}
                             onClick={() => setIsCreating(true)}
-                            className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full hover:bg-neutral-200 transition-all font-bold text-[10px] uppercase tracking-[0.2em]"
+                            className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-[2rem] hover:bg-neutral-200 transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] active:scale-95"
                         >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-4 h-4" />
                             New Collection
-                        </button>
+                        </motion.button>
                     </div>
                 </header>
 
-                <div className="grid lg:grid-cols-12 gap-12">
+                <div className="grid lg:grid-cols-12 gap-16">
                     {/* Left: Playlist Selector */}
                     <div className="lg:col-span-4 space-y-6">
-                        <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600 px-4">Cloud Collections</h2>
-                        <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                            {playlists.map(pl => (
-                                <div
+                        <div className="flex items-center justify-between border-b border-white/5 pb-4 px-2">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Archived Nodes</h2>
+                        </div>
+                        <div ref={playlistRef} className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                            {playlists.map((pl, idx) => (
+                                <motion.div
                                     key={pl.id}
-                                    onClick={() => setSelectedPlaylist(pl)}
-                                    className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer ${selectedPlaylist?.id === pl.id
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    onClick={() => {
+                                        setSelectedPlaylist(pl);
+                                        setFocusedPlaylistIndex(idx);
+                                        setActiveSection('playlists');
+                                    }}
+                                    onMouseEnter={() => {
+                                        setFocusedPlaylistIndex(idx);
+                                        setActiveSection('playlists');
+                                    }}
+                                    className={`group flex items-center justify-between p-5 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlaylist?.id === pl.id
                                         ? 'bg-white/10 border-white/20'
-                                        : 'bg-white/5 border-transparent hover:border-white/10'
+                                        : (activeSection === 'playlists' && focusedPlaylistIndex === idx)
+                                            ? 'bg-white/10 border-white/20 scale-[1.02]'
+                                            : 'bg-neutral-900/40 border-transparent hover:border-white/10'
                                         }`}
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-neutral-900 flex items-center justify-center border border-white/5">
-                                            <Music className={`w-4 h-4 ${selectedPlaylist?.id === pl.id ? 'text-white' : 'text-neutral-600'}`} />
+                                    <div className="flex items-center gap-5">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${selectedPlaylist?.id === pl.id || (activeSection === 'playlists' && focusedPlaylistIndex === idx)
+                                                ? 'bg-neutral-900 border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                                                : 'bg-black/40 border-white/5'
+                                            }`}>
+                                            <Music className={`w-5 h-5 ${selectedPlaylist?.id === pl.id || (activeSection === 'playlists' && focusedPlaylistIndex === idx) ? 'text-white' : 'text-neutral-700'}`} />
                                         </div>
-                                        <div className="space-y-0.5">
+                                        <div className="space-y-1">
                                             <span className="text-sm font-bold tracking-tight block truncate max-w-[120px]">{pl.name}</span>
-                                            <span className="text-[9px] text-neutral-600 uppercase font-bold tracking-widest">{pl.songs?.length || 0} Tracks</span>
+                                            <span className="text-[10px] text-neutral-600 uppercase font-black tracking-widest leading-none">{pl.songs?.length || 0} TRACKS</span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={(e) => deletePlaylist(pl.id, e)}
-                                        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded-full transition-all text-neutral-600 hover:text-red-400"
+                                        className="p-3 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded-2xl transition-all text-neutral-600 hover:text-red-400 active:scale-90"
                                     >
-                                        <X className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
-                                </div>
+                                </motion.div>
                             ))}
-                            {playlists.length === 0 && (
-                                <div className="p-8 text-center border border-dashed border-white/5 rounded-3xl">
-                                    <p className="text-[10px] text-neutral-700 uppercase font-bold tracking-widest">No Collections Found</p>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -285,32 +398,35 @@ export default function PlaylistPage() {
                             {selectedPlaylist ? (
                                 <motion.div
                                     key={selectedPlaylist.id}
+                                    ref={songContainerRef}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
                                     className="space-y-8"
                                 >
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-2xl font-bold tracking-tight">{selectedPlaylist.name}</h3>
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-8">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-4">
+                                                <h3 className="text-3xl font-extralight tracking-tighter">{selectedPlaylist.name}</h3>
                                                 {selectedPlaylist.songs && selectedPlaylist.songs.length > 0 && (
-                                                    <button
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.1 }}
+                                                        whileTap={{ scale: 0.9 }}
                                                         onClick={() => playPlaylist(selectedPlaylist)}
-                                                        className="p-2.5 bg-white text-black rounded-full hover:scale-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                                                        className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95"
                                                     >
-                                                        <Play className="w-3 h-3 fill-current" />
-                                                    </button>
+                                                        <Play className="w-4 h-4 fill-current" />
+                                                    </motion.button>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Protocol Details</p>
+                                            <p className="text-[10px] text-neutral-600 uppercase tracking-[0.3em] font-black">Collection Sequence</p>
                                         </div>
                                         <button
                                             onClick={() => setIsAddingSong(true)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors text-[9px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white"
+                                            className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-[1.5rem] hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-white group active:scale-95"
                                         >
-                                            <ListPlus className="w-3 h-3" />
-                                            Add Track
+                                            <ListPlus className="w-4 h-4 group-hover:text-cyan-400 transition-colors" />
+                                            Append Track
                                         </button>
                                     </div>
 
@@ -318,48 +434,57 @@ export default function PlaylistPage() {
                                         axis="y"
                                         values={selectedPlaylist.songs || []}
                                         onReorder={reorderSongs}
-                                        className="space-y-1"
+                                        className="space-y-3"
                                     >
                                         {(selectedPlaylist.songs || []).map((song, i) => (
                                             <Reorder.Item
                                                 key={song.id}
                                                 value={song}
-                                                className="group flex items-center gap-4 p-4 hover:bg-white/[0.03] rounded-2xl transition-colors group cursor-default"
+                                                onMouseEnter={() => {
+                                                    setFocusedSongIndex(i);
+                                                    setActiveSection('songs');
+                                                }}
+                                                className={`group flex items-center gap-6 p-5 rounded-[2.5rem] transition-all cursor-default relative overflow-hidden ${activeSection === 'songs' && focusedSongIndex === i
+                                                        ? 'bg-white/[0.08] border border-white/10 scale-[1.01] shadow-2xl'
+                                                        : 'bg-neutral-900/40 border border-transparent hover:border-white/5'
+                                                    }`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <GripVertical className="w-3.5 h-3.5 text-neutral-800 group-hover:text-neutral-600 cursor-grab active:cursor-grabbing transition-colors" />
-                                                    <div className="w-5 text-[10px] font-mono text-neutral-700">{i + 1}</div>
+                                                <div className="flex items-center gap-4">
+                                                    <GripVertical className="w-4 h-4 text-neutral-800 group-hover:text-neutral-600 cursor-grab active:cursor-grabbing transition-colors" />
+                                                    <div className="w-6 text-[10px] font-black font-mono text-neutral-800">{String(i + 1).padStart(2, '0')}</div>
                                                 </div>
-                                                <div className="flex-1 space-y-0.5 min-w-0">
-                                                    <span className="text-sm font-medium tracking-tight text-white/90 group-hover:text-white truncate block">{song.title}</span>
-                                                    <div className="flex items-center gap-1.5 overflow-hidden">
-                                                        <LinkIcon className="w-2.5 h-2.5 text-neutral-700 flex-shrink-0" />
-                                                        <span className="text-[9px] text-neutral-700 truncate">{song.youtube_url}</span>
+                                                <div className="flex-1 space-y-1 min-w-0">
+                                                    <span className="text-sm font-bold tracking-tight text-white/90 group-hover:text-white truncate block">{song.title}</span>
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <div className="p-1 px-2 rounded-md bg-white/5 border border-white/5">
+                                                            <Youtube className="w-2.5 h-2.5 text-neutral-600" />
+                                                        </div>
+                                                        <span className="text-[10px] text-neutral-700 truncate font-mono tracking-tighter">{song.youtube_url}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                                                     <button
                                                         onClick={() => playPlaylist(selectedPlaylist, i)}
-                                                        className={`p-2 rounded-xl transition-colors ${currentSong?.id === song.id && isPlaying
-                                                            ? 'text-cyan-400 bg-cyan-400/10'
-                                                            : 'text-neutral-500 hover:text-white hover:bg-white/10'
+                                                        className={`p-3 rounded-2xl transition-all active:scale-90 ${currentSong?.id === song.id && isPlaying
+                                                            ? 'text-cyan-400 bg-cyan-400/10 border border-cyan-400/20'
+                                                            : 'text-neutral-500 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5'
                                                             }`}
                                                     >
                                                         {currentSong?.id === song.id && isPlaying ? (
-                                                            <div className="flex gap-0.5 items-end h-3">
-                                                                <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-0.5 bg-current" />
-                                                                <motion.div animate={{ height: [8, 4, 12] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-0.5 bg-current" />
-                                                                <motion.div animate={{ height: [6, 12, 6] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-0.5 bg-current" />
+                                                            <div className="flex gap-1 items-end h-4">
+                                                                <motion.div animate={{ height: [4, 14, 4] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-0.5 bg-current" />
+                                                                <motion.div animate={{ height: [10, 4, 14] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-0.5 bg-current" />
+                                                                <motion.div animate={{ height: [7, 14, 7] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-0.5 bg-current" />
                                                             </div>
                                                         ) : (
-                                                            <Play className="w-3.5 h-3.5" />
+                                                            <Play className="w-4 h-4" />
                                                         )}
                                                     </button>
                                                     <button
                                                         onClick={() => deleteSong(song.id)}
-                                                        className="p-2 hover:bg-red-500/10 rounded-xl text-neutral-500 hover:text-red-400 transition-colors"
+                                                        className="p-3 bg-white/5 hover:bg-red-500/10 rounded-2xl text-neutral-500 hover:text-red-400 transition-all border border-white/5 active:scale-90"
                                                     >
-                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </Reorder.Item>
@@ -465,144 +590,154 @@ export default function PlaylistPage() {
                 )}
             </div>
 
-            {/* Create Playlist Modal */}
-            {isCreating && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in transition-all">
-                    <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 space-y-8 animate-in zoom-in-95">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500 text-glow">Library Creation</h3>
-                            <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-neutral-600" /></button>
-                        </div>
-                        <div className="space-y-4">
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Collection Identity</label>
-                            <input
+            {/* Create Playlist Dialog */}
+            <Dialog open={isCreating} onOpenChange={setIsCreating}>
+                <DialogContent className="sm:max-w-[425px] bg-neutral-900 border-white/10 rounded-[2.5rem] p-8">
+                    <DialogHeader className="space-y-4">
+                        <DialogTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Node Initialization</DialogTitle>
+                        <DialogDescription className="text-white/60 text-xs">
+                            Define a new collection identity in the centralized library.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 py-4">
+                        <div className="space-y-2">
+                             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-700 px-1">Entry Name</label>
+                             <Input
                                 autoFocus
                                 value={newPlaylistName}
                                 onChange={e => setNewPlaylistName(e.target.value)}
-                                placeholder="Name your collection..."
-                                className="w-full bg-transparent border-b border-white/10 py-4 text-2xl font-light focus:outline-none focus:border-white transition-colors placeholder:text-neutral-800"
-                            />
+                                placeholder="Designate collection name..."
+                                className="bg-white/5 border-white/5 h-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all text-base px-5"
+                             />
                         </div>
-                        <button
+                        <Button 
                             onClick={createPlaylist}
-                            className="w-full py-4 bg-white text-black rounded-3xl font-bold text-xs uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-2xl"
+                            className="w-full h-14 bg-white text-black hover:bg-neutral-200 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl transition-all"
                         >
                             Sync to Database
-                        </button>
+                        </Button>
                     </div>
-                </div>
-            )}
+                </DialogContent>
+            </Dialog>
 
-            {isAddingSong && selectedPlaylist && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in transition-all">
-                    <div className="w-full max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 space-y-8 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500 text-glow">Track Registration</h3>
-                            <button onClick={() => { setIsAddingSong(false); setSearchResults([]); setSearchQuery(""); }} className="p-2 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-neutral-600" /></button>
-                        </div>
+            {/* Track Registration Dialog */}
+            <Dialog open={isAddingSong} onOpenChange={(open) => {
+                if (!open) {
+                    setIsAddingSong(false);
+                    setSearchResults([]);
+                    setSearchQuery("");
+                }
+            }}>
+                <DialogContent className="sm:max-w-[600px] bg-neutral-900 border-white/10 rounded-[3rem] p-8 max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="space-y-4 mb-4">
+                        <DialogTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Track Protocol Registration</DialogTitle>
+                        <DialogDescription className="text-white/60 text-xs">
+                            Append new auditory stimulus to {selectedPlaylist?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        <div className="flex p-1 bg-white/5 rounded-2xl">
-                            <button
-                                onClick={() => setActiveTab('search')}
-                                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'search' ? 'bg-white text-black' : 'text-neutral-500 hover:text-white'}`}
-                            >
-                                Search YouTube
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('manual')}
-                                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'manual' ? 'bg-white text-black' : 'text-neutral-500 hover:text-white'}`}
-                            >
-                                Manual Link
-                            </button>
-                        </div>
-
-                        {activeTab === 'search' ? (
-                            <div className="space-y-6">
-                                <div className="flex gap-2">
+                    <Tabs defaultValue="search" className="w-full flex-1 flex flex-col overflow-hidden">
+                        <TabsList className="bg-white/5 p-1 rounded-2xl w-full mb-8">
+                            <TabsTrigger value="search" className="flex-1 rounded-xl text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-white data-[state=active]:text-black transition-all">
+                                Neural Search
+                            </TabsTrigger>
+                            <TabsTrigger value="manual" className="flex-1 rounded-xl text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-white data-[state=active]:text-black transition-all">
+                                Manual Injection
+                            </TabsTrigger>
+                        </TabsList>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                            <TabsContent value="search" className="space-y-6 mt-0">
+                                <div className="flex gap-3">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                                        <input
+                                        <Input
                                             autoFocus
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                                            placeholder="Search focus music, lofi, ambient..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+                                            placeholder="Explore focus nodes, ambient, lofi..."
+                                            className="bg-white/5 border-white/5 h-12 pl-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all"
                                         />
                                     </div>
-                                    <button
+                                    <Button 
                                         onClick={handleSearch}
                                         disabled={isSearching}
-                                        className="px-6 bg-white text-black rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                                        className="h-12 px-8 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
                                     >
-                                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-                                    </button>
+                                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "QUERY"}
+                                    </Button>
                                 </div>
 
-                                <div className="space-y-2">
-                                    {searchResults.map((video: any) => (
-                                        <div
+                                <div className="space-y-3 pb-4">
+                                    {searchResults.map((video: any, idx: number) => (
+                                        <motion.div
                                             key={video.id.videoId}
-                                            className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all group"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.03 }}
+                                            className="flex items-center gap-5 p-4 bg-neutral-900 border border-white/5 hover:border-white/10 rounded-[2rem] transition-all group"
                                         >
-                                            <div className="relative w-24 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                                                <img src={video.snippet.thumbnails.default.url} alt="" className="w-full h-full object-cover" />
+                                            <div className="relative w-28 h-16 rounded-2xl overflow-hidden flex-shrink-0 shadow-lg border border-white/5">
+                                                <img src={video.snippet.thumbnails.default.url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Youtube className="w-6 h-6 text-red-500" />
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-white truncate">{video.snippet.title}</p>
-                                                <p className="text-[10px] text-neutral-500 truncate">{video.snippet.channelTitle}</p>
+                                                <p className="text-sm font-bold text-white/90 truncate group-hover:text-white transition-colors">{video.snippet.title}</p>
+                                                <p className="text-[10px] text-neutral-600 font-black uppercase tracking-widest mt-1">{video.snippet.channelTitle}</p>
                                             </div>
-                                            <button
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                 onClick={() => addSearchedSong(video)}
-                                                className="p-3 bg-white/10 rounded-xl hover:bg-white text-neutral-400 hover:text-black transition-all"
+                                                className="w-12 h-12 bg-white/5 hover:bg-white hover:text-black rounded-2xl transition-all active:scale-90"
                                             >
                                                 <Plus className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                            </Button>
+                                        </motion.div>
                                     ))}
                                     {searchResults.length === 0 && !isSearching && (
-                                        <div className="py-12 text-center text-[10px] text-neutral-600 uppercase tracking-widest bg-white/[0.02] rounded-3xl border border-dashed border-white/5">
-                                            Enter keyword to explore
+                                        <div className="py-24 text-center text-[10px] text-neutral-700 font-black uppercase tracking-[0.2em] bg-white/[0.01] rounded-[3rem] border-2 border-dashed border-white/5">
+                                            Awaiting Input Stream
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
+                            </TabsContent>
+
+                            <TabsContent value="manual" className="space-y-8 mt-0 pb-4">
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Track Title</label>
-                                        <input
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-700 px-1">Track Identity</label>
+                                        <Input
                                             value={newSongTitle}
                                             onChange={e => setNewSongTitle(e.target.value)}
-                                            placeholder="Song Name..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+                                            placeholder="Specify Track Name..."
+                                            className="bg-white/5 border-white/5 h-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all px-5"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Audio Source (YouTube URL)</label>
-                                        <input
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-700 px-1">Source Protocol (YouTube URL)</label>
+                                        <Input
                                             value={newSongUrl}
                                             onChange={e => setNewSongUrl(e.target.value)}
                                             placeholder="https://youtube.com/watch?v=..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+                                            className="bg-white/5 border-white/5 h-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all px-5"
                                         />
                                     </div>
                                 </div>
-                                <button
+                                <Button
                                     onClick={addSong}
-                                    className="w-full py-4 bg-white text-black rounded-3xl font-bold text-xs uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-2xl"
+                                    className="w-full h-14 bg-white text-black hover:bg-neutral-200 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl transition-all"
                                 >
-                                    Commit Track
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+                                    Commit Fragment
+                                </Button>
+                            </TabsContent>
+                        </div>
+                    </Tabs>
+                </DialogContent>
+            </Dialog>
         </main>
     );
 }

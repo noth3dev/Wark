@@ -70,28 +70,28 @@ export function Header() {
                 </div>
 
                 {/* Right: Tools & Profile */}
-                <div className="flex items-center gap-3 sm:gap-6">
+                <div className="flex items-center gap-2 sm:gap-3">
                     <MusicPlayer />
 
                     {/* Solved Problems Button */}
                     <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setIsSolvedProblemsOpen(!isSolvedProblemsOpen)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isSolvedProblemsOpen
-                            ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400'
-                            : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/10'
+                        className={`flex items-center gap-3 px-3 py-1.5 rounded-full border transition-all duration-300 ${isSolvedProblemsOpen
+                            ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.1)]'
+                            : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
                             }`}
                     >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span className="text-[10px] font-bold font-mono">{totalCount}</span>
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-cyan-400' : 'text-neutral-500'}`} />
+                        <span className="text-[10px] font-black font-mono tracking-tight tabular-nums">{totalCount}</span>
                     </motion.button>
 
                     <BatteryIndicator />
                     <UserProfile />
 
                     {/* Mobile Menu Toggle */}
-                    <button className="md:hidden p-2 text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                    <button className="md:hidden p-2 text-white ml-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
                         {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
                 </div>

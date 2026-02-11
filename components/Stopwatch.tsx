@@ -31,12 +31,41 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
     const [showAddTag, setShowAddTag] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTag, setEditingTag] = useState<Tag | null>(null);
+    const [focusedTagIndex, setFocusedTagIndex] = useState(-1);
 
     const handleDeleteTag = async (id: string) => {
         if (!confirm("This will permanently decommission this tag and all associated protocol logs. Proceed?")) return;
         await deleteTag(id);
         setEditingTag(null);
     };
+
+    // Keyboard navigation for tags
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+            if (showAddTag || editingTag) return;
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocusedTagIndex(prev => (prev + 1) % tags.length);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocusedTagIndex(prev => (prev - 1 + tags.length) % tags.length);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (focusedTagIndex !== -1 && tags[focusedTagIndex]) {
+                    if (isEditMode) {
+                        setEditingTag(tags[focusedTagIndex]);
+                    } else {
+                        handleTagClick(tags[focusedTagIndex].id);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [tags, focusedTagIndex, showAddTag, editingTag, isEditMode, handleTagClick]);
 
     return (
         <div className="flex flex-col items-center w-full max-w-2xl space-y-8 sm:space-y-16 landscape:space-y-4">
@@ -74,14 +103,19 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                 </AnimatePresence>
 
                 <div className="flex flex-wrap justify-center gap-3 w-full">
-                    {tags.map((tag) => (
+                    {tags.map((tag, idx) => (
                         <TagItem
                             key={tag.id}
                             tag={tag}
                             isActive={activeTagId === tag.id}
                             isEditMode={isEditMode}
+                            isFocused={focusedTagIndex === idx}
                             dailyTime={(activeTagId === tag.id && activeSession) ? time : (dailyTimes[tag.id] || 0)}
-                            onClick={() => isEditMode ? setEditingTag(tag) : handleTagClick(tag.id)}
+                            onClick={() => {
+                                setFocusedTagIndex(idx);
+                                isEditMode ? setEditingTag(tag) : handleTagClick(tag.id);
+                            }}
+                            onMouseEnter={() => setFocusedTagIndex(idx)}
                         />
                     ))}
                 </div>
