@@ -23,7 +23,6 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
         activeTagId,
         activeSession,
         dailyTimes,
-        groupedDailyTimes,
         handleTagClick,
         addTag,
         updateTag,
@@ -121,42 +120,6 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                         />
                     ))}
                 </div>
-
-                {/* Grouped Totals Summary - More compact and modern */}
-                {!isEditMode && !showAddTag && Object.keys(groupedDailyTimes).length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex flex-wrap justify-center gap-6 pt-8 border-t border-white/5 w-full max-w-lg"
-                    >
-                        {Object.entries(groupedDailyTimes).map(([key, total]) => {
-                            const [icon, color] = key.split('|');
-                            if (total === 0) return null;
-                            const IconComponent = icon && (Icons as any)[icon] ? (Icons as any)[icon] : null;
-
-                            return (
-                                <div key={key} className="flex items-center gap-2.5 group">
-                                    <div
-                                        className="w-8 h-8 rounded-xl border flex items-center justify-center bg-black/40 transition-colors"
-                                        style={{ borderColor: `${color || '#22d3ee'}22`, color: color || '#22d3ee' }}
-                                    >
-                                        {IconComponent ? <IconComponent className="w-3.5 h-3.5" /> : <div className="w-1 h-1 rounded-full bg-current" />}
-                                    </div>
-                                    <div className="flex flex-col -space-y-0.5">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-neutral-600 group-hover:text-neutral-500 transition-colors">Type Total</span>
-                                        <span className="text-[11px] font-mono font-bold text-neutral-400 tabular-nums">
-                                            {(() => {
-                                                const h = Math.floor(total / 3600000);
-                                                const m = Math.floor((total % 3600000) / 60000);
-                                                return `${h > 0 ? `${h}h ` : ""}${m}m`;
-                                            })()}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </motion.div>
-                )}
             </div>
 
             <AnimatePresence>
