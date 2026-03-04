@@ -2,19 +2,21 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ListMusic, Repeat, SkipBack, SkipForward, Play, Pause, Music } from "lucide-react";
+import { ChevronDown, ListMusic, Repeat, SkipBack, SkipForward, Play, Pause, Music, Volume2 } from "lucide-react";
 import { useMusic, Song, Playlist } from "../../lib/music-context";
 
 interface MusicPlayerDropdownProps {
     currentSong: Song;
     currentPlaylist: Playlist | null;
     isPlaying: boolean;
-    isLooping: boolean;
+    repeatMode: 'none' | 'all' | 'one';
     togglePlay: () => void;
-    toggleLoop: () => void;
+    setRepeatMode: (mode: 'none' | 'all' | 'one') => void;
     nextTrack: () => void;
     prevTrack: () => void;
     playSongByIndex: (index: number) => void;
+    volume: number;
+    setVolume: (v: number) => void;
     currentTime: number;
     duration: number;
     seekTo: (seconds: number) => void;
@@ -22,9 +24,9 @@ interface MusicPlayerDropdownProps {
 
 export function MusicPlayer() {
     const {
-        currentSong, currentPlaylist, isPlaying, isLooping,
-        togglePlay, toggleLoop, nextTrack, prevTrack, playSongByIndex,
-        currentTime, duration, seekTo
+        currentSong, currentPlaylist, isPlaying, repeatMode, volume,
+        togglePlay, setRepeatMode, nextTrack, prevTrack, playSongByIndex,
+        currentTime, duration, seekTo, setVolume
     } = useMusic();
     const [isOpen, setIsOpen] = useState(false);
 
@@ -60,15 +62,17 @@ export function MusicPlayer() {
                         currentSong={currentSong}
                         currentPlaylist={currentPlaylist}
                         isPlaying={isPlaying}
-                        isLooping={isLooping}
+                        repeatMode={repeatMode}
                         togglePlay={togglePlay}
-                        toggleLoop={toggleLoop}
+                        setRepeatMode={setRepeatMode}
                         nextTrack={nextTrack}
                         prevTrack={prevTrack}
                         playSongByIndex={playSongByIndex}
                         currentTime={currentTime}
                         duration={duration}
                         seekTo={seekTo}
+                        volume={volume}
+                        setVolume={setVolume}
                     />
                 )}
             </AnimatePresence>
@@ -128,8 +132,21 @@ function MusicPlayerDropdown(props: MusicPlayerDropdownProps) {
                         <ListMusic className="w-3 h-3 text-cyan-400" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Current Queue</span>
                     </div>
-                    <button onClick={props.toggleLoop} className={`p-1.5 rounded-lg transition-colors ${props.isLooping ? 'text-cyan-400 bg-cyan-400/10' : 'text-neutral-600 hover:text-white'}`}>
-                        <Repeat className="w-3 h-3" />
+                    <button
+                        onClick={() => {
+                            const modes: ('none' | 'all' | 'one')[] = ['none', 'all', 'one'];
+                            const next = modes[(modes.indexOf(props.repeatMode) + 1) % modes.length];
+                            props.setRepeatMode(next);
+                        }}
+                        className={`p-1.5 rounded-lg transition-all relative ${props.repeatMode !== 'none' ? 'text-cyan-400 bg-cyan-400/10' : 'text-neutral-600 hover:text-white'}`}
+                    >
+                        <Repeat className={`w-3.5 h-3.5 ${props.repeatMode === 'one' ? 'opacity-50' : ''}`} />
+                        {props.repeatMode === 'one' && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[6px] font-black mt-0.5">1</span>
+                        )}
+                        {props.repeatMode !== 'none' && (
+                            <span className="absolute -top-1 -right-1 w-1 h-1 bg-cyan-400 rounded-full" />
+                        )}
                     </button>
                 </div>
 
@@ -175,6 +192,18 @@ function MusicPlayerDropdown(props: MusicPlayerDropdownProps) {
                         {props.isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
                     </button>
                     <button onClick={props.nextTrack} className="text-neutral-500 hover:text-white transition-colors"><SkipForward className="w-4 h-4" /></button>
+                </div>
+
+                <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                    <Volume2 className="w-3.5 h-3.5 text-neutral-600" />
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={props.volume}
+                        onChange={(e) => props.setVolume(parseInt(e.target.value))}
+                        className="flex-1 h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 transition-all [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                    />
                 </div>
             </div>
         </motion.div>
