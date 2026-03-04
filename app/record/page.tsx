@@ -25,6 +25,7 @@ export default function RecordPage() {
         mounted,
         changeDate,
         getTagTotal,
+        groupedTotals,
         totalToday,
         hourData,
         fetchData
@@ -182,8 +183,8 @@ export default function RecordPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white selection:bg-white/10 selection:text-white">
-            <div className="max-w-6xl mx-auto px-6 py-24 space-y-24">
+        <main className="min-h-screen bg-black text-white selection:bg-white/10 selection:text-white pb-20 sm:pb-0">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24 space-y-16 sm:space-y-24">
                 <RecordHeader
                     selectedDate={selectedDate}
                     isToday={isToday}
@@ -191,10 +192,11 @@ export default function RecordPage() {
                     onDateChange={changeDate}
                 />
 
-                <div className="grid lg:grid-cols-12 gap-16">
+                <div className="grid lg:grid-cols-12 gap-8 sm:gap-16">
                     <TagDistribution
                         tags={tags}
                         getTagTotal={getTagTotal}
+                        groupedTotals={groupedTotals}
                         totalToday={totalToday}
                         sessionsCount={sessions.length}
                     />

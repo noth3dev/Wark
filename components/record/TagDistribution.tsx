@@ -1,78 +1,146 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
 import { Tag } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
+
+import * as Icons from "lucide-react";
 
 interface TagDistributionProps {
     tags: Tag[];
     getTagTotal: (tagId: string) => number;
+    groupedTotals: Record<string, number>;
     totalToday: number;
     sessionsCount: number;
 }
 
-export function TagDistribution({ tags, getTagTotal, totalToday, sessionsCount }: TagDistributionProps) {
+export function TagDistribution({ tags, getTagTotal, groupedTotals, totalToday, sessionsCount }: TagDistributionProps) {
+    const [viewType, setViewType] = useState<'individual' | 'grouped'>('individual');
+
+    const groupedData = useMemo(() => {
+        const uniqueGroups: Record<string, { icon?: string, color?: string, total: number }> = {};
+        tags.forEach(tag => {
+            const key = `${tag.icon || ''}|${tag.color || ''}`;
+            if (!uniqueGroups[key]) {
+                uniqueGroups[key] = { icon: tag.icon, color: tag.color, total: groupedTotals[key] || 0 };
+            }
+        });
+        return Object.values(uniqueGroups).filter(g => g.total > 0).sort((a, b) => b.total - a.total);
+    }, [tags, groupedTotals]);
+
     return (
         <div className="lg:col-span-4 space-y-6">
-            <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Cognitive Load</h2>
-                <div className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] font-bold text-neutral-500 uppercase tracking-widest">
-                    {tags.length} Active Tags
+            <div className="flex items-center justify-between border-b border-border pb-4">
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setViewType('individual')}
+                        className={`text-[10px] font-semibold uppercase transition-colors ${viewType === 'individual' ? 'text-white' : 'text-neutral-500 hover:text-neutral-400'}`}
+                    >
+                        Tags
+                    </button>
+                    <button
+                        onClick={() => setViewType('grouped')}
+                        className={`text-[10px] font-semibold uppercase transition-colors ${viewType === 'grouped' ? 'text-white' : 'text-neutral-500 hover:text-neutral-400'}`}
+                    >
+                        Groups
+                    </button>
+                </div>
+                <div className="px-2 py-0.5 rounded bg-secondary/50 border border-border text-[9px] font-medium text-neutral-500 uppercase">
+                    {viewType === 'individual' ? `${tags.length} Active` : `${groupedData.length} Types`}
                 </div>
             </div>
 
-            <div className="grid gap-4">
-                {tags.map((tag, idx) => {
-                    const total = getTagTotal(tag.id);
-                    if (total === 0) return null;
-                    const percentage = totalToday > 0 ? ((total / totalToday) * 100).toFixed(1) : "0";
+            <div className="grid gap-3">
+                {viewType === 'individual' ? (
+                    tags.map((tag, idx) => {
+                        const total = getTagTotal(tag.id);
+                        if (total === 0) return null;
+                        const percentage = totalToday > 0 ? ((total / totalToday) * 100).toFixed(1) : "0";
 
-                    return (
-                        <motion.div
-                            key={tag.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.05 }}
-                            className="group p-5 rounded-[2rem] bg-neutral-900/40 border border-white/5 hover:border-white/10 transition-all cursor-default"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]" style={{ backgroundColor: tag.color || '#22d3ee' }} />
-                                    <span className="text-xs font-bold tracking-tight text-white/80 group-hover:text-white transition-colors">{tag.name}</span>
+                        return (
+                            <motion.div
+                                key={tag.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="group p-4 rounded-3xl bg-card border border-border hover:border-neutral-700 transition-all cursor-default"
+                            >
+                                <div className="flex items-center justify-between mb-2.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color || '#22d3ee' }} />
+                                        <span className="text-[11px] font-medium text-neutral-400 group-hover:text-white transition-colors">{tag.name}</span>
+                                    </div>
+                                    <span className="text-[9px] font-mono text-neutral-600 tabular-nums">{percentage}%</span>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-[10px] font-black font-mono text-neutral-500 uppercase tracking-tighter">{percentage}%</span>
-                                </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${percentage}%` }}
-                                        className="h-full relative"
-                                        style={{ backgroundColor: tag.color || '#22d3ee' }}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                                    </motion.div>
+                                <div className="space-y-1">
+                                    <div className="h-0.5 w-full bg-secondary/30 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percentage}%` }}
+                                            className="h-full"
+                                            style={{ backgroundColor: tag.color || '#22d3ee' }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[8px] text-neutral-700 uppercase font-black tracking-widest">Recorded</span>
+                                        <p className="text-[10px] font-mono text-neutral-500">{formatDuration(total)}</p>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[9px] text-neutral-700 font-bold uppercase tracking-widest">Allocated</span>
-                                    <p className="text-[11px] font-mono text-neutral-400 font-bold">{formatDuration(total)}</p>
+                            </motion.div>
+                        );
+                    })
+                ) : (
+                    groupedData.map((group, idx) => {
+                        const key = `${group.icon}|${group.color}`;
+                        const percentage = totalToday > 0 ? ((group.total / totalToday) * 100).toFixed(1) : "0";
+                        const IconComponent = group.icon && (Icons as any)[group.icon] ? (Icons as any)[group.icon] : null;
+
+                        return (
+                            <motion.div
+                                key={key}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="group p-4 rounded-3xl bg-neutral-900/50 border border-white/5 hover:border-white/10 transition-all cursor-default"
+                            >
+                                <div className="flex items-center justify-between mb-2.5">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="p-2 rounded-xl border flex items-center justify-center bg-black/40"
+                                            style={{ borderColor: `${group.color || '#22d3ee'}22`, color: group.color || '#22d3ee' }}
+                                        >
+                                            {IconComponent ? <IconComponent className="w-3 h-3" /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 group-hover:text-neutral-300">Type Summary</span>
+                                    </div>
+                                    <span className="text-[9px] font-mono text-neutral-600 tabular-nums">{percentage}%</span>
                                 </div>
-                            </div>
-                        </motion.div>
-                    );
-                })}
+
+                                <div className="space-y-1">
+                                    <div className="h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percentage}%` }}
+                                            className="h-full"
+                                            style={{ backgroundColor: group.color || '#22d3ee' }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[8px] text-neutral-700 uppercase font-black tracking-widest">Cumulative</span>
+                                        <p className="text-[10px] font-mono text-neutral-400">{formatDuration(group.total)}</p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })
+                )}
 
                 {sessionsCount === 0 && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="py-16 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]"
-                    >
-                        <p className="text-[10px] text-neutral-700 font-bold uppercase tracking-[0.2em]">Void Detected - No Data</p>
-                    </motion.div>
+                    <div className="py-12 text-center border border-dashed border-white/5 rounded-3xl bg-neutral-900/20">
+                        <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest">No spectral data detected</p>
+                    </div>
                 )}
             </div>
         </div>

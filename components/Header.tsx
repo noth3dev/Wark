@@ -75,16 +75,16 @@ export function Header() {
 
                     {/* Solved Problems Button */}
                     <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
                         onClick={() => setIsSolvedProblemsOpen(!isSolvedProblemsOpen)}
-                        className={`flex items-center gap-3 px-3 py-1.5 rounded-full border transition-all duration-300 ${isSolvedProblemsOpen
-                            ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.1)]'
-                            : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
+                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isSolvedProblemsOpen
+                            ? 'bg-secondary border-primary/20 text-primary'
+                            : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
                             }`}
                     >
-                        <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-cyan-400' : 'text-neutral-500'}`} />
-                        <span className="text-[10px] font-black font-mono tracking-tight tabular-nums">{totalCount}</span>
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-primary' : 'text-neutral-500'}`} />
+                        <span className="text-[11px] font-medium font-mono tabular-nums">{totalCount}</span>
                     </motion.button>
 
                     <BatteryIndicator />

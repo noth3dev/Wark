@@ -19,7 +19,7 @@ export function TimerDisplay({ time }: TimerDisplayProps) {
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-[18vw] sm:text-[10rem] md:text-[14rem] landscape:text-[15vh] font-extralight tabular-nums tracking-tighter leading-none text-white transition-all duration-700 select-none text-center"
+                className="text-[18vw] sm:text-[10rem] md:text-[14rem] landscape:text-[15vh] font-extralight tabular-nums leading-none text-white transition-all duration-700 select-none text-center"
             >
                 {formatTime(time)}
             </motion.div>

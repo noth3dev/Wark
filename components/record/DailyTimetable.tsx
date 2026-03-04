@@ -25,16 +25,16 @@ interface DailyTimetableProps {
 export function DailyTimetable({ hourData, tags, onFillGap }: DailyTimetableProps) {
     return (
         <div className="lg:col-span-8 space-y-6">
-            <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Chronicle Map</h2>
+            <div className="flex items-center justify-between border-b border-border pb-4">
+                <h2 className="text-[10px] font-semibold uppercase text-neutral-500">Timeline</h2>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                        <span className="text-[9px] font-bold text-neutral-700 uppercase tracking-widest">Idle</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-neutral-800" />
+                        <span className="text-[9px] font-medium text-neutral-600 uppercase">Idle</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/20" />
-                        <span className="text-[9px] font-bold text-neutral-700 uppercase tracking-widest">Active</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+                        <span className="text-[9px] font-medium text-neutral-600 uppercase">Active</span>
                     </div>
                 </div>
             </div>
@@ -42,30 +42,28 @@ export function DailyTimetable({ hourData, tags, onFillGap }: DailyTimetableProp
             <div className="grid gap-1">
                 {hourData.map(({ hour, total: totalInHour, segments: hourSegments }) => {
                     return (
-                        <div key={hour} className="group flex items-center gap-4 py-1">
-                            <div className="w-10 text-[10px] font-mono font-black text-neutral-800 tabular-nums text-right group-hover:text-neutral-500 transition-colors">
+                        <div key={hour} className="group flex items-center gap-2 sm:gap-3 py-0.5">
+                            <div className="w-6 sm:w-8 text-[9px] sm:text-[10px] font-mono text-neutral-600 tabular-nums text-right">
                                 {hour.toString().padStart(2, '0')}
                             </div>
-                            <div className="relative flex-1 h-10 bg-neutral-950 border border-white/[0.03] rounded-2xl overflow-hidden group-hover:border-white/10 transition-all flex shadow-inner">
-                                {/* Segmented Fill */}
+                            <div className="relative flex-1 h-8 bg-black/20 border border-border rounded-lg overflow-hidden flex group-hover:border-neutral-700 transition-colors">
                                 {hourSegments.map((seg, i) => {
                                     if (seg.type === 'session') {
                                         const tag = tags.find(t => t.id === seg.tagId);
                                         return (
                                             <div
                                                 key={i}
-                                                className="h-full relative overflow-hidden transition-all group/seg"
+                                                className="h-full relative transition-all"
                                                 style={{
                                                     width: `${(seg.duration / 3600000) * 100}%`,
-                                                    backgroundColor: `${tag?.color || '#22d3ee'}1a`, // Lower opacity
+                                                    backgroundColor: `${tag?.color || '#333'}33`,
                                                 }}
                                                 title={`${tag?.name}: ${formatDuration(seg.duration)}`}
                                             >
                                                 <div
-                                                    className="absolute inset-y-0 left-0 w-1 opacity-60"
-                                                    style={{ backgroundColor: tag?.color || '#22d3ee' }}
+                                                    className="absolute inset-y-0 left-0 w-0.5"
+                                                    style={{ backgroundColor: tag?.color || '#333' }}
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover/seg:opacity-100 transition-opacity" />
                                             </div>
                                         );
                                     } else {
@@ -73,25 +71,21 @@ export function DailyTimetable({ hourData, tags, onFillGap }: DailyTimetableProp
                                             <button
                                                 key={i}
                                                 onClick={() => onFillGap(seg.start, seg.duration)}
-                                                className="h-full hover:bg-white/5 transition-all relative group/gap"
+                                                className="h-full hover:bg-white/5 transition-all relative"
                                                 style={{
                                                     width: `${(seg.duration / 3600000) * 100}%`,
                                                 }}
                                             >
-                                                <div className="absolute inset-0 border-r border-white/[0.02] last:border-r-0" />
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/gap:opacity-100 transition-opacity">
-                                                    <div className="w-1 h-1 rounded-full bg-white/20" />
-                                                </div>
+                                                <div className="absolute inset-0 border-r border-border/20 last:border-r-0" />
                                             </button>
                                         );
                                     }
                                 })}
 
-                                {/* Details on Hover */}
-                                <div className="absolute inset-0 flex items-center px-4 pointer-events-none">
+                                <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
                                     {totalInHour > 0 && (
-                                        <span className="ml-auto text-[9px] font-black opacity-0 group-hover:opacity-100 transition-all text-neutral-600 font-mono tracking-tighter">
-                                            {Math.floor(totalInHour / 60000)}m / 60m
+                                        <span className="ml-auto text-[9px] font-mono text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {Math.floor(totalInHour / 60000)}m
                                         </span>
                                     )}
                                 </div>

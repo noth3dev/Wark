@@ -6,34 +6,48 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* 더 세련된 딥 다크 테마 */
-  --background: oklch(0.1 0 0);
-  /* #030303 에 가까운 깊은 블랙 */
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.95 0 0);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.95 0 0);
+  /* Notion/Vercel Minimal Matte Theme */
+  --background: oklch(0.12 0 0);
+  /* #1a1a1a - Matte Deep Gray */
+  --foreground: oklch(0.98 0 0);
+  /* Almost White */
+
+  --card: oklch(0.15 0 0);
+  /* #222222 */
+  --card-foreground: oklch(0.98 0 0);
+
+  --popover: oklch(0.15 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+
+  --primary: oklch(0.98 0 0);
+  --primary-foreground: oklch(0.12 0 0);
+
+  --secondary: oklch(0.2 0 0);
+  /* #2d2d2d */
+  --secondary-foreground: oklch(0.8 0 0);
+
   --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.18 0 0);
-  --accent-foreground: oklch(0.95 0 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.2 0 0);
-  /* #1a1a1a 에 가까운 경계선 */
-  --input: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.6 0 0);
+
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(0.98 0 0);
+
+  --destructive: oklch(0.5 0.15 30);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.22 0 0);
+  /* #333333 - Clean matte border */
+  --input: oklch(0.22 0 0);
   --ring: oklch(0.4 0 0);
-  --radius: 0.75rem;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  --radius: 0.5rem;
+  /* More minimal radius */
+
+  --chart-1: oklch(0.7 0.12 200);
+  --chart-2: oklch(0.6 0.12 200);
+  --chart-3: oklch(0.5 0.12 200);
+  --chart-4: oklch(0.4 0.12 200);
+  --chart-5: oklch(0.3 0.12 200);
 }
 
 @theme inline {
@@ -76,17 +90,16 @@
   }
 
   body {
-    @apply bg-background text-foreground font-normal tracking-tight;
+    @apply bg-background text-foreground font-normal;
     font-family: var(--font-pretendard);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -ms-overflow-style: none;
-    /* IE and Edge */
     scrollbar-width: none;
-    /* Firefox */
   }
 
   body::-webkit-scrollbar {
     display: none;
-    /* Chrome, Safari and Opera */
   }
 
   h1,
@@ -96,21 +109,27 @@
   h5,
   h6 {
     font-family: var(--font-suit);
-    @apply font-bold tracking-tight;
+    @apply font-semibold tracking-tight;
+    /* Relaxed from bold for more modern look */
   }
 }
 
 @layer utilities {
+  .matte-panel {
+    @apply bg-card border border-border;
+  }
+
+  .matte-hover {
+    @apply hover:bg-accent transition-colors duration-200;
+  }
+
+  /* Remove flashy glass/glow utilities as requested */
   .glass {
-    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10;
+    @apply bg-card/80 backdrop-blur-md border border-border;
   }
 
   .glass-hover {
-    @apply hover:bg-white/[0.08] transition-all;
-  }
-
-  .text-glow {
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    @apply hover:bg-accent/50 transition-all;
   }
 
   *::-webkit-scrollbar {

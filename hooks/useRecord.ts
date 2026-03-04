@@ -61,6 +61,16 @@ export function useRecord() {
         return (isToday && activeSession?.tag_id === tagId) ? recordedTotal + activeSessionElapsed : recordedTotal;
     };
 
+    const groupedTotals = useMemo(() => {
+        const groups: Record<string, number> = {};
+        tags.forEach(tag => {
+            const key = `${tag.icon || ''}|${tag.color || ''}`;
+            const total = getTagTotal(tag.id);
+            groups[key] = (groups[key] || 0) + total;
+        });
+        return groups;
+    }, [tags, sessions, isToday, activeSession, activeSessionElapsed]);
+
     const activeStartTime = useMemo(() => activeSession ? new Date(activeSession.start_time).getTime() : null, [activeSession]);
     const { hourData, totalToday } = useMemo(() =>
         calculateDistribution(isToday, activeSession?.tag_id || null, activeStartTime),
@@ -76,6 +86,7 @@ export function useRecord() {
         mounted,
         changeDate,
         getTagTotal,
+        groupedTotals,
         totalToday,
         hourData,
         fetchData

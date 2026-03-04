@@ -22,13 +22,15 @@ interface MusicContextType {
     currentPlaylist: Playlist | null;
     currentSong: Song | null;
     isPlaying: boolean;
-    isLooping: boolean;
+    repeatMode: 'none' | 'all' | 'one';
+    volume: number;
     duration: number;
     currentTime: number;
     playPlaylist: (playlist: Playlist, startIndex?: number) => void;
     playSongByIndex: (index: number) => void;
     togglePlay: () => void;
-    toggleLoop: () => void;
+    setRepeatMode: (mode: 'none' | 'all' | 'one') => void;
+    setVolume: (volume: number) => void;
     nextTrack: () => void;
     prevTrack: () => void;
     seekTo: (seconds: number) => void;
@@ -47,7 +49,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
     const [currentSongIndex, setCurrentSongIndex] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isLooping, setIsLooping] = useState(false);
+    const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none');
+    const [volume, setVolume] = useState(100);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const playerRef = useRef<any>(null);
@@ -69,12 +72,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         const savedState = localStorage.getItem('music_playback_state');
         if (savedState) {
             try {
-                const { playlist, index, time, isLooping: savedLoop, isPlaying: savedPlaying } = JSON.parse(savedState);
+                const { playlist, index, time, repeatMode: savedRepeat, volume: savedVolume, isPlaying: savedPlaying } = JSON.parse(savedState);
                 if (playlist && playlist.songs && playlist.songs[index]) {
                     setCurrentPlaylist(playlist);
                     setCurrentSongIndex(index);
                     setCurrentTime(time || 0);
-                    setIsLooping(savedLoop);
+                    setRepeatMode(savedRepeat || 'none');
+                    setVolume(savedVolume ?? 100);
                     setIsPlaying(savedPlaying);
                 }
             } catch (e) {
@@ -99,6 +103,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                 if (isPlaying) {
                     playerRef.current.playVideo();
                 }
+                playerRef.current.setVolume(volume);
             } else {
                 setCurrentTime(0);
                 setDuration(0);
@@ -117,11 +122,12 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                     },
                     events: {
                         onReady: (event: any) => {
+                            event.target.setVolume(volume);
                             if (isPlaying) event.target.playVideo();
                         },
                         onStateChange: (event: any) => {
                             if (event.data === 0) {
-                                if (isLooping) {
+                                if (repeatMode === 'one') {
                                     event.target.seekTo(0);
                                     event.target.playVideo();
                                 } else {
@@ -141,6 +147,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         }
     }, [currentSong]);
 
+    // Volume update effect
+    useEffect(() => {
+        if (playerRef.current && typeof playerRef.current.setVolume === 'function') {
+            playerRef.current.setVolume(volume);
+        }
+    }, [volume]);
+
     // Save state periodically
     useEffect(() => {
         if (currentPlaylist && currentSongIndex >= 0) {
@@ -148,12 +161,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                 playlist: currentPlaylist,
                 index: currentSongIndex,
                 time: currentTime,
-                isLooping,
+                repeatMode,
+                volume,
                 isPlaying
             };
             localStorage.setItem('music_playback_state', JSON.stringify(state));
         }
-    }, [currentPlaylist, currentSongIndex, currentTime, isLooping, isPlaying]);
+    }, [currentPlaylist, currentSongIndex, currentTime, repeatMode, volume, isPlaying]);
 
     // Progress timer
     useEffect(() => {
@@ -186,12 +200,23 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         setIsPlaying(!isPlaying);
     };
 
-    const toggleLoop = () => setIsLooping(!isLooping);
-
     const nextTrack = () => {
         if (!currentPlaylist?.songs || currentPlaylist.songs.length === 0) return;
         setCurrentTime(0);  // Reset time for new track
-        setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
+        if (repeatMode === 'all') {
+            setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
+        } else if (repeatMode === 'none') {
+            if (currentSongIndex < currentPlaylist.songs.length - 1) {
+                setCurrentSongIndex(prev => prev + 1);
+            } else {
+                setIsPlaying(false);
+            }
+        } else if (repeatMode === 'one') {
+            // Keep current index, but seek to 0 (already handled in onStateChange, 
+            // but manual next should probably go next unless it's strictly "repeat one forever")
+            // Let's make it follow the "all" behavior for manual triggers
+            setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
+        }
     };
 
     const prevTrack = () => {
@@ -225,13 +250,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             currentPlaylist,
             currentSong,
             isPlaying,
-            isLooping,
+            repeatMode,
+            volume,
             duration,
             currentTime,
             playPlaylist,
             playSongByIndex,
             togglePlay,
-            toggleLoop,
+            setRepeatMode,
+            setVolume,
             nextTrack,
             prevTrack,
             seekTo

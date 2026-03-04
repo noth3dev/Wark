@@ -31,9 +31,9 @@ export default function PlaylistPage() {
     const { user } = useAuth();
     const {
         playPlaylist, currentSong, isPlaying,
-        playPlaylist: playPlaylistFn, // check if we need this, useMusic returns playPlaylist
         togglePlay, nextTrack, prevTrack,
-        isLooping, toggleLoop, currentTime, duration, seekTo
+        repeatMode, setRepeatMode, volume, setVolume,
+        currentTime, duration, seekTo
     } = useMusic();
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -305,128 +305,109 @@ export default function PlaylistPage() {
     return (
         <main className="min-h-screen bg-black text-white selection:bg-cyan-500/20 selection:text-cyan-400">
             <div className="max-w-6xl mx-auto px-6 py-24 space-y-24">
-                {/* Header */}
-                <header className="space-y-6">
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/5 border border-white/10"
-                    >
-                        <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400/80">Auditory Protocol DB v4</span>
-                    </motion.div>
-
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+                {/* Header - More compact */}
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-white/5">
+                    <div className="space-y-2">
                         <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="inline-flex items-center space-x-2 px-2 py-0.5 rounded-full bg-white/5 border border-white/10"
                         >
-                            <h1 className="text-6xl md:text-8xl font-extralight tracking-tighter leading-none">
-                                Sound <br />
-                                <span className="text-neutral-800">Library</span>
-                            </h1>
+                            <div className="w-1 h-1 rounded-full bg-pink-500 animate-pulse" />
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-pink-400/80">Protocol DB v4</span>
                         </motion.div>
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.2 }}
-                            onClick={() => setIsCreating(true)}
-                            className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-[2rem] hover:bg-neutral-200 transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" />
-                            New Collection
-                        </motion.button>
+                        <h1 className="text-4xl font-extralight tracking-tighter leading-none">
+                            Sound <span className="text-neutral-700">Library</span>
+                        </h1>
                     </div>
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        onClick={() => setIsCreating(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full hover:bg-neutral-200 transition-all font-black text-[9px] uppercase tracking-[0.1em] shadow-xl active:scale-95"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Collection
+                    </motion.button>
                 </header>
 
-                <div className="grid lg:grid-cols-12 gap-16">
-                    {/* Left: Playlist Selector */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-4 px-2">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Archived Nodes</h2>
+                <div className="grid lg:grid-cols-12 gap-8 mt-8">
+                    <div className="lg:col-span-3 space-y-4">
+                        <div className="flex items-center justify-between px-1">
+                            <h2 className="text-[8px] font-black uppercase tracking-[0.3em] text-neutral-600">Collections</h2>
                         </div>
-                        <div ref={playlistRef} className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div ref={playlistRef} className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                             {playlists.map((pl, idx) => (
                                 <motion.div
                                     key={pl.id}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
+                                    transition={{ delay: idx * 0.03 }}
                                     onClick={() => {
                                         setSelectedPlaylist(pl);
                                         setFocusedPlaylistIndex(idx);
                                         setActiveSection('playlists');
                                     }}
-                                    onMouseEnter={() => {
-                                        setFocusedPlaylistIndex(idx);
-                                        setActiveSection('playlists');
-                                    }}
-                                    className={`group flex items-center justify-between p-5 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlaylist?.id === pl.id
-                                        ? 'bg-white/10 border-white/20'
+                                    className={`group flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${selectedPlaylist?.id === pl.id
+                                        ? 'bg-white/10 border-white/20 shadow-lg'
                                         : (activeSection === 'playlists' && focusedPlaylistIndex === idx)
-                                            ? 'bg-white/10 border-white/20 scale-[1.02]'
-                                            : 'bg-neutral-900/40 border-transparent hover:border-white/10'
+                                            ? 'bg-white/5 border-white/10'
+                                            : 'bg-neutral-900/20 border-transparent hover:border-white/5'
                                         }`}
                                 >
-                                    <div className="flex items-center gap-5">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${selectedPlaylist?.id === pl.id || (activeSection === 'playlists' && focusedPlaylistIndex === idx)
-                                                ? 'bg-neutral-900 border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]'
-                                                : 'bg-black/40 border-white/5'
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all flex-shrink-0 ${selectedPlaylist?.id === pl.id
+                                            ? 'bg-neutral-900 border-white/20'
+                                            : 'bg-black/40 border-white/5'
                                             }`}>
-                                            <Music className={`w-5 h-5 ${selectedPlaylist?.id === pl.id || (activeSection === 'playlists' && focusedPlaylistIndex === idx) ? 'text-white' : 'text-neutral-700'}`} />
+                                            <Music className={`w-4 h-4 ${selectedPlaylist?.id === pl.id ? 'text-white' : 'text-neutral-700'}`} />
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="text-sm font-bold tracking-tight block truncate max-w-[120px]">{pl.name}</span>
-                                            <span className="text-[10px] text-neutral-600 uppercase font-black tracking-widest leading-none">{pl.songs?.length || 0} TRACKS</span>
+                                        <div className="space-y-0.5 min-w-0">
+                                            <span className="text-xs font-bold tracking-tight block truncate">{pl.name}</span>
+                                            <span className="text-[8px] text-neutral-600 uppercase font-black tracking-widest">{pl.songs?.length || 0} TRACKS</span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={(e) => deletePlaylist(pl.id, e)}
-                                        className="p-3 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded-2xl transition-all text-neutral-600 hover:text-red-400 active:scale-90"
+                                        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all text-neutral-600 hover:text-red-400"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </motion.div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Right: Songs and Editor */}
-                    <div className="lg:col-span-8">
+                    <div className="lg:col-span-9">
                         <AnimatePresence mode="wait">
                             {selectedPlaylist ? (
                                 <motion.div
                                     key={selectedPlaylist.id}
                                     ref={songContainerRef}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-8"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="space-y-6"
                                 >
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-8">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-4">
-                                                <h3 className="text-3xl font-extralight tracking-tighter">{selectedPlaylist.name}</h3>
-                                                {selectedPlaylist.songs && selectedPlaylist.songs.length > 0 && (
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={() => playPlaylist(selectedPlaylist)}
-                                                        className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95"
-                                                    >
-                                                        <Play className="w-4 h-4 fill-current" />
-                                                    </motion.button>
-                                                )}
-                                            </div>
-                                            <p className="text-[10px] text-neutral-600 uppercase tracking-[0.3em] font-black">Collection Sequence</p>
+                                    <div className="flex items-center justify-between pb-4">
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-2xl font-light tracking-tight">{selectedPlaylist.name}</h3>
+                                            {selectedPlaylist.songs && selectedPlaylist.songs.length > 0 && (
+                                                <button
+                                                    onClick={() => playPlaylist(selectedPlaylist)}
+                                                    className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                                                >
+                                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                                </button>
+                                            )}
                                         </div>
                                         <button
                                             onClick={() => setIsAddingSong(true)}
-                                            className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-[1.5rem] hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-white group active:scale-95"
+                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-[9px] font-black uppercase tracking-widest text-neutral-400"
                                         >
-                                            <ListPlus className="w-4 h-4 group-hover:text-cyan-400 transition-colors" />
-                                            Append Track
+                                            <ListPlus className="w-3.5 h-3.5" />
+                                            Add Track
                                         </button>
                                     </div>
 
@@ -434,57 +415,51 @@ export default function PlaylistPage() {
                                         axis="y"
                                         values={selectedPlaylist.songs || []}
                                         onReorder={reorderSongs}
-                                        className="space-y-3"
+                                        className="space-y-1.5"
                                     >
                                         {(selectedPlaylist.songs || []).map((song, i) => (
                                             <Reorder.Item
                                                 key={song.id}
                                                 value={song}
-                                                onMouseEnter={() => {
-                                                    setFocusedSongIndex(i);
-                                                    setActiveSection('songs');
-                                                }}
-                                                className={`group flex items-center gap-6 p-5 rounded-[2.5rem] transition-all cursor-default relative overflow-hidden ${activeSection === 'songs' && focusedSongIndex === i
-                                                        ? 'bg-white/[0.08] border border-white/10 scale-[1.01] shadow-2xl'
-                                                        : 'bg-neutral-900/40 border border-transparent hover:border-white/5'
+                                                className={`group flex items-center gap-4 p-3 rounded-xl transition-all cursor-default ${activeSection === 'songs' && focusedSongIndex === i
+                                                    ? 'bg-white/10 border border-white/10 shadow-lg'
+                                                    : 'bg-neutral-900/40 border border-transparent hover:border-white/5'
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <GripVertical className="w-4 h-4 text-neutral-800 group-hover:text-neutral-600 cursor-grab active:cursor-grabbing transition-colors" />
-                                                    <div className="w-6 text-[10px] font-black font-mono text-neutral-800">{String(i + 1).padStart(2, '0')}</div>
+                                                <div className="flex items-center gap-3">
+                                                    <GripVertical className="w-3.5 h-3.5 text-neutral-800 group-hover:text-neutral-600 cursor-grab" />
+                                                    <div className="w-4 text-[8px] font-black font-mono text-neutral-800">{String(i + 1).padStart(2, '0')}</div>
                                                 </div>
-                                                <div className="flex-1 space-y-1 min-w-0">
-                                                    <span className="text-sm font-bold tracking-tight text-white/90 group-hover:text-white truncate block">{song.title}</span>
+                                                <div className="flex-1 space-y-0.5 min-w-0">
+                                                    <span className="text-xs font-bold tracking-tight text-white/90 group-hover:text-white truncate block">{song.title}</span>
                                                     <div className="flex items-center gap-2 overflow-hidden">
-                                                        <div className="p-1 px-2 rounded-md bg-white/5 border border-white/5">
-                                                            <Youtube className="w-2.5 h-2.5 text-neutral-600" />
-                                                        </div>
-                                                        <span className="text-[10px] text-neutral-700 truncate font-mono tracking-tighter">{song.youtube_url}</span>
+                                                        <Youtube className="w-2.5 h-2.5 text-neutral-700" />
+                                                        <span className="text-[9px] text-neutral-700 truncate font-mono">{song.youtube_url}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                                     <button
                                                         onClick={() => playPlaylist(selectedPlaylist, i)}
-                                                        className={`p-3 rounded-2xl transition-all active:scale-90 ${currentSong?.id === song.id && isPlaying
-                                                            ? 'text-cyan-400 bg-cyan-400/10 border border-cyan-400/20'
-                                                            : 'text-neutral-500 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5'
+                                                        className={`p-2 rounded-lg transition-all ${currentSong?.id === song.id && isPlaying
+                                                            ? 'text-cyan-400 bg-cyan-400/10'
+                                                            : 'text-neutral-500 hover:text-white bg-white/5'
                                                             }`}
                                                     >
                                                         {currentSong?.id === song.id && isPlaying ? (
-                                                            <div className="flex gap-1 items-end h-4">
-                                                                <motion.div animate={{ height: [4, 14, 4] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-0.5 bg-current" />
-                                                                <motion.div animate={{ height: [10, 4, 14] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-0.5 bg-current" />
-                                                                <motion.div animate={{ height: [7, 14, 7] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-0.5 bg-current" />
+                                                            <div className="flex gap-0.5 items-end h-3">
+                                                                <motion.div animate={{ height: [3, 10, 3] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-0.5 bg-current" />
+                                                                <motion.div animate={{ height: [8, 3, 10] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-0.5 bg-current" />
+                                                                <motion.div animate={{ height: [5, 10, 5] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-0.5 bg-current" />
                                                             </div>
                                                         ) : (
-                                                            <Play className="w-4 h-4" />
+                                                            <Play className="w-3.5 h-3.5" />
                                                         )}
                                                     </button>
                                                     <button
                                                         onClick={() => deleteSong(song.id)}
-                                                        className="p-3 bg-white/5 hover:bg-red-500/10 rounded-2xl text-neutral-500 hover:text-red-400 transition-all border border-white/5 active:scale-90"
+                                                        className="p-2 bg-white/5 hover:bg-red-500/10 rounded-lg text-neutral-500 hover:text-red-400 transition-all"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </Reorder.Item>
@@ -531,8 +506,17 @@ export default function PlaylistPage() {
                                 </div>
 
                                 <div className="flex items-center gap-6">
-                                    <button onClick={toggleLoop} className={`p-2 transition-colors ${isLooping ? 'text-cyan-400' : 'text-neutral-600 hover:text-neutral-400'}`}>
+                                    <button
+                                        onClick={() => {
+                                            const modes: ('none' | 'all' | 'one')[] = ['none', 'all', 'one'];
+                                            const next = modes[(modes.indexOf(repeatMode) + 1) % modes.length];
+                                            setRepeatMode(next);
+                                        }}
+                                        className={`transition-colors relative ${repeatMode !== 'none' ? 'text-cyan-400' : 'text-neutral-600 hover:text-neutral-400'}`}
+                                    >
                                         <Repeat className="w-4 h-4" />
+                                        {repeatMode === 'one' && <span className="absolute -top-1 -right-1 text-[7px] font-black">1</span>}
+                                        {repeatMode === 'none' && <div className="absolute top-1/2 left-0 w-full h-[1px] bg-neutral-600 rotate-45 pointer-events-none" />}
                                     </button>
                                     <div className="flex items-center gap-4">
                                         <button onClick={prevTrack} className="text-neutral-400 hover:text-white transition-colors">
@@ -548,13 +532,16 @@ export default function PlaylistPage() {
                                             <SkipForward className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <div className="w-24 px-4 border-l border-white/5 hidden sm:block">
-                                        <div className="flex items-center gap-2 text-neutral-600">
-                                            <Volume2 className="w-3.5 h-3.5" />
-                                            <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full w-2/3 bg-neutral-700" />
-                                            </div>
-                                        </div>
+                                    <div className="w-32 px-4 border-l border-white/5 hidden sm:flex items-center gap-3">
+                                        <Volume2 className="w-3.5 h-3.5 text-neutral-600" />
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={volume}
+                                            onChange={(e) => setVolume(Number(e.target.value))}
+                                            className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-400"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -601,16 +588,16 @@ export default function PlaylistPage() {
                     </DialogHeader>
                     <div className="space-y-6 py-4">
                         <div className="space-y-2">
-                             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-700 px-1">Entry Name</label>
-                             <Input
+                            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-700 px-1">Entry Name</label>
+                            <Input
                                 autoFocus
                                 value={newPlaylistName}
                                 onChange={e => setNewPlaylistName(e.target.value)}
                                 placeholder="Designate collection name..."
                                 className="bg-white/5 border-white/5 h-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all text-base px-5"
-                             />
+                            />
                         </div>
-                        <Button 
+                        <Button
                             onClick={createPlaylist}
                             className="w-full h-14 bg-white text-black hover:bg-neutral-200 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl transition-all"
                         >
@@ -645,7 +632,7 @@ export default function PlaylistPage() {
                                 Manual Injection
                             </TabsTrigger>
                         </TabsList>
-                        
+
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                             <TabsContent value="search" className="space-y-6 mt-0">
                                 <div className="flex gap-3">
@@ -660,7 +647,7 @@ export default function PlaylistPage() {
                                             className="bg-white/5 border-white/5 h-12 pl-12 rounded-2xl focus:ring-1 focus:ring-white/20 transition-all"
                                         />
                                     </div>
-                                    <Button 
+                                    <Button
                                         onClick={handleSearch}
                                         disabled={isSearching}
                                         className="h-12 px-8 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
