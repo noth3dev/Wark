@@ -43,7 +43,14 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
 
     useEffect(() => {
         if (user) fetchPlaylists();
+        // Restore full screen state from local storage
+        const savedFS = localStorage.getItem('music_is_fullscreen');
+        if (savedFS === 'true') setIsFullScreen(true);
     }, [user]);
+
+    useEffect(() => {
+        localStorage.setItem('music_is_fullscreen', isFullScreen.toString());
+    }, [isFullScreen]);
 
     // Sub-component to handle search params to avoid build error
     function URLSync() {
@@ -201,12 +208,12 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                     </div>
                     <div className="w-full flex items-center gap-2">
                         <span className="text-[11px] text-neutral-400 min-w-[40px] text-right tabular-nums">{formatTime(currentTime)}</span>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative">
+                        <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative overflow-hidden">
                             <div
                                 className="absolute left-0 h-full bg-white group-hover:bg-white rounded-full"
-                                style={{ width: `${(currentTime / (duration || 1)) * 100}%`, backgroundColor: 'var(--theme-color, white)' }}
+                                style={{ width: `${Math.min(100, (currentTime / (duration || 1)) * 100)}%`, backgroundColor: 'var(--theme-color, white)' }}
                             />
-                            <div className="absolute w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 -top-1 shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-opacity" style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }} />
+                            <div className="absolute w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 -top-1 shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-opacity" style={{ left: `calc(${Math.min(100, (currentTime / (duration || 1)) * 100)}% - 6px)` }} />
                             <input type="range" min="0" max={duration || 100} value={currentTime} onChange={(e) => seekTo(Number(e.target.value))} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                         </div>
                         <span className="text-[11px] text-neutral-400 min-w-[40px] tabular-nums">{formatTime(duration)}</span>

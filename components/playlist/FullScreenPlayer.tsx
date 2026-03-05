@@ -161,7 +161,41 @@ export default function FullScreenPlayer({
             >
                 {/* Dynamic Background — extracted from cover art */}
                 <canvas ref={canvasRef} className="hidden" />
-                <div className="absolute inset-0 z-0 transition-all duration-[2000ms]" style={{ background: bgColor }} />
+                <div className="absolute inset-0 z-0 transition-colors duration-[2000ms]" style={{ backgroundColor: bgColor }} />
+
+                {/* Animated Gradient Gradients */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40">
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.2, 1],
+                            x: [0, 50, -50, 0],
+                            y: [0, -30, 30, 0],
+                            rotate: [0, 10, -10, 0]
+                        }}
+                        transition={{
+                            duration: 20,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                        className="absolute -inset-1/2 bg-gradient-to-br from-white/10 to-transparent blur-[120px] rounded-full"
+                    />
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.3, 1],
+                            x: [0, -60, 60, 0],
+                            y: [0, 40, -40, 0]
+                        }}
+                        transition={{
+                            duration: 25,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 2
+                        }}
+                        className="absolute -inset-1/2 bg-gradient-to-tr from-black/20 to-transparent blur-[120px] rounded-full"
+                    />
+                </div>
+
+                <div className="absolute inset-0 z-0 bg-black/20 backdrop-blur-3xl" />
                 <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
                 {/* Header */}
@@ -427,14 +461,14 @@ export default function FullScreenPlayer({
                         {/* Progress Bar */}
                         <div className="flex items-center gap-3">
                             <span className="text-[11px] font-medium text-white/50 min-w-[36px] text-right tabular-nums">{formatTime(currentTime)}</span>
-                            <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative">
+                            <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative overflow-hidden">
                                 <div
                                     className="absolute left-0 h-full bg-white group-hover:bg-white rounded-full transition-colors"
-                                    style={{ width: `${(currentTime / (duration || 1)) * 100}%`, backgroundColor: 'var(--theme-color, white)' }}
+                                    style={{ width: `${Math.min(100, (currentTime / (duration || 1)) * 100)}%`, backgroundColor: 'var(--theme-color, white)' }}
                                 />
                                 <div
                                     className="absolute w-3 h-3 bg-white rounded-full -top-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                    style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }}
+                                    style={{ left: `calc(${Math.min(100, (currentTime / (duration || 1)) * 100)}% - 6px)` }}
                                 />
                                 <input
                                     type="range"
