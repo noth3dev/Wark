@@ -23,17 +23,23 @@ interface MusicContextType {
     currentSong: Song | null;
     isPlaying: boolean;
     repeatMode: 'none' | 'all' | 'one';
+    shuffleMode: boolean;
+    recentlyPlayed: Song[];
+    likedSongs: string[]; // YouTube Video IDs
     volume: number;
     duration: number;
     currentTime: number;
     playPlaylist: (playlist: Playlist, startIndex?: number) => void;
     playSongByIndex: (index: number) => void;
     togglePlay: () => void;
+    toggleShuffle: () => void;
+    toggleLike: (song: Song) => Promise<void>;
     setRepeatMode: (mode: 'none' | 'all' | 'one') => void;
     setVolume: (volume: number) => void;
     nextTrack: () => void;
     prevTrack: () => void;
     seekTo: (seconds: number) => void;
+    extractYoutubeId: (url: string) => string | null;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -50,6 +56,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [currentSongIndex, setCurrentSongIndex] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
     const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none');
+    const [shuffleMode, setShuffleMode] = useState(false);
+    const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
+    const [likedSongs, setLikedSongs] = useState<string[]>([]);
     const [volume, setVolume] = useState(100);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -70,14 +79,21 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Load initial state from localStorage
         const savedState = localStorage.getItem('music_playback_state');
+        const savedRecentlyPlayed = localStorage.getItem('music_recently_played');
+
+        if (savedRecentlyPlayed) {
+            try { setRecentlyPlayed(JSON.parse(savedRecentlyPlayed)); } catch (e) { console.error(e); }
+        }
+
         if (savedState) {
             try {
-                const { playlist, index, time, repeatMode: savedRepeat, volume: savedVolume, isPlaying: savedPlaying } = JSON.parse(savedState);
+                const { playlist, index, time, repeatMode: savedRepeat, volume: savedVolume, isPlaying: savedPlaying, shuffleMode: savedShuffle } = JSON.parse(savedState);
                 if (playlist && playlist.songs && playlist.songs[index]) {
                     setCurrentPlaylist(playlist);
                     setCurrentSongIndex(index);
                     setCurrentTime(time || 0);
                     setRepeatMode(savedRepeat || 'none');
+                    setShuffleMode(!!savedShuffle);
                     setVolume(savedVolume ?? 100);
                     setIsPlaying(savedPlaying);
                 }
@@ -86,90 +102,113 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('music_playback_state');
             }
         }
+        fetchLikedSongs();
     }, []);
 
-    useEffect(() => {
-        if (currentSong && window.YT && window.YT.Player) {
-            const videoId = extractYoutubeId(currentSong.youtube_url);
+    const fetchLikedSongs = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data, error } = await supabase
+                .from('liked_songs')
+                .select('song_id')
+                .eq('user_id', user.id);
+            if (error) throw error;
+            setLikedSongs(data.map(item => item.song_id));
+        } catch (err) { console.error("Error fetching liked songs:", err); }
+    };
+
+    const toggleLike = async (song: Song) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const videoId = extractYoutubeId(song.youtube_url);
             if (!videoId) return;
 
-            if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
-                playerRef.current.loadVideoById({
-                    videoId: videoId,
-                    startSeconds: 0
-                });
-                setCurrentTime(0);
-                setDuration(0);
-                if (isPlaying) {
-                    playerRef.current.playVideo();
-                }
-                playerRef.current.setVolume(volume);
+            if (likedSongs.includes(videoId)) {
+                const { error } = await supabase
+                    .from('liked_songs')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .eq('song_id', videoId);
+                if (error) throw error;
+                setLikedSongs(prev => prev.filter(id => id !== videoId));
             } else {
-                setCurrentTime(0);
-                setDuration(0);
-                playerRef.current = new window.YT.Player('youtube-player', {
-                    height: '0',
-                    width: '0',
-                    videoId: videoId,
-                    playerVars: {
-                        autoplay: isPlaying ? 1 : 0,
-                        controls: 0,
-                        disablekb: 1,
-                        fs: 0,
-                        rel: 0,
-                        start: 0,
-                        origin: typeof window !== 'undefined' ? window.location.origin : '',
-                    },
-                    events: {
-                        onReady: (event: any) => {
-                            event.target.setVolume(volume);
-                            if (isPlaying) event.target.playVideo();
-                        },
-                        onStateChange: (event: any) => {
-                            if (event.data === 0) {
-                                if (repeatMode === 'one') {
-                                    event.target.seekTo(0);
-                                    event.target.playVideo();
-                                } else {
-                                    nextTrack();
+                const { error } = await supabase
+                    .from('liked_songs')
+                    .insert({
+                        user_id: user.id,
+                        song_id: videoId,
+                        title: song.title,
+                        youtube_url: song.youtube_url,
+                        thumbnail_url: `https://img.youtube.com/vi/${videoId}/default.jpg`
+                    });
+                if (error) throw error;
+                setLikedSongs(prev => [...prev, videoId]);
+            }
+        } catch (err) { console.error("Error toggling like:", err); }
+    };
+
+    const toggleShuffle = () => setShuffleMode(!shuffleMode);
+
+    useEffect(() => {
+        if (currentSong) {
+            // Update recently played
+            setRecentlyPlayed(prev => {
+                const filtered = prev.filter(s => s.id !== currentSong.id);
+                const updated = [currentSong, ...filtered].slice(0, 50);
+                localStorage.setItem('music_recently_played', JSON.stringify(updated));
+                return updated;
+            });
+
+            if (window.YT && window.YT.Player) {
+                const videoId = extractYoutubeId(currentSong.youtube_url);
+                if (!videoId) return;
+
+                if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+                    playerRef.current.loadVideoById({ videoId, startSeconds: 0 });
+                    setCurrentTime(0);
+                    setDuration(0);
+                    if (isPlaying) playerRef.current.playVideo();
+                    playerRef.current.setVolume(volume);
+                } else {
+                    setCurrentTime(0);
+                    setDuration(0);
+                    playerRef.current = new window.YT.Player('youtube-player', {
+                        height: '0', width: '0', videoId: videoId,
+                        playerVars: { autoplay: isPlaying ? 1 : 0, controls: 0, disablekb: 1, fs: 0, rel: 0, start: 0, origin: typeof window !== 'undefined' ? window.location.origin : '' },
+                        events: {
+                            onReady: (event: any) => { event.target.setVolume(volume); if (isPlaying) event.target.playVideo(); },
+                            onStateChange: (event: any) => {
+                                if (event.data === 0) {
+                                    if (repeatMode === 'one') { event.target.seekTo(0); event.target.playVideo(); }
+                                    else { nextTrack(); }
                                 }
-                            }
-                            if (event.data === 1) setIsPlaying(true);
-                            if (event.data === 2) setIsPlaying(false);
-                        },
-                        onError: (e: any) => {
-                            console.error("YT Player Error:", e);
-                            nextTrack();
+                                if (event.data === 1) setIsPlaying(true);
+                                if (event.data === 2) setIsPlaying(false);
+                            },
+                            onError: (e: any) => { console.error("YT Player Error:", e); nextTrack(); }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
     }, [currentSong]);
 
-    // Volume update effect
     useEffect(() => {
         if (playerRef.current && typeof playerRef.current.setVolume === 'function') {
             playerRef.current.setVolume(volume);
         }
     }, [volume]);
 
-    // Save state periodically
     useEffect(() => {
         if (currentPlaylist && currentSongIndex >= 0) {
-            const state = {
-                playlist: currentPlaylist,
-                index: currentSongIndex,
-                time: currentTime,
-                repeatMode,
-                volume,
-                isPlaying
-            };
+            const state = { playlist: currentPlaylist, index: currentSongIndex, time: currentTime, repeatMode, volume, isPlaying, shuffleMode };
             localStorage.setItem('music_playback_state', JSON.stringify(state));
         }
-    }, [currentPlaylist, currentSongIndex, currentTime, repeatMode, volume, isPlaying]);
+    }, [currentPlaylist, currentSongIndex, currentTime, repeatMode, volume, isPlaying, shuffleMode]);
 
-    // Progress timer
     useEffect(() => {
         if (isPlaying && playerRef.current) {
             timerRef.current = setInterval(() => {
@@ -192,36 +231,29 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
     const togglePlay = () => {
         if (!playerRef.current) return;
-        if (isPlaying) {
-            playerRef.current.pauseVideo();
-        } else {
-            playerRef.current.playVideo();
-        }
+        if (isPlaying) { playerRef.current.pauseVideo(); }
+        else { playerRef.current.playVideo(); }
         setIsPlaying(!isPlaying);
     };
 
     const nextTrack = () => {
         if (!currentPlaylist?.songs || currentPlaylist.songs.length === 0) return;
-        setCurrentTime(0);  // Reset time for new track
-        if (repeatMode === 'all') {
-            setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
-        } else if (repeatMode === 'none') {
-            if (currentSongIndex < currentPlaylist.songs.length - 1) {
-                setCurrentSongIndex(prev => prev + 1);
-            } else {
-                setIsPlaying(false);
-            }
-        } else if (repeatMode === 'one') {
-            // Keep current index, but seek to 0 (already handled in onStateChange, 
-            // but manual next should probably go next unless it's strictly "repeat one forever")
-            // Let's make it follow the "all" behavior for manual triggers
-            setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
+        setCurrentTime(0);
+        if (shuffleMode) {
+            const nextIndex = Math.floor(Math.random() * currentPlaylist.songs.length);
+            setCurrentSongIndex(nextIndex);
+        } else {
+            if (repeatMode === 'all') { setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length); }
+            else if (repeatMode === 'none') {
+                if (currentSongIndex < currentPlaylist.songs.length - 1) { setCurrentSongIndex(prev => prev + 1); }
+                else { setIsPlaying(false); }
+            } else if (repeatMode === 'one') { setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length); }
         }
     };
 
     const prevTrack = () => {
         if (!currentPlaylist?.songs || currentPlaylist.songs.length === 0) return;
-        setCurrentTime(0);  // Reset time for new track
+        setCurrentTime(0);
         setCurrentSongIndex(prev => (prev - 1 + currentPlaylist.songs!.length) % currentPlaylist.songs!.length);
     };
 
@@ -240,31 +272,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
     const playSongByIndex = (index: number) => {
         if (!currentPlaylist?.songs) return;
-        setCurrentTime(0);  // Reset time for new track
+        setCurrentTime(0);
         setCurrentSongIndex(index);
         setIsPlaying(true);
     };
 
     return (
         <MusicContext.Provider value={{
-            currentPlaylist,
-            currentSong,
-            isPlaying,
-            repeatMode,
-            volume,
-            duration,
-            currentTime,
-            playPlaylist,
-            playSongByIndex,
-            togglePlay,
-            setRepeatMode,
-            setVolume,
-            nextTrack,
-            prevTrack,
-            seekTo
+            currentPlaylist, currentSong, isPlaying, repeatMode, shuffleMode, recentlyPlayed, likedSongs,
+            volume, duration, currentTime, playPlaylist, playSongByIndex, togglePlay, toggleShuffle, toggleLike,
+            setRepeatMode, setVolume, nextTrack, prevTrack, seekTo, extractYoutubeId
         }}>
             {children}
-            {/* Stable container for YouTube player to avoid React reconciliation errors */}
             <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', pointerEvents: 'none' }}>
                 <div id="youtube-player"></div>
             </div>

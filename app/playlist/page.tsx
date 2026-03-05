@@ -5,8 +5,7 @@ import { useAuth } from "../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../lib/music-context";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Play, Plus, Search, Music, Clock3, MoreHorizontal, Pause, Volume2,
-    Repeat, SkipBack, SkipForward, ListMusic, MonitorSpeaker, Maximize2, Heart
+    Repeat, SkipBack, SkipForward, ListMusic, MonitorSpeaker, Maximize2, Heart, Shuffle
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import PlaylistSidebar from "../../components/playlist/PlaylistSidebar";
@@ -22,7 +21,9 @@ export default function PlaylistPage() {
         playPlaylist, currentSong, isPlaying,
         togglePlay, nextTrack, prevTrack,
         repeatMode, setRepeatMode, volume, setVolume,
-        currentTime, duration, seekTo, currentPlaylist
+        currentTime, duration, seekTo, currentPlaylist,
+        shuffleMode, toggleShuffle, likedSongs, toggleLike,
+        recentlyPlayed, extractYoutubeId
     } = useMusic();
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -82,15 +83,16 @@ export default function PlaylistPage() {
     };
 
     const playInstant = (video: any) => {
+        const videoId = video.id.videoId;
         const dummyPlaylist: Playlist = {
             id: 'search-results',
             name: 'Search Results',
             user_id: user?.id || '',
             songs: [{
-                id: video.id.videoId,
+                id: videoId,
                 playlist_id: 'search-results',
                 title: video.snippet.title,
-                youtube_url: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+                youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
                 order_index: 0
             }]
         };
@@ -118,27 +120,22 @@ export default function PlaylistPage() {
 
     if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
 
-    const currentThumbnail = currentSong ? `https://img.youtube.com/vi/${extractYoutubeId(currentSong.youtube_url)}/maxresdefault.jpg` : "";
+    const currentThumbnail = currentSong ? `https://img.youtube.com/vi/${extractYoutubeId(currentSong.youtube_url)}/0.jpg` : "";
 
     return (
-        <div className="h-screen bg-black flex flex-col overflow-hidden select-none">
-            {/* Main Area (Sidebar + Content) */}
-            <div className="flex-1 flex overflow-hidden p-2 gap-2 min-h-0">
-                {/* Left Sidebar */}
-                <div className="w-[280px] flex-shrink-0 h-full">
-                    <PlaylistSidebar
-                        playlists={playlists}
-                        selectedPlaylistId={selectedPlaylist?.id}
-                        onSelectPlaylist={setSelectedPlaylist}
-                        onCreatePlaylist={() => setIsCreating(true)}
-                    />
-                </div>
+        <div className="flex flex-col h-screen bg-black overflow-hidden select-none">
+            <div className="flex flex-1 overflow-hidden">
+                <PlaylistSidebar
+                    playlists={playlists}
+                    selectedPlaylistId={selectedPlaylist?.id || ""}
+                    onSelectPlaylist={(p: Playlist) => setSelectedPlaylist(p)}
+                    onCreatePlaylist={() => setIsCreating(true)}
+                />
 
-                {/* Main Content Area */}
                 <main
                     ref={mainScrollRef}
                     onScroll={handleScroll}
-                    className="flex-1 bg-[#121212] rounded-lg overflow-y-auto relative custom-scrollbar scroll-smooth h-full"
+                    className="flex-1 overflow-y-auto overflow-x-hidden bg-[#121212] relative custom-scrollbar scroll-smooth"
                 >
                     {/* Header Overlay */}
                     <div
@@ -168,13 +165,16 @@ export default function PlaylistPage() {
                     {/* Dynamic Hero Area */}
                     <div className="relative pt-24 pb-12 px-8 overflow-hidden group/hero">
                         <div
-                            className="absolute inset-0 z-0 bg-gradient-to-b from-[#4f46e566] to-[#121212] transition-colors duration-700"
-                            style={currentSong ? {
-                                backgroundImage: `linear-gradient(to bottom, rgba(79, 70, 229, 0.5), #121212)`,
-                                backgroundSize: '100% 100%'
-                            } : {}}
+                            className="absolute inset-0 z-0 bg-gradient-to-b transition-colors duration-1000"
+                            style={{
+                                backgroundImage: currentSong
+                                    ? `linear-gradient(to bottom, rgba(79, 70, 229, 0.4), #121212)`
+                                    : `linear-gradient(to bottom, rgba(55, 65, 81, 0.4), #121212)`,
+                                filter: 'blur(50px)',
+                                opacity: 0.6
+                            }}
                         />
-                        <div className="absolute inset-0 z-0 bg-black/20 group-hover/hero:bg-black/10 transition-colors duration-500" />
+                        <div className="absolute inset-0 z-0 bg-black/40" />
 
                         <div className="relative z-10 flex items-end gap-6">
                             <motion.div
@@ -209,12 +209,15 @@ export default function PlaylistPage() {
                     {/* Controls Bar */}
                     <div className="sticky top-16 z-10 bg-[#121212]/80 backdrop-blur-md px-8 py-6 flex items-center gap-8">
                         <button
-                            onClick={togglePlay}
-                            className="w-14 h-14 bg-[#1DB954] text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                            onClick={() => playPlaylist(selectedPlaylist!, 0)}
+                            className="w-14 h-14 bg-[#1DB954] text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
                         >
-                            {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
+                            <Play className="w-6 h-6 fill-current ml-1" />
                         </button>
-                        <Heart className="w-8 h-8 text-[#1DB954] cursor-pointer hover:scale-110 transition-transform" />
+                        <Heart
+                            onClick={() => currentSong && toggleLike(currentSong)}
+                            className={`w-8 h-8 cursor-pointer hover:scale-110 transition-transform ${currentSong && likedSongs.includes(extractYoutubeId(currentSong.youtube_url) || '') ? "text-[#1DB954] fill-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                        />
                         <PlusCircle className="w-8 h-8 text-neutral-400 hover:text-white cursor-pointer transition-colors" />
                         <MoreHorizontal className="w-8 h-8 text-neutral-400 hover:text-white cursor-pointer transition-colors" />
                     </div>
@@ -334,7 +337,10 @@ export default function PlaylistPage() {
                                 <h4 className="text-[14px] font-bold text-white hover:underline cursor-pointer truncate">{currentSong.title}</h4>
                                 <p className="text-[11px] text-neutral-400 hover:text-white hover:underline cursor-pointer truncate">YouTube Artist</p>
                             </div>
-                            <Heart className="w-4 h-4 text-neutral-400 hover:text-white cursor-pointer ml-2" />
+                            <Heart
+                                onClick={() => toggleLike(currentSong)}
+                                className={`w-4 h-4 cursor-pointer ml-2 transition-colors ${likedSongs.includes(extractYoutubeId(currentSong.youtube_url) || '') ? "text-[#1DB954] fill-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                            />
                         </>
                     ) : (
                         <div className="flex items-center gap-4">
@@ -350,14 +356,20 @@ export default function PlaylistPage() {
                 {/* Center: Playback Controls */}
                 <div className="flex flex-col items-center gap-2 flex-1 max-w-[40%]">
                     <div className="flex items-center gap-6">
-                        <button className="text-neutral-400 hover:text-white transition-colors"><SkipBack className="w-5 h-5 fill-current" /></button>
+                        <button
+                            onClick={toggleShuffle}
+                            className={`transition-colors ${shuffleMode ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                        >
+                            <Shuffle className="w-4 h-4" />
+                        </button>
+                        <button onClick={prevTrack} className="text-neutral-400 hover:text-white transition-colors"><SkipBack className="w-5 h-5 fill-current" /></button>
                         <button
                             onClick={togglePlay}
                             className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
                         >
                             {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
                         </button>
-                        <button className="text-neutral-400 hover:text-white transition-colors"><SkipForward className="w-5 h-5 fill-current" /></button>
+                        <button onClick={nextTrack} className="text-neutral-400 hover:text-white transition-colors"><SkipForward className="w-5 h-5 fill-current" /></button>
                         <Repeat
                             onClick={() => {
                                 const modes: ('none' | 'all' | 'one')[] = ['none', 'all', 'one'];
@@ -419,6 +431,8 @@ export default function PlaylistPage() {
                 onClose={() => setIsFullScreen(false)}
                 isPlaying={isPlaying}
                 onTogglePlay={togglePlay}
+                onNext={nextTrack}
+                onPrev={prevTrack}
                 currentTime={currentTime}
                 duration={duration}
                 onSeek={seekTo}
@@ -426,6 +440,13 @@ export default function PlaylistPage() {
                 onVolumeChange={setVolume}
                 currentPlaylist={currentPlaylist}
                 onPlaySong={(idx) => playPlaylist(currentPlaylist!, idx)}
+                recentlyPlayed={recentlyPlayed}
+                shuffleMode={shuffleMode}
+                onToggleShuffle={toggleShuffle}
+                repeatMode={repeatMode}
+                onSetRepeatMode={setRepeatMode}
+                likedSongs={likedSongs}
+                onToggleLike={toggleLike}
             />
 
             {/* Create Playlist Dialog */}
@@ -455,11 +476,7 @@ export default function PlaylistPage() {
     );
 }
 
-function extractYoutubeId(url: string) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-}
+
 
 interface PlusCircleProps extends React.SVGProps<SVGSVGElement> { }
 function PlusCircle(props: PlusCircleProps) {
