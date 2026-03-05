@@ -215,18 +215,25 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }, [currentPlaylist, currentSongIndex, currentTime, repeatMode, volume, isPlaying, shuffleMode]);
 
     useEffect(() => {
-        if (isPlaying && playerRef.current) {
-            timerRef.current = setInterval(() => {
-                if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
-                    setCurrentTime(playerRef.current.getCurrentTime());
-                    setDuration(playerRef.current.getDuration());
-                }
-            }, 500);
+        const updateProgress = () => {
+            if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+                const time = playerRef.current.getCurrentTime();
+                const dur = playerRef.current.getDuration();
+                if (typeof time === 'number' && !isNaN(time)) setCurrentTime(time);
+                if (typeof dur === 'number' && !isNaN(dur) && dur > 0) setDuration(dur);
+            }
+        };
+
+        if (isPlaying) {
+            updateProgress();
+            timerRef.current = setInterval(updateProgress, 500);
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
+            // Even if paused, update once to be sure
+            updateProgress();
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isPlaying]);
+    }, [isPlaying, currentSong]); // Re-run interval logic when song changes too
 
     const playPlaylist = (playlist: Playlist, startIndex = 0) => {
         setCurrentPlaylist(playlist);
