@@ -70,9 +70,8 @@ function PlaylistHomeContent() {
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto bg-[#121212] custom-scrollbar relative"
         >
-            {/* Sticky Header Background */}
             <div
-                className="sticky top-0 w-full h-16 z-20 pointer-events-none transition-colors duration-300"
+                className="sticky top-0 w-full h-16 z-20 pointer-events-none transition-colors duration-300 -mb-16"
                 style={{ backgroundColor: `rgba(18, 18, 18, ${headerOpacity})` }}
             />
 

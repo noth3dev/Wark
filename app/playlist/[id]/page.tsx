@@ -169,7 +169,7 @@ function PlaylistDetailContent({ id }: { id: string }) {
             className="flex-1 overflow-y-auto overflow-x-hidden bg-[#121212] relative custom-scrollbar scroll-smooth"
         >
             <div
-                className="sticky top-0 w-full h-16 z-20 transition-colors duration-300 pointer-events-none"
+                className="sticky top-0 w-full h-16 z-20 transition-colors duration-300 pointer-events-none -mb-16"
                 style={{
                     backgroundColor: `rgba(18, 18, 18, ${headerOpacity})`,
                     boxShadow: headerOpacity > 0.8 ? "0 8px 12px rgba(0,0,0,0.3)" : "none"

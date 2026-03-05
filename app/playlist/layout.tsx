@@ -42,6 +42,17 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [addToPlaylistSong, setAddToPlaylistSong] = useState<Song | null>(null);
     const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+    const [leftSidebarExpanded, setLeftSidebarExpanded] = useState(false);
+
+    const toggleLeftSidebarCollapse = () => {
+        setLeftSidebarCollapsed(!leftSidebarCollapsed);
+        if (leftSidebarExpanded) setLeftSidebarExpanded(false);
+    };
+
+    const toggleLeftSidebarExpand = () => {
+        setLeftSidebarExpanded(!leftSidebarExpanded);
+        if (leftSidebarCollapsed) setLeftSidebarCollapsed(false);
+    };
 
     useEffect(() => {
         if (user) fetchPlaylists();
@@ -132,37 +143,43 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
             {/* Main content area */}
             <div className="flex flex-1 overflow-hidden min-h-0 pb-[72px] md:pb-[90px]">
                 {/* Left Sidebar - Hidden on mobile */}
-                <div className="flex h-full">
+                <div className={`flex h-full transition-all duration-300 ${leftSidebarExpanded ? 'flex-1' : ''}`}>
                     <PlaylistSidebar
                         playlists={playlists}
                         selectedPlaylistId={selectedPlaylistId}
-                        onSelectPlaylist={(p) => router.push(`/playlist/${p.id}`)}
+                        onSelectPlaylist={(p) => { router.push(`/playlist/${p.id}`); if (leftSidebarExpanded) setLeftSidebarExpanded(false); }}
                         onCreatePlaylist={() => setIsCreating(true)}
                         onSearchClick={() => router.push('/playlist/search')}
                         onHomeClick={() => router.push('/playlist')}
                         isCollapsed={leftSidebarCollapsed}
-                        onToggleCollapse={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)}
+                        onToggleCollapse={toggleLeftSidebarCollapse}
+                        isExpanded={leftSidebarExpanded}
+                        onToggleExpand={toggleLeftSidebarExpand}
                     />
                 </div>
 
                 {/* Page content */}
-                <div className="flex-1 flex flex-col min-w-0 bg-[#121212] md:rounded-lg md:m-2 relative overflow-hidden">
-                    <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
-                        {children}
-                        <URLSync />
-                    </Suspense>
-                </div>
+                {!leftSidebarExpanded && (
+                    <div className="flex-1 flex flex-col min-w-0 bg-[#121212] md:rounded-lg md:m-2 relative overflow-hidden">
+                        <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
+                            {children}
+                            <URLSync />
+                        </Suspense>
+                    </div>
+                )}
 
                 {/* Right Sidebar - Hidden on mobile */}
-                <NowPlayingSidebar
-                    song={currentSong}
-                    playlist={currentPlaylist}
-                    isVisible={rightSidebarVisible}
-                    onClose={() => setRightSidebarVisible(false)}
-                    isPlaying={isPlaying}
-                    onTogglePlay={togglePlay}
-                    onExpand={() => setIsFullScreen(true)}
-                />
+                {!leftSidebarExpanded && (
+                    <NowPlayingSidebar
+                        song={currentSong}
+                        playlist={currentPlaylist}
+                        isVisible={rightSidebarVisible}
+                        onClose={() => setRightSidebarVisible(false)}
+                        isPlaying={isPlaying}
+                        onTogglePlay={togglePlay}
+                        onExpand={() => setIsFullScreen(true)}
+                    />
+                )}
             </div>
 
             {/* Fixed Bottom Player Bar - Simplified for Mobile */}
