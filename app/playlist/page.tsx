@@ -5,7 +5,6 @@ import { useAuth } from "../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../lib/music-context";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { useRouter } from "next/navigation";
 import { Play, Music, Clock3, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 
