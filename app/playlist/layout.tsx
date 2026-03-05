@@ -41,6 +41,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
     const [rightSidebarVisible, setRightSidebarVisible] = useState(false);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [addToPlaylistSong, setAddToPlaylistSong] = useState<Song | null>(null);
+    const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         if (user) fetchPlaylists();
@@ -131,7 +132,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
             {/* Main content area */}
             <div className="flex flex-1 overflow-hidden min-h-0 pb-[72px] md:pb-[90px]">
                 {/* Left Sidebar - Hidden on mobile */}
-                <div className="hidden md:flex h-full">
+                <div className="flex h-full">
                     <PlaylistSidebar
                         playlists={playlists}
                         selectedPlaylistId={selectedPlaylistId}
@@ -139,28 +140,29 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                         onCreatePlaylist={() => setIsCreating(true)}
                         onSearchClick={() => router.push('/playlist/search')}
                         onHomeClick={() => router.push('/playlist')}
+                        isCollapsed={leftSidebarCollapsed}
+                        onToggleCollapse={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)}
                     />
                 </div>
 
                 {/* Page content */}
-                <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
-                    {children}
-                    <URLSync />
-                </Suspense>
+                <div className="flex-1 flex flex-col min-w-0 bg-[#121212] md:rounded-lg md:m-2 relative overflow-hidden">
+                    <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
+                        {children}
+                        <URLSync />
+                    </Suspense>
+                </div>
 
                 {/* Right Sidebar - Hidden on mobile */}
-                {rightSidebarVisible && (
-                    <div className="hidden lg:block w-[300px] flex-shrink-0 h-full">
-                        <NowPlayingSidebar
-                            song={currentSong}
-                            playlist={currentPlaylist}
-                            isVisible={rightSidebarVisible}
-                            onClose={() => setRightSidebarVisible(false)}
-                            isPlaying={isPlaying}
-                            onTogglePlay={togglePlay}
-                        />
-                    </div>
-                )}
+                <NowPlayingSidebar
+                    song={currentSong}
+                    playlist={currentPlaylist}
+                    isVisible={rightSidebarVisible}
+                    onClose={() => setRightSidebarVisible(false)}
+                    isPlaying={isPlaying}
+                    onTogglePlay={togglePlay}
+                    onExpand={() => setIsFullScreen(true)}
+                />
             </div>
 
             {/* Fixed Bottom Player Bar - Simplified for Mobile */}

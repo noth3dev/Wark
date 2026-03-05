@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { X, Heart, Music } from "lucide-react";
+import { X, Heart, Music, Maximize2 } from "lucide-react";
 import { Song, Playlist } from "../../lib/music-context";
 
 interface NowPlayingSidebarProps {
@@ -11,6 +11,7 @@ interface NowPlayingSidebarProps {
     onClose: () => void;
     isPlaying: boolean;
     onTogglePlay: () => void;
+    onExpand?: () => void;
 }
 
 export default function NowPlayingSidebar({
@@ -20,6 +21,7 @@ export default function NowPlayingSidebar({
     onClose,
     isPlaying,
     onTogglePlay,
+    onExpand,
 }: NowPlayingSidebarProps) {
     if (!isVisible) return null;
 
@@ -34,16 +36,22 @@ export default function NowPlayingSidebar({
 
     return (
         <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 300, opacity: 0 }}
-            className="w-[300px] bg-black border-l border-white/5 flex flex-col overflow-hidden h-full"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: isVisible ? 300 : 0, opacity: isVisible ? 1 : 0 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="bg-black border-l border-white/5 flex flex-col overflow-hidden h-full"
         >
-            <div className="p-4 flex items-center justify-between">
-                <h3 className="text-[16px] font-bold text-white">{playlist?.name || "Now Playing"}</h3>
-                <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                    <X className="w-5 h-5 text-neutral-400" />
-                </button>
+            <div className="p-4 flex items-center justify-between gap-2 overflow-hidden">
+                <h3 className="text-[16px] font-bold text-white truncate">{playlist?.name || "Now Playing"}</h3>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={onExpand} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Expand to full screen">
+                        <Maximize2 className="w-5 h-5 text-neutral-400" />
+                    </button>
+                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Close">
+                        <X className="w-5 h-5 text-neutral-400" />
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
