@@ -65,6 +65,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [currentTime, setCurrentTime] = useState(0);
     const playerRef = useRef<any>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const repeatModeRef = useRef(repeatMode);
+    const shuffleModeRef = useRef(shuffleMode);
+    const currentSongIndexRef = useRef(currentSongIndex);
+    const currentPlaylistRef = useRef(currentPlaylist);
+
+    useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+    useEffect(() => { shuffleModeRef.current = shuffleMode; }, [shuffleMode]);
+    useEffect(() => { currentSongIndexRef.current = currentSongIndex; }, [currentSongIndex]);
+    useEffect(() => { currentPlaylistRef.current = currentPlaylist; }, [currentPlaylist]);
 
     const currentSong = currentPlaylist?.songs?.[currentSongIndex] || null;
 
@@ -182,12 +191,16 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                         events: {
                             onReady: (event: any) => { event.target.setVolume(volume); if (isPlaying) event.target.playVideo(); },
                             onStateChange: (event: any) => {
+                                // YT.PlayerState.ENDED = 0
                                 if (event.data === 0) {
-                                    if (repeatMode === 'one') {
+                                    if (repeatModeRef.current === 'one') {
                                         event.target.seekTo(0);
                                         event.target.playVideo();
                                     } else {
-                                        nextTrack();
+                                        // Use a small timeout to avoid immediate state updates during events
+                                        setTimeout(() => {
+                                            nextTrack();
+                                        }, 10);
                                     }
                                 }
                                 if (event.data === 1) setIsPlaying(true);
@@ -264,7 +277,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             const nextIndex = Math.floor(Math.random() * currentPlaylist.songs.length);
             setCurrentSongIndex(nextIndex);
         } else {
-            if (repeatMode === 'all') {
+            if (repeatModeRef.current === 'all') {
                 setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
             } else {
                 // repeatMode === 'none'

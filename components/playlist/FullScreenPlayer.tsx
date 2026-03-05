@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Play, Pause, SkipBack, SkipForward, Repeat, Volume2,
-    Heart, X, Music, Clock3, Shuffle, ListMusic, ChevronRight, PanelRightOpen, PanelRightClose
+    Heart, X, Music, Clock3, Shuffle, ListMusic, ChevronRight, PanelRightOpen, PanelRightClose, PlusCircle
 } from "lucide-react";
 import { Song, Playlist } from "../../lib/music-context";
 import { useState, useEffect, useRef } from "react";
@@ -36,6 +36,7 @@ interface FullScreenPlayerProps {
     currentSongIndex: number;
     themeColor: string;
     tagStatus: any;
+    onAddToPlaylist: () => void;
 }
 
 export default function FullScreenPlayer({
@@ -64,6 +65,7 @@ export default function FullScreenPlayer({
     currentSongIndex,
     themeColor,
     tagStatus,
+    onAddToPlaylist,
 }: FullScreenPlayerProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'queue' | 'recent'>('queue');
@@ -237,8 +239,7 @@ export default function FullScreenPlayer({
 
                 {/* Main Content */}
                 <div className="relative z-10 flex-1 flex overflow-hidden">
-                    {/* Center: Cover Art or Stopwatch */}
-                    <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-300 ${sidebarOpen ? 'pr-0' : ''}`}>
+                    <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="relative w-full max-w-[min(55vh,520px)] aspect-square group overflow-hidden">
                             <AnimatePresence mode="wait">
                                 {!isFlipped ? (
@@ -308,7 +309,7 @@ export default function FullScreenPlayer({
                                 animate={{ width: 380, opacity: 1 }}
                                 exit={{ width: 0, opacity: 0 }}
                                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                                className="flex flex-col bg-black/40 backdrop-blur-xl border-l border-white/5 overflow-hidden"
+                                className="absolute right-0 top-0 bottom-0 z-20 flex flex-col bg-black/60 backdrop-blur-2xl border-l border-white/10 overflow-hidden shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
                             >
                                 <div className="p-5 flex items-center gap-5 border-b border-white/5 flex-shrink-0">
                                     <button
@@ -455,6 +456,10 @@ export default function FullScreenPlayer({
                                     style={isLiked ? { color: themeColor, fill: themeColor } : {}}
                                     className={`w-5 h-5 cursor-pointer hover:scale-110 transition-all ${isLiked ? "" : "text-white/40 hover:text-white"}`}
                                 />
+                                <PlusCircle
+                                    onClick={(e) => { e.stopPropagation(); onAddToPlaylist(); }}
+                                    className="w-5 h-5 text-white/40 hover:text-white cursor-pointer hover:scale-110 transition-all"
+                                />
                             </div>
                         </div>
 
@@ -530,6 +535,6 @@ export default function FullScreenPlayer({
                     </div>
                 </div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence >
     );
 }
