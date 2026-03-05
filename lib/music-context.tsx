@@ -40,6 +40,7 @@ interface MusicContextType {
     prevTrack: () => void;
     seekTo: (seconds: number) => void;
     extractYoutubeId: (url: string) => string | null;
+    currentSongIndex: number;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -281,7 +282,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         <MusicContext.Provider value={{
             currentPlaylist, currentSong, isPlaying, repeatMode, shuffleMode, recentlyPlayed, likedSongs,
             volume, duration, currentTime, playPlaylist, playSongByIndex, togglePlay, toggleShuffle, toggleLike,
-            setRepeatMode, setVolume, nextTrack, prevTrack, seekTo, extractYoutubeId
+            setRepeatMode, setVolume, nextTrack, prevTrack, seekTo, extractYoutubeId, currentSongIndex
         }}>
             {children}
             <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', pointerEvents: 'none' }}>

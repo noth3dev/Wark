@@ -9,6 +9,7 @@ interface PlaylistSidebarProps {
     selectedPlaylistId?: string;
     onSelectPlaylist: (playlist: Playlist) => void;
     onCreatePlaylist: () => void;
+    onSearchClick?: () => void;
 }
 
 export default function PlaylistSidebar({
@@ -16,16 +17,27 @@ export default function PlaylistSidebar({
     selectedPlaylistId,
     onSelectPlaylist,
     onCreatePlaylist,
+    onSearchClick,
 }: PlaylistSidebarProps) {
+
+    const extractYoutubeId = (url: string) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
     return (
-        <div className="flex flex-col h-full bg-black text-neutral-400 p-2 gap-2">
+        <div className="flex flex-col h-full bg-black text-neutral-400 p-2 gap-2 w-[300px] flex-shrink-0">
             {/* Top Navigation */}
             <div className="bg-[#121212] rounded-lg p-3 space-y-4">
                 <button className="flex items-center gap-5 px-3 py-1 text-sm font-bold hover:text-white transition-colors w-full group">
                     <Home className="w-6 h-6" />
                     <span>Home</span>
                 </button>
-                <button className="flex items-center gap-5 px-3 py-1 text-sm font-bold hover:text-white transition-colors w-full group">
+                <button
+                    onClick={onSearchClick}
+                    className="flex items-center gap-5 px-3 py-1 text-sm font-bold hover:text-white transition-colors w-full group"
+                >
                     <Search className="w-6 h-6" />
                     <span>Search</span>
                 </button>
@@ -55,9 +67,6 @@ export default function PlaylistSidebar({
                 <div className="px-4 py-2 flex gap-2">
                     <button className="bg-white/10 text-white text-[12px] font-bold px-3 py-1.5 rounded-full hover:bg-white/15 transition-colors">
                         Playlists
-                    </button>
-                    <button className="bg-white/10 text-white text-[12px] font-bold px-3 py-1.5 rounded-full hover:bg-white/15 transition-colors">
-                        Artists
                     </button>
                 </div>
 
@@ -95,10 +104,4 @@ export default function PlaylistSidebar({
             </div>
         </div>
     );
-}
-
-function extractYoutubeId(url: string) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
 }

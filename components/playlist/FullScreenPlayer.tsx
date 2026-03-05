@@ -1,9 +1,12 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, MoreHorizontal, Play, Pause, SkipBack, SkipForward, Repeat, Volume2, ListMusic, Heart, Share2, X, Music, User, Info, Clock3, Shuffle } from "lucide-react";
+import {
+    Play, Pause, SkipBack, SkipForward, Repeat, Volume2,
+    Heart, X, Music, Clock3, Shuffle, ListMusic, ChevronRight, PanelRightOpen, PanelRightClose
+} from "lucide-react";
 import { Song, Playlist } from "../../lib/music-context";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface FullScreenPlayerProps {
     song: Song | null;
@@ -27,6 +30,8 @@ interface FullScreenPlayerProps {
     onSetRepeatMode: (mode: 'none' | 'all' | 'one') => void;
     likedSongs: string[];
     onToggleLike: (song: Song) => Promise<void>;
+    extractYoutubeId: (url: string) => string | null;
+    currentSongIndex: number;
 }
 
 export default function FullScreenPlayer({
@@ -51,8 +56,58 @@ export default function FullScreenPlayer({
     onSetRepeatMode,
     likedSongs,
     onToggleLike,
+    extractYoutubeId,
+    currentSongIndex,
 }: FullScreenPlayerProps) {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'queue' | 'recent'>('queue');
+    const [bgColor, setBgColor] = useState('rgba(30, 30, 30, 1)');
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Extract dominant color from thumbnail
+    useEffect(() => {
+        if (!song || !isVisible) return;
+        const videoId = extractYoutubeId(song.youtube_url);
+        if (!videoId) return;
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        img.onload = () => {
+            try {
+                const canvas = canvasRef.current || document.createElement('canvas');
+                canvas.width = 4;
+                canvas.height = 4;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+                ctx.drawImage(img, 0, 0, 4, 4);
+                const data = ctx.getImageData(0, 0, 4, 4).data;
+
+                // Sample multiple pixels and average
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    r += data[i];
+                    g += data[i + 1];
+                    b += data[i + 2];
+                    count++;
+                }
+                r = Math.floor(r / count);
+                g = Math.floor(g / count);
+                b = Math.floor(b / count);
+
+                // Darken the color for background
+                const darken = 0.6;
+                r = Math.floor(r * darken);
+                g = Math.floor(g * darken);
+                b = Math.floor(b * darken);
+
+                setBgColor(`rgb(${r}, ${g}, ${b})`);
+            } catch {
+                setBgColor('rgb(30, 40, 50)');
+            }
+        };
+        img.onerror = () => setBgColor('rgb(30, 40, 50)');
+    }, [song, isVisible]);
 
     if (!isVisible || !song) return null;
 
@@ -61,6 +116,7 @@ export default function FullScreenPlayer({
     const isLiked = videoId ? likedSongs.includes(videoId) : false;
 
     const formatTime = (seconds: number) => {
+        if (!seconds || isNaN(seconds)) return '0:00';
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
@@ -71,191 +127,221 @@ export default function FullScreenPlayer({
         onSetRepeatMode(modes[(modes.indexOf(repeatMode) + 1) % modes.length]);
     };
 
+    // Get songs after current index for "Next Up" queue
+    const upcomingSongs = currentPlaylist?.songs
+        ? currentPlaylist.songs.slice(currentSongIndex + 1)
+        : [];
+
     return (
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-black overflow-hidden flex flex-col font-sans"
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 z-[100] overflow-hidden flex flex-col"
+                style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
             >
-                {/* Dynamic Background Gradient */}
-                <div
-                    className="absolute inset-0 z-0 opacity-80 transition-all duration-1000"
-                    style={{
-                        backgroundImage: `radial-gradient(circle at 20% 40%, rgba(79, 70, 229, 0.4) 0%, rgba(18, 18, 18, 1) 100%)`,
-                    }}
-                />
+                {/* Dynamic Background — extracted from cover art */}
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="absolute inset-0 z-0 transition-all duration-[2000ms]" style={{ background: bgColor }} />
+                <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
-                {/* Header Section */}
-                <div className="relative z-10 p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Music className="w-5 h-5 text-white/60" />
-                        <span className="text-[13px] font-bold text-white/80">{currentPlaylist?.name || "Now Playing"}</span>
+                {/* Header */}
+                <div className="relative z-10 flex items-center justify-between px-8 py-5">
+                    <div className="flex items-center gap-3">
+                        <Music className="w-4 h-4 text-white/60" />
+                        <span className="text-[13px] font-semibold text-white/80 tracking-tight">
+                            {currentPlaylist?.name || "Now Playing"}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                            <X className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="p-2.5 hover:bg-white/10 rounded-full transition-colors"
+                            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                        >
+                            {sidebarOpen ? (
+                                <PanelRightClose className="w-5 h-5 text-white/70" />
+                            ) : (
+                                <PanelRightOpen className="w-5 h-5 text-white/70" />
+                            )}
+                        </button>
+                        <button onClick={onClose} className="p-2.5 hover:bg-white/10 rounded-full transition-colors">
+                            <X className="w-5 h-5 text-white/70" />
                         </button>
                     </div>
                 </div>
 
-                {/* Main 2-Column Content */}
-                <div className="relative z-10 flex-1 flex overflow-hidden px-12 pb-12 gap-12 max-w-[1600px] mx-auto w-full">
-
-                    {/* Left Column: Huge Cover Art & Primary Info */}
-                    <div className="flex-1 flex flex-col justify-center items-center gap-12">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="aspect-square w-full max-w-[560px] bg-[#282828] rounded-2xl shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-hidden group relative"
-                        >
-                            <img src={thumbnailUrl} alt={song.title} className="w-full h-full object-cover" />
-                        </motion.div>
-
-                        <div className="w-full max-w-[560px] space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="min-w-0">
-                                    <h1 className="text-4xl font-black text-white tracking-tighter truncate">{song.title}</h1>
-                                    <p className="text-xl font-bold text-white/60">YouTube Track</p>
-                                </div>
-                                <Heart
-                                    onClick={(e) => { e.stopPropagation(); onToggleLike(song); }}
-                                    className={`w-8 h-8 cursor-pointer hover:scale-110 transition-transform ${isLiked ? "text-[#1DB954] fill-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                {/* Main Content */}
+                <div className="relative z-10 flex-1 flex overflow-hidden">
+                    {/* Center: Cover Art */}
+                    <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-300 ${sidebarOpen ? 'pr-0' : ''}`}>
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={song.id}
+                                initial={{ scale: 0.92, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.92, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                                className="w-full max-w-[min(55vh,520px)] aspect-square rounded-lg shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden"
+                            >
+                                <img
+                                    src={thumbnailUrl}
+                                    alt={song.title}
+                                    className="w-full h-full object-cover"
+                                    draggable={false}
                                 />
-                            </div>
-                        </div>
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
 
-                    {/* Right Column: Queue & History */}
-                    <div className="w-[450px] flex flex-col bg-black/30 backdrop-blur-md rounded-2xl overflow-hidden border border-white/5">
-                        <div className="p-6 flex items-center gap-6 border-b border-white/5">
-                            <button
-                                onClick={() => setActiveTab('queue')}
-                                className={`text-[14px] font-bold transition-colors ${activeTab === 'queue' ? "text-white border-b-2 border-[#1DB954] pb-1" : "text-white/40 hover:text-white"}`}
+                    {/* Right Sidebar (toggleable) */}
+                    <AnimatePresence>
+                        {sidebarOpen && (
+                            <motion.div
+                                initial={{ width: 0, opacity: 0 }}
+                                animate={{ width: 380, opacity: 1 }}
+                                exit={{ width: 0, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                className="flex flex-col bg-black/40 backdrop-blur-xl border-l border-white/5 overflow-hidden"
                             >
-                                재생목록
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('recent')}
-                                className={`text-[14px] font-bold transition-colors ${activeTab === 'recent' ? "text-white border-b-2 border-[#1DB954] pb-1" : "text-white/40 hover:text-white"}`}
-                            >
-                                최근 재생한 항목
-                            </button>
-                        </div>
+                                <div className="p-5 flex items-center gap-5 border-b border-white/5 flex-shrink-0">
+                                    <button
+                                        onClick={() => setActiveTab('queue')}
+                                        className={`text-[13px] font-bold transition-colors pb-1 ${activeTab === 'queue' ? "text-white border-b-2 border-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                                    >
+                                        Queue
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('recent')}
+                                        className={`text-[13px] font-bold transition-colors pb-1 ${activeTab === 'recent' ? "text-white border-b-2 border-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                                    >
+                                        Recently Played
+                                    </button>
+                                </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-                            {activeTab === 'queue' ? (
-                                <>
-                                    <div className="space-y-4">
-                                        <h3 className="text-[14px] font-bold text-white/50 uppercase tracking-widest">지금 재생 중</h3>
-                                        <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
-                                            <div className="w-12 h-12 rounded bg-[#282828] overflow-hidden flex-shrink-0">
-                                                <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[14px] font-bold text-[#1DB954] truncate">{song.title}</p>
-                                                <p className="text-[12px] text-white/60 truncate">YouTube Source</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <h3 className="text-[14px] font-bold text-white/50 uppercase tracking-widest">다음 재생</h3>
-                                        {(currentPlaylist?.songs || []).slice(1, 15).map((s, idx) => (
-                                            <div
-                                                key={s.id}
-                                                onClick={() => onPlaySong(idx + 1)}
-                                                className="flex items-center gap-4 hover:bg-white/5 p-2 rounded-lg transition-colors group cursor-pointer"
-                                            >
-                                                <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0 relative">
-                                                    <img src={`https://img.youtube.com/vi/${extractYoutubeId(s.youtube_url)}/default.jpg`} alt="" className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                        <Play className="w-4 h-4 fill-white text-white" />
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5">
+                                    {activeTab === 'queue' ? (
+                                        <>
+                                            {/* Now Playing */}
+                                            <div className="space-y-3">
+                                                <h3 className="text-[12px] font-bold text-white/40 uppercase tracking-widest">Now Playing</h3>
+                                                <div className="flex items-center gap-3 bg-white/5 p-2.5 rounded-lg border border-white/5">
+                                                    <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0">
+                                                        <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[13px] font-semibold text-[#1DB954] truncate">{song.title}</p>
+                                                        <p className="text-[11px] text-white/40 truncate">{(song as any).channel_title || 'YouTube'}</p>
                                                     </div>
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-[13px] font-bold text-white truncate">{s.title}</p>
-                                                    <p className="text-[11px] text-white/40 truncate">YouTube Track</p>
-                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="space-y-4">
-                                    {recentlyPlayed.length > 0 ? (
-                                        recentlyPlayed.map((s, idx) => (
-                                            <div
-                                                key={`${s.id}-${idx}`}
-                                                onClick={() => {
-                                                    const p: Playlist = { id: 'history', name: 'History', user_id: '', songs: recentlyPlayed };
-                                                    onPlaySong(idx);
-                                                }}
-                                                className="flex items-center gap-4 hover:bg-white/5 p-2 rounded-lg transition-colors group cursor-pointer"
-                                            >
-                                                <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0 relative">
-                                                    <img src={`https://img.youtube.com/vi/${extractYoutubeId(s.youtube_url)}/default.jpg`} alt="" className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                        <Play className="w-4 h-4 fill-white text-white" />
-                                                    </div>
+
+                                            {/* Next Up */}
+                                            {upcomingSongs.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <h3 className="text-[12px] font-bold text-white/40 uppercase tracking-widest">Next Up</h3>
+                                                    {upcomingSongs.slice(0, 20).map((s, idx) => {
+                                                        const sVideoId = extractYoutubeId(s.youtube_url);
+                                                        return (
+                                                            <div
+                                                                key={`${s.id}-${idx}`}
+                                                                onClick={() => onPlaySong(currentSongIndex + 1 + idx)}
+                                                                className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors group cursor-pointer"
+                                                            >
+                                                                <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0 relative">
+                                                                    <img src={`https://img.youtube.com/vi/${sVideoId}/default.jpg`} alt="" className="w-full h-full object-cover" />
+                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                        <Play className="w-4 h-4 fill-white text-white" />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-[13px] font-medium text-white truncate">{s.title}</p>
+                                                                    <p className="text-[11px] text-white/30 truncate">{(s as any).channel_title || 'YouTube'}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-[13px] font-bold text-white truncate">{s.title}</p>
-                                                    <p className="text-[11px] text-white/40 truncate">Played recently</p>
-                                                </div>
-                                            </div>
-                                        ))
+                                            )}
+                                        </>
                                     ) : (
-                                        <div className="h-full flex flex-col items-center justify-center text-white/20 pt-20">
-                                            <Clock3 className="w-12 h-12 mb-4" />
-                                            <p className="text-sm font-bold">최근 재생 내역이 없습니다.</p>
+                                        <div className="space-y-3">
+                                            {recentlyPlayed.length > 0 ? (
+                                                recentlyPlayed.map((s, idx) => {
+                                                    const sVideoId = extractYoutubeId(s.youtube_url);
+                                                    return (
+                                                        <div
+                                                            key={`recent-${s.id}-${idx}`}
+                                                            onClick={() => onPlaySong(idx)}
+                                                            className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors group cursor-pointer"
+                                                        >
+                                                            <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0 relative">
+                                                                <img src={`https://img.youtube.com/vi/${sVideoId}/default.jpg`} alt="" className="w-full h-full object-cover" />
+                                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                    <Play className="w-4 h-4 fill-white text-white" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-[13px] font-medium text-white truncate">{s.title}</p>
+                                                                <p className="text-[11px] text-white/30 truncate">Played recently</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center text-white/20 pt-16">
+                                                    <Clock3 className="w-10 h-10 mb-3" />
+                                                    <p className="text-sm font-medium">No recent history</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                {/* Playback Controls Footer */}
-                <div className="relative z-10 px-12 py-8 flex flex-col items-center gap-4 w-full">
-                    <div className="w-full max-w-[800px] flex flex-col items-center gap-4">
-                        <div className="flex items-center gap-8">
-                            <button
-                                onClick={onToggleShuffle}
-                                className={`p-2 transition-colors ${shuffleMode ? "text-[#1DB954]" : "text-white/40 hover:text-white"}`}
-                            >
-                                <Shuffle className="w-5 h-5" />
-                            </button>
-                            <button onClick={onPrev} className="p-2 text-white/80 hover:text-white transition-colors hover:scale-110"><SkipBack className="w-8 h-8 fill-current" /></button>
-                            <button
-                                onClick={onTogglePlay}
-                                className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-2xl"
-                            >
-                                {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
-                            </button>
-                            <button onClick={onNext} className="p-2 text-white/80 hover:text-white transition-colors hover:scale-110"><SkipForward className="w-8 h-8 fill-current" /></button>
-                            <button
-                                onClick={handleToggleRepeat}
-                                className={`p-2 transition-colors ${repeatMode !== 'none' ? "text-[#1DB954]" : "text-white/40 hover:text-white"}`}
-                            >
-                                <Repeat className={`w-5 h-5 ${repeatMode === 'one' ? "stroke-[3px]" : ""}`} />
-                                {repeatMode === 'one' && <span className="absolute text-[8px] font-bold">1</span>}
-                            </button>
+                {/* Bottom: Song Info + Controls */}
+                <div className="relative z-10 px-8 pb-6 pt-4">
+                    <div className="max-w-[720px] mx-auto flex flex-col gap-4">
+                        {/* Song Info Row */}
+                        <div className="flex items-center justify-between">
+                            <div className="min-w-0 flex-1 mr-4">
+                                <AnimatePresence mode="wait">
+                                    <motion.h2
+                                        key={song.id + '-title'}
+                                        initial={{ y: 8, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        exit={{ y: -8, opacity: 0 }}
+                                        className="text-xl font-bold text-white truncate leading-tight"
+                                    >
+                                        {song.title}
+                                    </motion.h2>
+                                </AnimatePresence>
+                                <p className="text-sm text-white/50 truncate mt-0.5">{(song as any).channel_title || 'YouTube'}</p>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                                <Heart
+                                    onClick={(e) => { e.stopPropagation(); onToggleLike(song); }}
+                                    className={`w-5 h-5 cursor-pointer hover:scale-110 transition-all ${isLiked ? "text-[#1DB954] fill-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                                />
+                            </div>
                         </div>
 
-                        {/* Progress Slider */}
-                        <div className="w-full flex items-center gap-4">
-                            <span className="text-[11px] font-bold text-white/40 min-w-[40px] text-right">{formatTime(currentTime)}</span>
+                        {/* Progress Bar */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-[11px] font-medium text-white/50 min-w-[36px] text-right tabular-nums">{formatTime(currentTime)}</span>
                             <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative">
                                 <div
-                                    className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954] rounded-full"
+                                    className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954] rounded-full transition-colors"
                                     style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
                                 />
                                 <div
-                                    className="absolute w-4 h-4 bg-white rounded-full -top-1.5 shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                                    style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 8px)` }}
+                                    className="absolute w-3 h-3 bg-white rounded-full -top-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }}
                                 />
                                 <input
                                     type="range"
@@ -264,20 +350,52 @@ export default function FullScreenPlayer({
                                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                                 />
                             </div>
-                            <span className="text-[11px] font-bold text-white/40 min-w-[40px]">{formatTime(duration)}</span>
+                            <span className="text-[11px] font-medium text-white/50 min-w-[36px] tabular-nums">{formatTime(duration)}</span>
                         </div>
-                    </div>
 
-                    <div className="absolute right-12 bottom-12 flex items-center gap-6">
-                        <div className="flex items-center gap-3 w-40 group">
-                            <Volume2 className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
-                            <div className="flex-1 h-1 bg-white/10 rounded-full relative overflow-hidden group-hover:h-1.5 transition-all">
-                                <div className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954]" style={{ width: `${volume}%` }} />
-                                <input
-                                    type="range" min="0" max="100" value={volume}
-                                    onChange={(e) => onVolumeChange(Number(e.target.value))}
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                />
+                        {/* Playback Controls */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6 mx-auto">
+                                <button
+                                    onClick={onToggleShuffle}
+                                    className={`p-1.5 transition-colors ${shuffleMode ? "text-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                                >
+                                    <Shuffle className="w-5 h-5" />
+                                </button>
+                                <button onClick={onPrev} className="p-1.5 text-white/70 hover:text-white transition-colors">
+                                    <SkipBack className="w-6 h-6 fill-current" />
+                                </button>
+                                <button
+                                    onClick={onTogglePlay}
+                                    className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
+                                </button>
+                                <button onClick={onNext} className="p-1.5 text-white/70 hover:text-white transition-colors">
+                                    <SkipForward className="w-6 h-6 fill-current" />
+                                </button>
+                                <button
+                                    onClick={handleToggleRepeat}
+                                    className={`p-1.5 transition-colors relative ${repeatMode !== 'none' ? "text-[#1DB954]" : "text-white/40 hover:text-white"}`}
+                                >
+                                    <Repeat className="w-5 h-5" />
+                                    {repeatMode === 'one' && (
+                                        <span className="absolute -top-0.5 -right-0.5 text-[8px] font-black text-[#1DB954]">1</span>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Volume — far right */}
+                            <div className="absolute right-8 bottom-8 flex items-center gap-2 w-32 group">
+                                <Volume2 className="w-4 h-4 text-white/40 group-hover:text-white transition-colors flex-shrink-0" />
+                                <div className="flex-1 h-1 bg-white/10 rounded-full relative overflow-hidden group-hover:h-1.5 transition-all">
+                                    <div className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954]" style={{ width: `${volume}%` }} />
+                                    <input
+                                        type="range" min="0" max="100" value={volume}
+                                        onChange={(e) => onVolumeChange(Number(e.target.value))}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -285,10 +403,4 @@ export default function FullScreenPlayer({
             </motion.div>
         </AnimatePresence>
     );
-}
-
-function extractYoutubeId(url: string) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
 }
