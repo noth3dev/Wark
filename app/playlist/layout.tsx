@@ -33,7 +33,6 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
     } = useMusic();
 
     const tagStatus = useActiveSessionSync();
-    const searchParams = useSearchParams();
     const themeColor = tagStatus.color || "#1DB954";
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -46,15 +45,23 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
         if (user) fetchPlaylists();
     }, [user]);
 
-    // Update URL with current song ID
-    useEffect(() => {
-        if (!currentSong) return;
-        const params = new URLSearchParams(searchParams.toString());
-        if (params.get('song') !== currentSong.id) {
-            params.set('song', currentSong.id);
-            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-        }
-    }, [currentSong, pathname, router, searchParams]);
+    // Sub-component to handle search params to avoid build error
+    function URLSync() {
+        const searchParams = useSearchParams();
+        const pathname = usePathname();
+        const router = useRouter();
+
+        useEffect(() => {
+            if (!currentSong) return;
+            const params = new URLSearchParams(searchParams.toString());
+            if (params.get('song') !== currentSong.id) {
+                params.set('song', currentSong.id);
+                router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+            }
+        }, [searchParams, pathname, router]);
+
+        return null;
+    }
 
     const fetchPlaylists = async () => {
         try {
@@ -112,6 +119,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                 {/* Page content */}
                 <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
                     {children}
+                    <URLSync />
                 </Suspense>
 
                 {/* Right Sidebar */}
