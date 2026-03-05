@@ -38,6 +38,7 @@ export default function PlaylistPage() {
     const [rightSidebarVisible, setRightSidebarVisible] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [headerOpacity, setHeaderOpacity] = useState(0);
+    const [hoveredTrackIndex, setHoveredTrackIndex] = useState<number | null>(null);
 
     const mainScrollRef = useRef<HTMLDivElement>(null);
 
@@ -121,9 +122,10 @@ export default function PlaylistPage() {
 
     return (
         <div className="h-screen bg-black flex flex-col overflow-hidden select-none">
-            <div className="flex-1 flex overflow-hidden p-2 gap-2">
+            {/* Main Area (Sidebar + Content) */}
+            <div className="flex-1 flex overflow-hidden p-2 gap-2 min-h-0">
                 {/* Left Sidebar */}
-                <div className="w-[280px] flex-shrink-0">
+                <div className="w-[280px] flex-shrink-0 h-full">
                     <PlaylistSidebar
                         playlists={playlists}
                         selectedPlaylistId={selectedPlaylist?.id}
@@ -136,14 +138,14 @@ export default function PlaylistPage() {
                 <main
                     ref={mainScrollRef}
                     onScroll={handleScroll}
-                    className="flex-1 bg-[#121212] rounded-lg overflow-y-auto relative custom-scrollbar scroll-smooth"
+                    className="flex-1 bg-[#121212] rounded-lg overflow-y-auto relative custom-scrollbar scroll-smooth h-full"
                 >
                     {/* Header Overlay */}
                     <div
-                        className="fixed top-[2px] right-auto left-auto w-full max-w-[calc(100%-280px-20px)] h-16 z-20 transition-colors duration-300 rounded-t-lg pointer-events-none"
+                        className="sticky top-0 w-full h-16 z-20 transition-colors duration-300 rounded-t-lg pointer-events-none"
                         style={{
                             backgroundColor: `rgba(18, 18, 18, ${headerOpacity})`,
-                            boxShadow: headerOpacity > 0.8 ? "0 4px 6px -1px rgba(0,0,0,0.1)" : "none"
+                            boxShadow: headerOpacity > 0.8 ? "0 8px 12px rgba(0,0,0,0.3)" : "none"
                         }}
                     >
                         <div className="flex items-center h-full px-6 pointer-events-auto">
@@ -259,18 +261,27 @@ export default function PlaylistPage() {
                                 {(selectedPlaylist?.songs || []).map((song, i) => (
                                     <tr
                                         key={song.id}
-                                        className="group hover:bg-white/10 transition-colors rounded-md cursor-default text-[14px]"
+                                        className={`group hover:bg-white/10 transition-colors rounded-md cursor-default text-[14px] ${currentSong?.id === song.id ? "bg-white/5" : ""}`}
                                         onDoubleClick={() => playPlaylist(selectedPlaylist!, i)}
+                                        onMouseEnter={() => setHoveredTrackIndex(i)}
+                                        onMouseLeave={() => setHoveredTrackIndex(null)}
                                     >
-                                        <td className="py-2 px-4 text-center rounded-l-md text-neutral-400 group-hover:text-white">
-                                            {currentSong?.id === song.id && isPlaying ? (
-                                                <div className="flex gap-0.5 items-end h-3 justify-center">
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-2" style={{ animationDelay: '0ms' }} />
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-3" style={{ animationDelay: '200ms' }} />
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-1" style={{ animationDelay: '400ms' }} />
-                                                </div>
+                                        <td className="py-2 px-4 text-center rounded-l-md text-neutral-400 group-hover:text-white relative">
+                                            {hoveredTrackIndex === i ? (
+                                                <Play
+                                                    className="w-4 h-4 fill-white text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                                                    onClick={() => playPlaylist(selectedPlaylist!, i)}
+                                                />
                                             ) : (
-                                                <span className={`${currentSong?.id === song.id ? "text-[#1DB954]" : ""}`}>{i + 1}</span>
+                                                currentSong?.id === song.id && isPlaying ? (
+                                                    <div className="flex gap-0.5 items-end h-3 justify-center">
+                                                        <div className="w-1 bg-[#1DB954] animate-bounce h-2" style={{ animationDelay: '0ms' }} />
+                                                        <div className="w-1 bg-[#1DB954] animate-bounce h-3" style={{ animationDelay: '200ms' }} />
+                                                        <div className="w-1 bg-[#1DB954] animate-bounce h-1" style={{ animationDelay: '400ms' }} />
+                                                    </div>
+                                                ) : (
+                                                    <span className={`${currentSong?.id === song.id ? "text-[#1DB954]" : ""}`}>{i + 1}</span>
+                                                )
                                             )}
                                         </td>
                                         <td className="py-2 px-4 flex items-center gap-3">
@@ -294,7 +305,7 @@ export default function PlaylistPage() {
 
                 {/* Right Sidebar */}
                 {rightSidebarVisible && (
-                    <div className="w-[300px] flex-shrink-0">
+                    <div className="w-[300px] flex-shrink-0 h-full">
                         <NowPlayingSidebar
                             song={currentSong}
                             playlist={currentPlaylist}
@@ -308,7 +319,7 @@ export default function PlaylistPage() {
             </div>
 
             {/* Sub-bar Player Controls */}
-            <div className="bg-black border-t border-white/5 h-[90px] px-4 py-2 flex items-center justify-between z-50">
+            <div className="bg-black border-t border-white/5 h-[90px] px-4 py-2 flex items-center justify-between z-50 flex-shrink-0">
                 {/* Left: Track Info */}
                 <div className="flex items-center gap-4 min-w-[30%]">
                     {currentSong ? (
@@ -413,26 +424,30 @@ export default function PlaylistPage() {
                 onSeek={seekTo}
                 volume={volume}
                 onVolumeChange={setVolume}
+                currentPlaylist={currentPlaylist}
+                onPlaySong={(idx) => playPlaylist(currentPlaylist!, idx)}
             />
 
             {/* Create Playlist Dialog */}
             <Dialog open={isCreating} onOpenChange={setIsCreating}>
-                <DialogContent className="bg-[#282828] border-none text-white rounded-lg p-0 overflow-hidden">
-                    <DialogHeader className="p-6">
-                        <DialogTitle className="text-xl font-bold">Create new playlist</DialogTitle>
-                        <DialogDescription className="text-neutral-400">Give your collection a name.</DialogDescription>
+                <DialogContent className="bg-[#282828] border-none text-white max-w-md rounded-2xl p-8">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold tracking-tight">플레이리스트 만들기</DialogTitle>
+                        <DialogDescription className="text-neutral-400 text-sm">
+                            새로운 플레이리스트의 이름을 입력하세요.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="p-6 space-y-4">
+                    <div className="py-6">
                         <Input
+                            placeholder="내 플레이리스트 #1"
                             value={newPlaylistName}
-                            onChange={e => setNewPlaylistName(e.target.value)}
-                            placeholder="My Playlist #1"
-                            className="bg-[#3e3e3e] border-none text-white h-12 focus:ring-1 focus:ring-white/20"
+                            onChange={(e) => setNewPlaylistName(e.target.value)}
+                            className="bg-white/10 border-none h-12 text-lg focus-visible:ring-1 focus-visible:ring-[#1DB954]"
                         />
-                        <div className="flex justify-end gap-4">
-                            <Button variant="ghost" onClick={() => setIsCreating(false)} className="hover:text-white">Cancel</Button>
-                            <Button onClick={createPlaylist} className="bg-white text-black hover:bg-neutral-200 rounded-full px-8 font-bold">Create</Button>
-                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setIsCreating(false)} className="hover:bg-white/5 text-white font-bold h-12 px-6 rounded-full">취소</Button>
+                        <Button onClick={createPlaylist} className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold h-12 px-8 rounded-full">생성하기</Button>
                     </div>
                 </DialogContent>
             </Dialog>
