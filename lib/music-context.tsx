@@ -182,11 +182,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                         events: {
                             onReady: (event: any) => { event.target.setVolume(volume); if (isPlaying) event.target.playVideo(); },
                             onStateChange: (event: any) => {
-                                if (repeatMode === 'one') {
-                                    event.target.seekTo(0);
-                                    event.target.playVideo();
-                                } else {
-                                    nextTrack();
+                                if (event.data === 0) {
+                                    if (repeatMode === 'one') {
+                                        event.target.seekTo(0);
+                                        event.target.playVideo();
+                                    } else {
+                                        nextTrack();
+                                    }
                                 }
                                 if (event.data === 1) setIsPlaying(true);
                                 if (event.data === 2) setIsPlaying(false);

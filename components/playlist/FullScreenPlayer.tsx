@@ -203,60 +203,66 @@ export default function FullScreenPlayer({
 
                 {/* Main Content */}
                 <div className="relative z-10 flex-1 flex overflow-hidden">
-                    {/* Center: Cover Art with 3D Flip */}
+                    {/* Center: Cover Art or Stopwatch */}
                     <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-300 ${sidebarOpen ? 'pr-0' : ''}`}>
-                        <div className="relative w-full max-w-[min(55vh,520px)] aspect-square [perspective:1000px] group">
-                            <motion.div
-                                animate={{ rotateY: isFlipped ? 180 : 0 }}
-                                transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-                                className="relative w-full h-full [transform-style:preserve-3d]"
-                            >
-                                {/* Front: Thumbnail */}
-                                <div
-                                    className="absolute inset-0 w-full h-full [backface-visibility:hidden] cursor-pointer"
-                                    onClick={() => setIsFlipped(true)}
-                                >
-                                    <AnimatePresence mode="wait" custom={direction}>
-                                        <motion.div
-                                            key={song.id}
-                                            custom={direction}
-                                            initial={direction === 0 ? { scale: 0.92, opacity: 0 } : { x: direction * 100, opacity: 0, scale: 0.95 }}
-                                            animate={{ x: 0, opacity: 1, scale: 1 }}
-                                            exit={{ x: -direction * 100, opacity: 0, scale: 0.95 }}
-                                            transition={{
-                                                x: { type: "spring", stiffness: 300, damping: 30 },
-                                                opacity: { duration: 0.3 }
-                                            }}
-                                            className="w-full h-full rounded-lg shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden"
-                                        >
-                                            <img
-                                                src={thumbnailUrl}
-                                                alt={song.title}
-                                                className="w-full h-full object-cover"
-                                                draggable={false}
-                                            />
-                                        </motion.div>
-                                    </AnimatePresence>
-                                </div>
-
-                                {/* Back: Stopwatch */}
-                                <div
-                                    className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-lg bg-black/40 backdrop-blur-3xl border border-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.6)] p-8 overflow-y-auto no-scrollbar scroll-smooth"
-                                >
-                                    <div className="flex justify-between items-center mb-4">
-                                        <button
-                                            onClick={() => setIsFlipped(false)}
-                                            className="text-[11px] font-bold text-white/40 hover:text-white uppercase tracking-widest flex items-center gap-1 group"
-                                        >
-                                            <LucideIcons.ChevronLeft className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" />
-                                            Back to Cover
-                                        </button>
-                                    </div>
-                                    <div className="scale-75 origin-top transform-gpu">
-                                        <Stopwatch />
-                                    </div>
-                                </div>
-                            </motion.div>
+                        <div className="relative w-full max-w-[min(55vh,520px)] aspect-square group overflow-hidden">
+                            <AnimatePresence mode="wait">
+                                {!isFlipped ? (
+                                    <motion.div
+                                        key="thumbnail"
+                                        initial={{ y: 0, opacity: 1 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        exit={{ y: -500, opacity: 0 }}
+                                        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                                        className="absolute inset-0 w-full h-full cursor-pointer"
+                                        onClick={() => setIsFlipped(true)}
+                                    >
+                                        <AnimatePresence mode="wait" custom={direction}>
+                                            <motion.div
+                                                key={song.id}
+                                                custom={direction}
+                                                initial={direction === 0 ? { scale: 0.92, opacity: 0 } : { x: direction * 100, opacity: 0, scale: 0.95 }}
+                                                animate={{ x: 0, opacity: 1, scale: 1 }}
+                                                exit={{ x: -direction * 100, opacity: 0, scale: 0.95 }}
+                                                transition={{
+                                                    x: { type: "spring", stiffness: 300, damping: 30 },
+                                                    opacity: { duration: 0.3 }
+                                                }}
+                                                className="w-full h-full rounded-lg shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden"
+                                            >
+                                                <img
+                                                    src={thumbnailUrl}
+                                                    alt={song.title}
+                                                    className="w-full h-full object-cover"
+                                                    draggable={false}
+                                                />
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="stopwatch"
+                                        initial={{ y: 500, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        exit={{ y: 500, opacity: 0 }}
+                                        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                                        className="absolute inset-0 w-full h-full p-8 overflow-y-auto no-scrollbar scroll-smooth flex flex-col"
+                                    >
+                                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                                            <button
+                                                onClick={() => setIsFlipped(false)}
+                                                className="text-[11px] font-bold text-white/40 hover:text-white uppercase tracking-widest flex items-center gap-1 group"
+                                            >
+                                                <LucideIcons.ChevronLeft className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" />
+                                                Back to Cover
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 flex items-center justify-center scale-75 lg:scale-90 origin-center transform-gpu">
+                                            <Stopwatch />
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
 
