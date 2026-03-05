@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../../lib/music-context";
+import { useSearchParams } from "next/navigation";
 import { Play, Search, Music, PlusCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
@@ -106,7 +107,7 @@ export default function SearchPage() {
                 {/* Loading */}
                 {isSearching && (
                     <div className="flex items-center justify-center py-20">
-                        <div className="w-8 h-8 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--theme-color, #1DB954)', borderTopColor: 'transparent' }} />
                     </div>
                 )}
 
@@ -129,7 +130,7 @@ export default function SearchPage() {
                                     </div>
                                     <h4 className="text-[28px] font-black text-white truncate">{searchResults[0].title}</h4>
                                     <p className="text-[14px] text-neutral-400 mt-1">{searchResults[0].channelTitle}</p>
-                                    <div className="absolute bottom-5 right-5 w-12 h-12 bg-[#1DB954] rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                                    <div className="absolute bottom-5 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all" style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}>
                                         <Play className="w-6 h-6 fill-black text-black ml-0.5" />
                                     </div>
                                 </div>
@@ -180,7 +181,7 @@ export default function SearchPage() {
                                             <div className="relative aspect-square mb-3 rounded-md overflow-hidden shadow-lg" onClick={() => playInstant(result)}>
                                                 <img src={result.thumbnail} alt="" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity">
-                                                    <div className="w-10 h-10 bg-[#1DB954] rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform" style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}>
                                                         <Play className="w-5 h-5 fill-black text-black ml-0.5" />
                                                     </div>
                                                 </div>
@@ -224,7 +225,7 @@ export default function SearchPage() {
                                                 <div className="relative aspect-square mb-3 rounded-md overflow-hidden shadow-lg">
                                                     <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity">
-                                                        <div className="w-10 h-10 bg-[#1DB954] rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform" style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}>
                                                             <Play className="w-5 h-5 fill-black text-black ml-0.5" />
                                                         </div>
                                                     </div>

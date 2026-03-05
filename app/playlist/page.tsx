@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../../lib/auth-context";
-import { useMusic, Playlist } from "../../lib/music-context";
+import { useMusic, Playlist, Song } from "../../lib/music-context";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import { Play, Music, Clock3, Heart } from "lucide-react";
@@ -11,7 +12,10 @@ import { motion } from "framer-motion";
 export default function PlaylistHome() {
     const { user } = useAuth();
     const router = useRouter();
-    const { recentlyPlayed, playPlaylist, extractYoutubeId, likedSongs } = useMusic();
+    const { recentlyPlayed, playPlaylist, extractYoutubeId, likedSongs, currentSong } = useMusic();
+    const searchParams = useSearchParams();
+    const initialSongId = searchParams.get('song');
+    const hasInitialPlayTried = useRef(false);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [loading, setLoading] = useState(true);
     const [headerOpacity, setHeaderOpacity] = useState(0);
@@ -30,6 +34,23 @@ export default function PlaylistHome() {
             finally { setLoading(false); }
         })();
     }, [user]);
+
+    // Auto-play song from URL on load
+    useEffect(() => {
+        if (!loading && playlists.length > 0 && initialSongId && !hasInitialPlayTried.current) {
+            // Find playlist containing the song
+            for (const pl of playlists) {
+                const index = pl.songs?.findIndex(s => s.id === initialSongId);
+                if (index !== undefined && index !== -1) {
+                    if (currentSong?.id !== initialSongId) {
+                        playPlaylist(pl, index);
+                    }
+                    hasInitialPlayTried.current = true;
+                    break;
+                }
+            }
+        }
+    }, [loading, playlists, initialSongId, playPlaylist, currentSong]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -93,7 +114,8 @@ export default function PlaylistHome() {
                                     <div className="absolute right-4 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); playPlaylist(pl, 0); }}
-                                            className="w-10 h-10 bg-[#1DB954] text-black rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-transform"
+                                            className="w-10 h-10 text-black rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-transform"
+                                            style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}
                                         >
                                             <Play className="w-5 h-5 fill-current ml-0.5" />
                                         </button>
@@ -129,8 +151,13 @@ export default function PlaylistHome() {
                                                 alt=""
                                                 className="w-full h-full object-cover"
                                             />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity">
-                                                <div className="w-10 h-10 bg-[#1DB954] rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform">
+                                            <div
+                                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity"
+                                            >
+                                                <div
+                                                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform"
+                                                    style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}
+                                                >
                                                     <Play className="w-5 h-5 fill-black text-black ml-0.5" />
                                                 </div>
                                             </div>
@@ -173,7 +200,10 @@ export default function PlaylistHome() {
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity">
-                                            <div className="w-10 h-10 bg-[#1DB954] rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform">
+                                            <div
+                                                className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl translate-y-2 group-hover:translate-y-0 transition-transform"
+                                                style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}
+                                            >
                                                 <Play className="w-5 h-5 fill-black text-black ml-0.5" />
                                             </div>
                                         </div>

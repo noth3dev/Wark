@@ -14,7 +14,8 @@ import FullScreenPlayer from "../../components/playlist/FullScreenPlayer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useActiveSessionSync } from "../../hooks/useActiveSessionSync";
 
 export default function PlaylistLayout({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
@@ -31,6 +32,10 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
         currentSongIndex, playPlaylist
     } = useMusic();
 
+    const tagStatus = useActiveSessionSync();
+    const searchParams = useSearchParams();
+    const themeColor = tagStatus.color || "#1DB954";
+
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -40,6 +45,16 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
     useEffect(() => {
         if (user) fetchPlaylists();
     }, [user]);
+
+    // Update URL with current song ID
+    useEffect(() => {
+        if (!currentSong) return;
+        const params = new URLSearchParams(searchParams.toString());
+        if (params.get('song') !== currentSong.id) {
+            params.set('song', currentSong.id);
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    }, [currentSong, pathname, router, searchParams]);
 
     const fetchPlaylists = async () => {
         try {
@@ -78,9 +93,12 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
     const currentThumbnail = currentSong ? `https://img.youtube.com/vi/${extractYoutubeId(currentSong.youtube_url)}/0.jpg` : "";
 
     return (
-        <div className="flex flex-col h-screen bg-black overflow-hidden select-none">
+        <div
+            className="flex flex-col h-screen bg-black overflow-hidden select-none"
+            style={{ "--theme-color": themeColor } as any}
+        >
             {/* Main content area */}
-            <div className="flex flex-1 overflow-hidden min-h-0">
+            <div className="flex flex-1 overflow-hidden min-h-0 pb-[90px]">
                 {/* Left Sidebar */}
                 <PlaylistSidebar
                     playlists={playlists}
@@ -88,6 +106,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                     onSelectPlaylist={(p) => router.push(`/playlist/${p.id}`)}
                     onCreatePlaylist={() => setIsCreating(true)}
                     onSearchClick={() => router.push('/playlist/search')}
+                    onHomeClick={() => router.push('/playlist')}
                 />
 
                 {/* Page content */}
@@ -111,7 +130,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
             </div>
 
             {/* Fixed Bottom Player Bar */}
-            <div className="bg-black border-t border-white/5 h-[90px] px-4 py-2 flex items-center justify-between z-50 flex-shrink-0">
+            <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/5 h-[90px] px-4 py-2 flex items-center justify-between z-50">
                 {/* Left: Track Info */}
                 <div className="flex items-center gap-4 min-w-[30%]">
                     {currentSong ? (
@@ -133,7 +152,8 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                             </div>
                             <Heart
                                 onClick={() => toggleLike(currentSong)}
-                                className={`w-4 h-4 cursor-pointer ml-2 transition-colors flex-shrink-0 ${likedSongs.includes(extractYoutubeId(currentSong.youtube_url) || '') ? "text-[#1DB954] fill-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                                style={likedSongs.includes(extractYoutubeId(currentSong.youtube_url) || '') ? { color: themeColor, fill: themeColor } : {}}
+                                className={`w-4 h-4 cursor-pointer ml-2 transition-colors flex-shrink-0 ${likedSongs.includes(extractYoutubeId(currentSong.youtube_url) || '') ? "" : "text-neutral-400 hover:text-white"}`}
                             />
                         </>
                     ) : (
@@ -150,7 +170,11 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                 {/* Center: Playback Controls */}
                 <div className="flex flex-col items-center gap-2 flex-1 max-w-[40%]">
                     <div className="flex items-center gap-6">
-                        <button onClick={toggleShuffle} className={`transition-colors ${shuffleMode ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}>
+                        <button
+                            onClick={toggleShuffle}
+                            style={shuffleMode ? { color: themeColor } : {}}
+                            className={`transition-colors ${shuffleMode ? "" : "text-neutral-400 hover:text-white"}`}
+                        >
                             <Shuffle className="w-4 h-4" />
                         </button>
                         <button onClick={prevTrack} className="text-neutral-400 hover:text-white transition-colors"><SkipBack className="w-5 h-5 fill-current" /></button>
@@ -163,13 +187,17 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                                 const modes: ('none' | 'all' | 'one')[] = ['none', 'all', 'one'];
                                 setRepeatMode(modes[(modes.indexOf(repeatMode) + 1) % modes.length]);
                             }}
-                            className={`w-4 h-4 cursor-pointer transition-colors ${repeatMode !== 'none' ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                            style={repeatMode !== 'none' ? { color: themeColor } : {}}
+                            className={`w-4 h-4 cursor-pointer transition-colors ${repeatMode !== 'none' ? "" : "text-neutral-400 hover:text-white"}`}
                         />
                     </div>
                     <div className="w-full flex items-center gap-2">
                         <span className="text-[11px] text-neutral-400 min-w-[40px] text-right tabular-nums">{formatTime(currentTime)}</span>
                         <div className="flex-1 h-1 bg-white/10 rounded-full group cursor-pointer relative">
-                            <div className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954] rounded-full" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
+                            <div
+                                className="absolute left-0 h-full bg-white group-hover:bg-white rounded-full"
+                                style={{ width: `${(currentTime / (duration || 1)) * 100}%`, backgroundColor: 'var(--theme-color, white)' }}
+                            />
                             <div className="absolute w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 -top-1 shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-opacity" style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }} />
                             <input type="range" min="0" max={duration || 100} value={currentTime} onChange={(e) => seekTo(Number(e.target.value))} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                         </div>
@@ -179,17 +207,17 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
 
                 {/* Right: Misc Controls */}
                 <div className="flex items-center justify-end gap-3 min-w-[30%]">
-                    <button onClick={() => setRightSidebarVisible(!rightSidebarVisible)} className={`transition-colors ${rightSidebarVisible ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}>
+                    <button onClick={() => setRightSidebarVisible(!rightSidebarVisible)} className={`transition-colors ${rightSidebarVisible ? "" : "text-neutral-400 hover:text-white"}`} style={rightSidebarVisible ? { color: themeColor } : {}}>
                         <ListMusic className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-2 group w-32">
                         <Volume2 className="w-4 h-4 text-neutral-400 group-hover:text-white" />
                         <div className="flex-1 h-1 bg-white/10 rounded-full relative overflow-hidden group-hover:h-1.5 transition-all">
-                            <div className="absolute left-0 h-full bg-white group-hover:bg-[#1DB954]" style={{ width: `${volume}%` }} />
+                            <div className="absolute left-0 h-full bg-white group-hover:bg-white" style={{ width: `${volume}%`, backgroundColor: 'var(--theme-color, white)' }} />
                             <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="absolute inset-0 opacity-0 cursor-pointer" />
                         </div>
                     </div>
-                    <button onClick={() => setIsFullScreen(true)} className={`transition-colors ${isFullScreen ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}>
+                    <button onClick={() => setIsFullScreen(true)} className={`transition-colors ${isFullScreen ? "" : "text-neutral-400 hover:text-white"}`} style={isFullScreen ? { color: themeColor } : {}}>
                         <Maximize2 className="w-4 h-4" />
                     </button>
                 </div>
@@ -220,6 +248,8 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                 onToggleLike={toggleLike}
                 extractYoutubeId={extractYoutubeId}
                 currentSongIndex={currentSongIndex}
+                themeColor={themeColor}
+                tagStatus={tagStatus}
             />
 
             {/* Create Playlist Dialog */}
@@ -235,12 +265,13 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
                             value={newPlaylistName}
                             onChange={(e) => setNewPlaylistName(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && createPlaylist()}
-                            className="bg-white/10 border-none h-12 text-lg focus-visible:ring-1 focus-visible:ring-[#1DB954] text-white"
+                            className="bg-white/10 border-none h-12 text-lg focus-visible:ring-1 text-white"
+                            style={{ '--tw-ring-color': themeColor } as any}
                         />
                     </div>
                     <div className="flex justify-end gap-3">
                         <Button variant="ghost" onClick={() => setIsCreating(false)} className="hover:bg-white/5 text-white font-bold h-12 px-6 rounded-full">Cancel</Button>
-                        <Button onClick={createPlaylist} className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold h-12 px-8 rounded-full">Create</Button>
+                        <Button onClick={createPlaylist} className="hover:bg-opacity-90 text-black font-bold h-12 px-8 rounded-full" style={{ backgroundColor: themeColor }}>Create</Button>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef, use } from "react";
 import { useAuth } from "../../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../../lib/music-context";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Play, Pause, Search, Music, Clock3, MoreHorizontal, Shuffle, Heart, PlusCircle, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Button } from "../../../components/ui/button";
 
@@ -17,8 +17,11 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
     const {
         playPlaylist, currentSong, isPlaying, togglePlay,
         shuffleMode, toggleShuffle, likedSongs, toggleLike,
-        extractYoutubeId
+        extractYoutubeId, playSongByIndex
     } = useMusic();
+    const searchParams = useSearchParams();
+    const initialSongId = searchParams.get('song');
+    const hasInitialPlayTried = useRef(false);
 
     const [playlist, setPlaylist] = useState<Playlist | null>(null);
     const [loading, setLoading] = useState(true);
@@ -46,6 +49,17 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
         }
         finally { setLoading(false); }
     };
+
+    // Auto-play song from URL on load
+    useEffect(() => {
+        if (!loading && playlist && playlist.songs && initialSongId && !hasInitialPlayTried.current) {
+            const index = playlist.songs.findIndex(s => s.id === initialSongId);
+            if (index !== -1 && currentSong?.id !== initialSongId) {
+                playPlaylist(playlist, index);
+            }
+            hasInitialPlayTried.current = true;
+        }
+    }, [loading, playlist, initialSongId, playPlaylist, currentSong]);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         setHeaderOpacity(Math.min(e.currentTarget.scrollTop / 200, 1));
@@ -119,13 +133,15 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
             <div className="sticky top-16 z-10 bg-[#121212]/80 backdrop-blur-md px-8 py-6 flex items-center gap-8">
                 <button
                     onClick={() => playlist.songs && playlist.songs.length > 0 && playPlaylist(playlist, 0)}
-                    className="w-14 h-14 bg-[#1DB954] text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
+                    className="w-14 h-14 text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
+                    style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}
                 >
                     <Play className="w-6 h-6 fill-current ml-1" />
                 </button>
                 <Shuffle
                     onClick={toggleShuffle}
-                    className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${shuffleMode ? "text-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                    style={shuffleMode ? { color: 'var(--theme-color)' } : {}}
+                    className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${shuffleMode ? "" : "text-neutral-400 hover:text-white"}`}
                 />
                 <MoreHorizontal className="w-7 h-7 text-neutral-400 hover:text-white cursor-pointer transition-colors" />
             </div>
@@ -171,12 +187,12 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
                                         ) : (
                                             currentSong?.id === song.id && isPlaying ? (
                                                 <div className="flex gap-0.5 items-end h-3 justify-center">
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-2" style={{ animationDelay: '0ms' }} />
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-3" style={{ animationDelay: '200ms' }} />
-                                                    <div className="w-1 bg-[#1DB954] animate-bounce h-1" style={{ animationDelay: '400ms' }} />
+                                                    <div className="w-1 animate-bounce h-2" style={{ animationDelay: '0ms', backgroundColor: 'var(--theme-color)' }} />
+                                                    <div className="w-1 animate-bounce h-3" style={{ animationDelay: '200ms', backgroundColor: 'var(--theme-color)' }} />
+                                                    <div className="w-1 animate-bounce h-1" style={{ animationDelay: '400ms', backgroundColor: 'var(--theme-color)' }} />
                                                 </div>
                                             ) : (
-                                                <span className={currentSong?.id === song.id ? "text-[#1DB954]" : ""}>{i + 1}</span>
+                                                <span style={currentSong?.id === song.id ? { color: 'var(--theme-color)' } : {}}>{i + 1}</span>
                                             )
                                         )}
                                     </td>
@@ -185,13 +201,14 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
                                             <img src={`https://img.youtube.com/vi/${extractYoutubeId(song.youtube_url)}/default.jpg`} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className={`font-bold truncate ${currentSong?.id === song.id ? "text-[#1DB954]" : "text-white"}`}>{song.title}</p>
+                                            <p className="font-bold truncate" style={currentSong?.id === song.id ? { color: 'var(--theme-color)' } : { color: 'white' }}>{song.title}</p>
                                             <p className="text-xs text-neutral-400">{(song as any).channel_title || 'YouTube'}</p>
                                         </div>
                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Heart
                                                 onClick={(e) => { e.stopPropagation(); toggleLike(song); }}
-                                                className={`w-4 h-4 cursor-pointer ${likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? "text-[#1DB954] fill-[#1DB954]" : "text-neutral-400 hover:text-white"}`}
+                                                style={likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? { color: 'var(--theme-color)', fill: 'var(--theme-color)' } : {}}
+                                                className={`w-4 h-4 cursor-pointer ${likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? "" : "text-neutral-400 hover:text-white"}`}
                                             />
                                             <Trash2
                                                 onClick={(e) => { e.stopPropagation(); setDeleteConfirm(song.id); }}

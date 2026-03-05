@@ -10,6 +10,7 @@ interface PlaylistSidebarProps {
     onSelectPlaylist: (playlist: Playlist) => void;
     onCreatePlaylist: () => void;
     onSearchClick?: () => void;
+    onHomeClick?: () => void;
 }
 
 export default function PlaylistSidebar({
@@ -18,6 +19,7 @@ export default function PlaylistSidebar({
     onSelectPlaylist,
     onCreatePlaylist,
     onSearchClick,
+    onHomeClick,
 }: PlaylistSidebarProps) {
 
     const extractYoutubeId = (url: string) => {
@@ -30,7 +32,10 @@ export default function PlaylistSidebar({
         <div className="flex flex-col h-full bg-black text-neutral-400 p-2 gap-2 w-[300px] flex-shrink-0">
             {/* Top Navigation */}
             <div className="bg-[#121212] rounded-lg p-3 space-y-4">
-                <button className="flex items-center gap-5 px-3 py-1 text-sm font-bold hover:text-white transition-colors w-full group">
+                <button
+                    onClick={onHomeClick}
+                    className={`flex items-center gap-5 px-3 py-1 text-sm font-bold transition-colors w-full group ${!onSearchClick ? 'text-white' : 'hover:text-white'}`}
+                >
                     <Home className="w-6 h-6" />
                     <span>Home</span>
                 </button>
