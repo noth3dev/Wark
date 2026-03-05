@@ -182,9 +182,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                         events: {
                             onReady: (event: any) => { event.target.setVolume(volume); if (isPlaying) event.target.playVideo(); },
                             onStateChange: (event: any) => {
-                                if (event.data === 0) {
-                                    if (repeatMode === 'one') { event.target.seekTo(0); event.target.playVideo(); }
-                                    else { nextTrack(); }
+                                if (repeatMode === 'one') {
+                                    event.target.seekTo(0);
+                                    event.target.playVideo();
+                                } else {
+                                    nextTrack();
                                 }
                                 if (event.data === 1) setIsPlaying(true);
                                 if (event.data === 2) setIsPlaying(false);
@@ -240,22 +242,50 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const nextTrack = () => {
         if (!currentPlaylist?.songs || currentPlaylist.songs.length === 0) return;
         setCurrentTime(0);
+
+        if (repeatMode === 'one') {
+            // Re-trigger current index to reset playback
+            const currentIndex = currentSongIndex;
+            setCurrentSongIndex(-1);
+            setTimeout(() => setCurrentSongIndex(currentIndex), 10);
+            return;
+        }
+
         if (shuffleMode) {
             const nextIndex = Math.floor(Math.random() * currentPlaylist.songs.length);
             setCurrentSongIndex(nextIndex);
         } else {
-            if (repeatMode === 'all') { setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length); }
-            else if (repeatMode === 'none') {
-                if (currentSongIndex < currentPlaylist.songs.length - 1) { setCurrentSongIndex(prev => prev + 1); }
-                else { setIsPlaying(false); }
-            } else if (repeatMode === 'one') { setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length); }
+            if (repeatMode === 'all') {
+                setCurrentSongIndex(prev => (prev + 1) % currentPlaylist.songs!.length);
+            } else {
+                // repeatMode === 'none'
+                if (currentSongIndex < currentPlaylist.songs.length - 1) {
+                    setCurrentSongIndex(prev => prev + 1);
+                } else {
+                    setIsPlaying(false);
+                    // Reset to first song but keep it paused (Spotify style)
+                    setCurrentSongIndex(0);
+                }
+            }
         }
     };
 
     const prevTrack = () => {
         if (!currentPlaylist?.songs || currentPlaylist.songs.length === 0) return;
+
+        // If we've played more than 3 seconds, just restart the song
+        if (currentTime > 3) {
+            seekTo(0);
+            return;
+        }
+
         setCurrentTime(0);
-        setCurrentSongIndex(prev => (prev - 1 + currentPlaylist.songs!.length) % currentPlaylist.songs!.length);
+        if (shuffleMode) {
+            const nextIndex = Math.floor(Math.random() * currentPlaylist.songs.length);
+            setCurrentSongIndex(nextIndex);
+        } else {
+            setCurrentSongIndex(prev => (prev - 1 + currentPlaylist.songs!.length) % currentPlaylist.songs!.length);
+        }
     };
 
     const seekTo = (seconds: number) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "../../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../../lib/music-context";
 import { useSearchParams } from "next/navigation";
@@ -21,6 +21,14 @@ interface SearchResult {
 }
 
 export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
+            <SearchPageContent />
+        </Suspense>
+    );
+}
+
+function SearchPageContent() {
     const { user } = useAuth();
     const { playPlaylist, recentlyPlayed, extractYoutubeId } = useMusic();
 

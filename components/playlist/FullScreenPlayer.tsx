@@ -69,8 +69,17 @@ export default function FullScreenPlayer({
     const [activeTab, setActiveTab] = useState<'queue' | 'recent'>('queue');
     const [bgColor, setBgColor] = useState('rgba(30, 30, 30, 1)');
     const [isFlipped, setIsFlipped] = useState(false);
+    const [direction, setDirection] = useState(0); // -1 for left, 1 for right
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const lastSongIndex = useRef(currentSongIndex);
     const TagIcon = (LucideIcons as any)[tagStatus.icon || 'Moon'] || LucideIcons.Moon;
+
+    useEffect(() => {
+        if (currentSongIndex !== lastSongIndex.current) {
+            setDirection(currentSongIndex > lastSongIndex.current ? 1 : -1);
+            lastSongIndex.current = currentSongIndex;
+        }
+    }, [currentSongIndex]);
 
     // Extract dominant color from thumbnail
     useEffect(() => {
@@ -207,13 +216,17 @@ export default function FullScreenPlayer({
                                     className="absolute inset-0 w-full h-full [backface-visibility:hidden] cursor-pointer"
                                     onClick={() => setIsFlipped(true)}
                                 >
-                                    <AnimatePresence mode="wait">
+                                    <AnimatePresence mode="wait" custom={direction}>
                                         <motion.div
                                             key={song.id}
-                                            initial={{ scale: 0.92, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            exit={{ scale: 0.92, opacity: 0 }}
-                                            transition={{ duration: 0.4 }}
+                                            custom={direction}
+                                            initial={direction === 0 ? { scale: 0.92, opacity: 0 } : { x: direction * 100, opacity: 0, scale: 0.95 }}
+                                            animate={{ x: 0, opacity: 1, scale: 1 }}
+                                            exit={{ x: -direction * 100, opacity: 0, scale: 0.95 }}
+                                            transition={{
+                                                x: { type: "spring", stiffness: 300, damping: 30 },
+                                                opacity: { duration: 0.3 }
+                                            }}
                                             className="w-full h-full rounded-lg shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden"
                                         >
                                             <img
@@ -363,18 +376,38 @@ export default function FullScreenPlayer({
                         {/* Song Info Row */}
                         <div className="flex items-center justify-between">
                             <div className="min-w-0 flex-1 mr-4">
-                                <AnimatePresence mode="wait">
+                                <AnimatePresence mode="wait" custom={direction}>
                                     <motion.h2
                                         key={song.id + '-title'}
-                                        initial={{ y: 8, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        exit={{ y: -8, opacity: 0 }}
+                                        custom={direction}
+                                        initial={direction === 0 ? { y: 8, opacity: 0 } : { x: direction * 40, opacity: 0 }}
+                                        animate={{ x: 0, y: 0, opacity: 1 }}
+                                        exit={{ x: -direction * 40, opacity: 0 }}
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
                                         className="text-xl font-bold text-white truncate leading-tight"
                                     >
                                         {song.title}
                                     </motion.h2>
                                 </AnimatePresence>
-                                <p className="text-sm text-white/50 truncate mt-0.5">{(song as any).channel_title || 'YouTube'}</p>
+                                <AnimatePresence mode="wait" custom={direction}>
+                                    <motion.p
+                                        key={song.id + '-channel'}
+                                        custom={direction}
+                                        initial={direction === 0 ? { opacity: 0 } : { x: direction * 30, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        exit={{ x: -direction * 30, opacity: 0 }}
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="text-sm text-white/50 truncate mt-0.5"
+                                    >
+                                        {(song as any).channel_title || 'YouTube'}
+                                    </motion.p>
+                                </AnimatePresence>
                             </div>
                             <div className="flex items-center gap-3 flex-shrink-0">
                                 <Heart

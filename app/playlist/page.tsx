@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense, use } from "react";
 import { useAuth } from "../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../lib/music-context";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -8,7 +8,7 @@ import { supabase } from "../../lib/supabase";
 import { Play, Music, Clock3, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function PlaylistHome() {
+function PlaylistHomeContent() {
     const { user } = useAuth();
     const router = useRouter();
     const { recentlyPlayed, playPlaylist, extractYoutubeId, likedSongs, currentSong } = useMusic();
@@ -231,5 +231,13 @@ export default function PlaylistHome() {
                 )}
             </div>
         </main>
+    );
+}
+
+export default function PlaylistHome() {
+    return (
+        <Suspense fallback={<div className="flex-1 bg-[#121212]" />}>
+            <PlaylistHomeContent />
+        </Suspense>
     );
 }

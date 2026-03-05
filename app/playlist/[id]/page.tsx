@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useEffect, useState, useRef, Suspense, use } from "react";
 import { useAuth } from "../../../lib/auth-context";
 import { useMusic, Playlist, Song } from "../../../lib/music-context";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -10,8 +10,7 @@ import { supabase } from "../../../lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Button } from "../../../components/ui/button";
 
-export default function PlaylistDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+function PlaylistDetailContent({ id }: { id: string }) {
     const { user } = useAuth();
     const router = useRouter();
     const {
@@ -240,5 +239,14 @@ export default function PlaylistDetailPage({ params }: { params: Promise<{ id: s
                 </DialogContent>
             </Dialog>
         </main>
+    );
+}
+
+export default function PlaylistDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    return (
+        <Suspense fallback={<div className="flex-1 bg-[#121212]" />}>
+            <PlaylistDetailContent id={id} />
+        </Suspense>
     );
 }
