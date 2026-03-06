@@ -43,6 +43,16 @@
   --radius: 0.5rem;
   /* More minimal radius */
 
+  /* Playlist Theme Variables */
+  --pl-base: #121212;
+  --pl-surface: #181818;
+  --pl-elevated: #282828;
+  --pl-hover: #3e3e3e;
+  --pl-player: #000000;
+  --pl-text: #ffffff;
+  --pl-text-muted: #a7a7a7;
+  --pl-border: rgba(255, 255, 255, 0.1);
+
   --chart-1: oklch(0.7 0.12 200);
   --chart-2: oklch(0.6 0.12 200);
   --chart-3: oklch(0.5 0.12 200);

@@ -137,7 +137,7 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
 
     return (
         <div
-            className="flex flex-col h-screen bg-black overflow-hidden select-none"
+            className="flex flex-col h-full bg-[var(--pl-player)] overflow-hidden select-none"
             style={{ "--theme-color": themeColor } as any}
         >
             {/* Main content area */}
@@ -160,8 +160,8 @@ export default function PlaylistLayout({ children }: { children: React.ReactNode
 
                 {/* Page content */}
                 {!leftSidebarExpanded && (
-                    <div className="flex-1 flex flex-col min-w-0 bg-[#121212] md:rounded-lg md:m-2 relative overflow-hidden">
-                        <Suspense fallback={<div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Loading...</div>}>
+                    <div className="flex-1 flex flex-col min-w-0 bg-[var(--pl-base)] md:rounded-lg md:m-2 relative overflow-hidden">
+                        <Suspense fallback={<div className="flex-1 bg-[var(--pl-base)] flex items-center justify-center text-[var(--pl-text)]">Loading...</div>}>
                             {children}
                             <URLSync />
                         </Suspense>

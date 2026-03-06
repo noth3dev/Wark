@@ -183,7 +183,7 @@ export default function RecordPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white selection:bg-white/10 selection:text-white pb-20 sm:pb-0">
+        <main className="h-full overflow-y-auto bg-black text-white selection:bg-white/10 selection:text-white pb-20 sm:pb-0">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24 space-y-16 sm:space-y-24">
                 <RecordHeader
                     selectedDate={selectedDate}

@@ -159,14 +159,14 @@ function PlaylistDetailContent({ id }: { id: string }) {
         }
     };
 
-    if (loading) return <div className="flex-1 bg-[#121212]" />;
-    if (!playlist) return <div className="flex-1 bg-[#121212] flex items-center justify-center text-white">Playlist not found</div>;
+    if (loading) return <div className="flex-1 bg-[var(--pl-base)]" />;
+    if (!playlist) return <div className="flex-1 bg-[var(--pl-base)] flex items-center justify-center text-[var(--pl-text)]">Playlist not found</div>;
 
     return (
         <main
             ref={mainScrollRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto overflow-x-hidden bg-[#121212] relative custom-scrollbar scroll-smooth"
+            className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--pl-base)] relative custom-scrollbar scroll-smooth"
         >
             <div
                 className="sticky top-0 w-full h-16 z-20 transition-colors duration-300 pointer-events-none -mb-16"
@@ -177,7 +177,7 @@ function PlaylistDetailContent({ id }: { id: string }) {
             >
                 <div className="flex items-center h-full px-6 pointer-events-auto">
                     {headerOpacity > 0.5 && (
-                        <h2 className="text-lg font-bold text-white truncate">{playlist.name}</h2>
+                        <h2 className="text-lg font-bold text-[var(--pl-text)] truncate">{playlist.name}</h2>
                     )}
                 </div>
             </div>
@@ -187,31 +187,31 @@ function PlaylistDetailContent({ id }: { id: string }) {
                 <div
                     className="absolute inset-0 z-0 bg-gradient-to-b transition-colors duration-1000"
                     style={{
-                        backgroundImage: `linear-gradient(to bottom, ${heroColor}, #121212)`,
+                        backgroundImage: `linear-gradient(to bottom, ${heroColor}, var(--pl-base))`,
                         filter: 'blur(50px)', opacity: 0.6
                     }}
                 />
                 <div className="absolute inset-0 z-0 bg-black/40" />
 
                 <div className="relative z-10 flex items-end gap-6 w-full">
-                    <motion.div className="w-52 h-52 bg-[#282828] shadow-[0_24px_60px_rgba(0,0,0,0.6)] flex-shrink-0 rounded-lg overflow-hidden">
+                    <motion.div className="w-52 h-52 bg-[var(--pl-elevated)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] flex-shrink-0 rounded-lg overflow-hidden">
                         {playlist.songs?.[0] ? (
                             <img src={`https://img.youtube.com/vi/${extractYoutubeId(playlist.songs[0].youtube_url)}/maxresdefault.jpg`} alt="" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center"><Music className="w-16 h-16 text-neutral-600" /></div>
+                            <div className="w-full h-full flex items-center justify-center"><Music className="w-16 h-16 text-[var(--pl-text-muted)]" /></div>
                         )}
                     </motion.div>
                     <div className="space-y-4 flex-1">
-                        <p className="text-[12px] font-bold text-white uppercase tracking-tight">Playlist</p>
-                        <h1 className="text-[72px] font-black text-white leading-none tracking-tighter truncate max-w-full">{playlist.name}</h1>
-                        <div className="flex items-center gap-2 text-sm text-white font-medium">
+                        <p className="text-[12px] font-bold text-[var(--pl-text)] uppercase tracking-tight">Playlist</p>
+                        <h1 className="text-[72px] font-black text-[var(--pl-text)] leading-none tracking-tighter truncate max-w-full">{playlist.name}</h1>
+                        <div className="flex items-center gap-2 text-sm text-[var(--pl-text)] font-medium">
                             <span>{(playlist.songs?.length || 0)} songs</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="sticky top-16 z-10 bg-[#121212]/80 backdrop-blur-md px-8 py-6 flex items-center gap-8">
+            <div className="sticky top-16 z-10 bg-[var(--pl-base)]/80 backdrop-blur-md px-8 py-6 flex items-center gap-8">
                 <button
                     onClick={() => playlist.songs && playlist.songs.length > 0 && playPlaylist(playlist, 0)}
                     className="w-14 h-14 text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
@@ -222,16 +222,16 @@ function PlaylistDetailContent({ id }: { id: string }) {
                 <Shuffle
                     onClick={toggleShuffle}
                     style={shuffleMode ? { color: 'var(--theme-color)' } : {}}
-                    className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${shuffleMode ? "" : "text-neutral-400 hover:text-white"}`}
+                    className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${shuffleMode ? "" : "text-[var(--pl-text-muted)] hover:text-[var(--pl-text)]"}`}
                 />
-                <MoreHorizontal className="w-7 h-7 text-neutral-400 hover:text-white cursor-pointer transition-colors" />
+                <MoreHorizontal className="w-7 h-7 text-[var(--pl-text-muted)] hover:text-[var(--pl-text)] cursor-pointer transition-colors" />
             </div>
 
             <div className="px-8 pb-32">
                 {(!playlist.songs || playlist.songs.length === 0) ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
+                    <div className="flex flex-col items-center justify-center py-20 text-[var(--pl-text-muted)]">
                         <Music className="w-12 h-12 mb-4" />
-                        <p className="text-lg font-bold">This playlist is empty</p>
+                        <p className="text-lg font-bold text-[var(--pl-text)]">This playlist is empty</p>
                         <p className="text-sm mt-1">Search for songs and add them here</p>
                         <button
                             onClick={() => router.push('/playlist/search')}
@@ -247,10 +247,10 @@ function PlaylistDetailContent({ id }: { id: string }) {
                         onDragEnd={handleDragEnd}
                     >
                         <table className="w-full text-left border-collapse">
-                            <thead className="text-[12px] font-medium text-neutral-400 border-b border-white/10 uppercase tracking-widest">
+                            <thead className="text-[12px] font-medium text-[var(--pl-text-muted)] border-b border-white/10 uppercase tracking-widest">
                                 <tr>
                                     <th className="py-2 px-4 font-medium w-12 text-center">#</th>
-                                    <th className="py-2 px-4 font-medium">Title</th>
+                                    <th className="py-2 px-4 font-medium text-[var(--pl-text-muted)]">Title</th>
                                     <th className="py-2 px-4 font-medium text-right pr-12"><Clock3 className="w-4 h-4 ml-auto" /></th>
                                 </tr>
                             </thead>
@@ -284,14 +284,14 @@ function PlaylistDetailContent({ id }: { id: string }) {
             </div>
 
             <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-                <DialogContent className="bg-[#282828] border-none text-white max-w-sm rounded-2xl p-6">
+                <DialogContent className="bg-[var(--pl-elevated)] border-none text-[var(--pl-text)] max-w-sm rounded-2xl p-6">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-bold">Remove Song</DialogTitle>
-                        <DialogDescription className="text-neutral-400">Remove this song from the playlist?</DialogDescription>
+                        <DialogDescription className="text-[var(--pl-text-muted)]">Remove this song from the playlist?</DialogDescription>
                     </DialogHeader>
                     <div className="flex justify-end gap-3 mt-4">
-                        <Button variant="ghost" onClick={() => setDeleteConfirm(null)} className="hover:bg-white/5 text-white font-bold rounded-full">Cancel</Button>
-                        <Button onClick={() => deleteConfirm && deleteSong(deleteConfirm)} className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full">Remove</Button>
+                        <Button variant="ghost" onClick={() => setDeleteConfirm(null)} className="hover:bg-white/5 text-[var(--pl-text)] font-bold rounded-full">Cancel</Button>
+                        <Button onClick={() => deleteConfirm && deleteSong(deleteConfirm)} className="bg-red-500 hover:bg-red-600 text-[var(--pl-text)] font-bold rounded-full">Remove</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -336,10 +336,10 @@ function SortableRow({
             onMouseEnter={() => setHoveredTrackIndex(index)}
             onMouseLeave={() => setHoveredTrackIndex(null)}
         >
-            <td className="py-2 px-4 text-center rounded-l-md text-neutral-400 group-hover:text-white relative w-12">
+            <td className="py-2 px-4 text-center rounded-l-md text-[var(--pl-text-muted)] group-hover:text-[var(--pl-text)] relative w-12">
                 {hoveredTrackIndex === index ? (
                     <Play
-                        className="w-4 h-4 fill-white text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                        className="w-4 h-4 fill-white text-[var(--pl-text)] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
                         onClick={() => playPlaylist(playlist, index)}
                     />
                 ) : (
@@ -355,26 +355,26 @@ function SortableRow({
                 )}
             </td>
             <td className="py-2 px-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#282828] rounded flex-shrink-0 overflow-hidden">
+                <div className="w-10 h-10 bg-[var(--pl-elevated)] rounded flex-shrink-0 overflow-hidden">
                     <img src={`https://img.youtube.com/vi/${extractYoutubeId(song.youtube_url)}/default.jpg`} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="font-bold truncate" style={currentSong?.id === song.id ? { color: 'var(--theme-color)' } : { color: 'white' }}>{song.title}</p>
-                    <p className="text-xs text-neutral-400">{(song as any).channel_title || 'YouTube'}</p>
+                    <p className="font-bold truncate" style={currentSong?.id === song.id ? { color: 'var(--theme-color)' } : { color: 'var(--pl-text)' }}>{song.title}</p>
+                    <p className="text-xs text-[var(--pl-text-muted)]">{(song as any).channel_title || 'YouTube'}</p>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Heart
                         onClick={(e) => { e.stopPropagation(); toggleLike(song); }}
                         style={likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? { color: 'var(--theme-color)', fill: 'var(--theme-color)' } : {}}
-                        className={`w-4 h-4 cursor-pointer ${likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? "" : "text-neutral-400 hover:text-white"}`}
+                        className={`w-4 h-4 cursor-pointer ${likedSongs.includes(extractYoutubeId(song.youtube_url) || '') ? "" : "text-[var(--pl-text-muted)] hover:text-[var(--pl-text)]"}`}
                     />
                     <Trash2
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirm(song.id); }}
-                        className="w-4 h-4 text-neutral-400 hover:text-red-400 cursor-pointer"
+                        className="w-4 h-4 text-[var(--pl-text-muted)] hover:text-red-400 cursor-pointer"
                     />
                 </div>
             </td>
-            <td className="py-2 px-4 text-right pr-12 text-neutral-400 rounded-r-md tabular-nums text-[13px]">
+            <td className="py-2 px-4 text-right pr-12 text-[var(--pl-text-muted)] rounded-r-md tabular-nums text-[13px]">
                 {(song as any).duration_text || '—'}
             </td>
         </tr>
@@ -384,7 +384,7 @@ function SortableRow({
 export default function PlaylistDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     return (
-        <Suspense fallback={<div className="flex-1 bg-[#121212]" />}>
+        <Suspense fallback={<div className="flex-1 bg-[var(--pl-base)]" />}>
             <PlaylistDetailContent id={id} />
         </Suspense>
     );

@@ -62,13 +62,13 @@ function PlaylistHomeContent() {
         setHeaderOpacity(Math.min(e.currentTarget.scrollTop / 200, 1));
     };
 
-    if (loading) return <div className="flex-1 bg-[#121212]" />;
+    if (loading) return <div className="flex-1 bg-[var(--pl-base)]" />;
 
     return (
         <main
             ref={mainRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto bg-[#121212] custom-scrollbar relative"
+            className="flex-1 overflow-y-auto bg-[var(--pl-base)] custom-scrollbar relative"
         >
             <div
                 className="sticky top-0 w-full h-16 z-20 pointer-events-none transition-colors duration-300 -mb-16"
@@ -80,7 +80,7 @@ function PlaylistHomeContent() {
 
             <div className="relative z-10 px-8 pt-6 pb-32">
                 <header className="mb-8 pt-8">
-                    <h1 className="text-3xl font-black text-white tracking-tight">{getGreeting()}</h1>
+                    <h1 className="text-3xl font-black text-[var(--pl-text)] tracking-tight">{getGreeting()}</h1>
                 </header>
 
                 {/* Top Grid - Recent/Favorite Playlists */}
@@ -93,7 +93,7 @@ function PlaylistHomeContent() {
                                     onClick={() => router.push(`/playlist/${pl.id}`)}
                                     className="group flex items-center bg-white/5 hover:bg-white/10 rounded-md overflow-hidden transition-all cursor-pointer relative"
                                 >
-                                    <div className="w-20 h-20 bg-[#282828] flex-shrink-0 shadow-lg relative">
+                                    <div className="w-20 h-20 bg-[var(--pl-elevated)] flex-shrink-0 shadow-lg relative">
                                         {pl.songs?.[0] ? (
                                             <img
                                                 src={`https://img.youtube.com/vi/${extractYoutubeId(pl.songs[0].youtube_url)}/default.jpg`}
@@ -107,7 +107,7 @@ function PlaylistHomeContent() {
                                         )}
                                     </div>
                                     <div className="flex-1 px-4 min-w-0">
-                                        <p className="text-[14px] font-bold text-white truncate">{pl.name}</p>
+                                        <p className="text-[14px] font-bold text-[var(--pl-text)] truncate">{pl.name}</p>
                                     </div>
                                     <div className="absolute right-4 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
                                         <button
@@ -128,8 +128,8 @@ function PlaylistHomeContent() {
                 {recentlyPlayed.length > 0 && (
                     <section className="mb-10">
                         <div className="flex items-end justify-between mb-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight hover:underline cursor-pointer">Recently Played</h2>
-                            <button className="text-[12px] font-bold text-neutral-400 hover:underline">Show all</button>
+                            <h2 className="text-2xl font-bold text-[var(--pl-text)] tracking-tight hover:underline cursor-pointer">Recently Played</h2>
+                            <button className="text-[12px] font-bold text-[var(--pl-text-muted)] hover:underline">Show all</button>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                             {recentlyPlayed.slice(0, 12).map((s, i) => {
@@ -137,7 +137,7 @@ function PlaylistHomeContent() {
                                 return (
                                     <div
                                         key={`recent-${s.id}-${i}`}
-                                        className="bg-[#181818] hover:bg-[#282828] p-4 rounded-md transition-all cursor-pointer group flex flex-col items-center text-center"
+                                        className="bg-[var(--pl-surface)] hover:bg-[var(--pl-elevated)] p-4 rounded-md transition-all cursor-pointer group flex flex-col items-center text-center"
                                         onClick={() => {
                                             const p: Playlist = { id: 'recently-played', name: 'Recently Played', user_id: '', songs: recentlyPlayed };
                                             playPlaylist(p, i);
@@ -161,8 +161,8 @@ function PlaylistHomeContent() {
                                             </div>
                                         </div>
                                         <div className="w-full text-left">
-                                            <p className="text-[14px] font-bold text-white truncate">{s.title}</p>
-                                            <p className="text-[12px] text-neutral-400 mt-1 truncate">{(s as any).channel_title || 'YouTube'}</p>
+                                            <p className="text-[14px] font-bold text-[var(--pl-text)] truncate">{s.title}</p>
+                                            <p className="text-[12px] text-[var(--pl-text-muted)] mt-1 truncate">{(s as any).channel_title || 'YouTube'}</p>
                                         </div>
                                     </div>
                                 );
@@ -175,14 +175,14 @@ function PlaylistHomeContent() {
                 {playlists.length > 8 && (
                     <section className="mb-10">
                         <div className="flex items-end justify-between mb-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight hover:underline cursor-pointer">Your Playlists</h2>
-                            <button className="text-[12px] font-bold text-neutral-400 hover:underline">Show all</button>
+                            <h2 className="text-2xl font-bold text-[var(--pl-text)] tracking-tight hover:underline cursor-pointer">Your Playlists</h2>
+                            <button className="text-[12px] font-bold text-[var(--pl-text-muted)] hover:underline">Show all</button>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                             {playlists.slice(8).map((pl) => (
                                 <div
                                     key={`all-${pl.id}`}
-                                    className="bg-[#181818] hover:bg-[#282828] p-4 rounded-md transition-all cursor-pointer group"
+                                    className="bg-[var(--pl-surface)] hover:bg-[var(--pl-elevated)] p-4 rounded-md transition-all cursor-pointer group"
                                     onClick={() => router.push(`/playlist/${pl.id}`)}
                                 >
                                     <div className="relative aspect-square w-full mb-4 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-md overflow-hidden">
@@ -193,8 +193,8 @@ function PlaylistHomeContent() {
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-[#282828] flex items-center justify-center">
-                                                <Music className="w-12 h-12 text-neutral-600" />
+                                            <div className="w-full h-full bg-[var(--pl-elevated)] flex items-center justify-center">
+                                                <Music className="w-12 h-12 text-[var(--pl-text-muted)]" />
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-end p-2 transition-opacity">
@@ -206,8 +206,8 @@ function PlaylistHomeContent() {
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-[14px] font-bold text-white truncate">{pl.name}</p>
-                                    <p className="text-[12px] text-neutral-400 mt-1 truncate">By {user?.email?.split('@')[0] || 'You'}</p>
+                                    <p className="text-[14px] font-bold text-[var(--pl-text)] truncate">{pl.name}</p>
+                                    <p className="text-[12px] text-[var(--pl-text-muted)] mt-1 truncate">By {user?.email?.split('@')[0] || 'You'}</p>
                                 </div>
                             ))}
                         </div>
@@ -216,9 +216,9 @@ function PlaylistHomeContent() {
 
                 {/* Empty State */}
                 {playlists.length === 0 && recentlyPlayed.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
+                    <div className="flex flex-col items-center justify-center py-24 text-[var(--pl-text-muted)]">
                         <Music className="w-16 h-16 mb-4 opacity-20" />
-                        <h3 className="text-xl font-bold mb-2">Build your library</h3>
+                        <h3 className="text-xl font-bold mb-2 text-[var(--pl-text)]">Build your library</h3>
                         <p className="text-sm max-w-xs text-center mb-6">Create a playlist or search for songs to start your collection.</p>
                         <button
                             onClick={() => router.push('/playlist/search')}
@@ -235,7 +235,7 @@ function PlaylistHomeContent() {
 
 export default function PlaylistHome() {
     return (
-        <Suspense fallback={<div className="flex-1 bg-[#121212]" />}>
+        <Suspense fallback={<div className="flex-1 bg-[var(--pl-base)]" />}>
             <PlaylistHomeContent />
         </Suspense>
     );

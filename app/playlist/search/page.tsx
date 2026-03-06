@@ -94,11 +94,11 @@ function SearchPageContent() {
     };
 
     return (
-        <main className="flex-1 overflow-y-auto bg-[#121212] custom-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-[var(--pl-base)] custom-scrollbar">
             {/* Search Header */}
-            <div className="sticky top-0 z-20 bg-[#121212] px-8 py-5">
+            <div className="sticky top-0 z-20 bg-[var(--pl-base)] px-8 py-5">
                 <div className="relative w-full max-w-xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--pl-text-muted)]" />
                     <input
                         type="text"
                         placeholder="What do you want to listen to?"
@@ -106,7 +106,7 @@ function SearchPageContent() {
                         onChange={e => setSearchQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                         autoFocus
-                        className="w-full bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#2a2a2a] text-[15px] rounded-full py-3 pl-12 pr-4 outline-none border-2 border-transparent focus:border-white/20 transition-all text-white placeholder:text-neutral-500"
+                        className="w-full bg-[var(--pl-surface)] hover:bg-[var(--pl-hover)] focus:bg-[var(--pl-hover)] text-[15px] rounded-full py-3 pl-12 pr-4 outline-none border-2 border-transparent focus:border-white/20 transition-all text-[var(--pl-text)] placeholder:text-[var(--pl-text-muted)]"
                     />
                 </div>
             </div>
@@ -122,22 +122,22 @@ function SearchPageContent() {
                 {/* Results */}
                 {!isSearching && searchResults.length > 0 && (
                     <div>
-                        <h2 className="text-2xl font-bold text-white mb-6">Results</h2>
+                        <h2 className="text-2xl font-bold text-[var(--pl-text)] mb-6">Results</h2>
 
                         {/* Top Result + Songs split */}
                         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 mb-8">
                             {/* Top Result Card */}
                             <div>
-                                <h3 className="text-[14px] font-bold text-white mb-4">Top result</h3>
+                                <h3 className="text-[14px] font-bold text-[var(--pl-text)] mb-4">Top result</h3>
                                 <div
                                     onClick={() => playInstant(searchResults[0])}
-                                    className="bg-[#181818] hover:bg-[#282828] p-5 rounded-xl transition-all cursor-pointer group relative"
+                                    className="bg-[var(--pl-surface)] hover:bg-[var(--pl-elevated)] p-5 rounded-xl transition-all cursor-pointer group relative"
                                 >
                                     <div className="w-24 h-24 rounded-md overflow-hidden shadow-lg mb-4">
                                         <img src={searchResults[0].thumbnail} alt="" className="w-full h-full object-cover" />
                                     </div>
-                                    <h4 className="text-[28px] font-black text-white truncate">{searchResults[0].title}</h4>
-                                    <p className="text-[14px] text-neutral-400 mt-1">{searchResults[0].channelTitle}</p>
+                                    <h4 className="text-[28px] font-black text-[var(--pl-text)] truncate">{searchResults[0].title}</h4>
+                                    <p className="text-[14px] text-[var(--pl-text-muted)] mt-1">{searchResults[0].channelTitle}</p>
                                     <div className="absolute bottom-5 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all" style={{ backgroundColor: 'var(--theme-color, #1DB954)' }}>
                                         <Play className="w-6 h-6 fill-black text-black ml-0.5" />
                                     </div>
@@ -146,27 +146,27 @@ function SearchPageContent() {
 
                             {/* Songs List */}
                             <div>
-                                <h3 className="text-[14px] font-bold text-white mb-4">Songs</h3>
+                                <h3 className="text-[14px] font-bold text-[var(--pl-text)] mb-4">Songs</h3>
                                 <div className="space-y-1">
                                     {searchResults.slice(0, 5).map((result, i) => (
                                         <div
                                             key={result.videoId}
                                             className="flex items-center gap-4 p-2.5 rounded-md hover:bg-white/5 transition-colors group"
                                         >
-                                            <div className="w-10 h-10 rounded bg-[#282828] overflow-hidden flex-shrink-0 relative cursor-pointer" onClick={() => playInstant(result)}>
+                                            <div className="w-10 h-10 rounded bg-[var(--pl-elevated)] overflow-hidden flex-shrink-0 relative cursor-pointer" onClick={() => playInstant(result)}>
                                                 <img src={result.thumbnail} alt="" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                    <Play className="w-4 h-4 fill-white text-white" />
+                                                    <Play className="w-4 h-4 fill-white text-[var(--pl-text)]" />
                                                 </div>
                                             </div>
                                             <div className="min-w-0 flex-1 cursor-pointer" onClick={() => playInstant(result)}>
-                                                <p className="text-[14px] font-medium text-white truncate">{result.title}</p>
-                                                <p className="text-[12px] text-neutral-400 truncate">{result.channelTitle}</p>
+                                                <p className="text-[14px] font-medium text-[var(--pl-text)] truncate">{result.title}</p>
+                                                <p className="text-[12px] text-[var(--pl-text-muted)] truncate">{result.channelTitle}</p>
                                             </div>
-                                            <span className="text-[12px] text-neutral-400 tabular-nums flex-shrink-0 w-12 text-right">{result.durationText || '—'}</span>
+                                            <span className="text-[12px] text-[var(--pl-text-muted)] tabular-nums flex-shrink-0 w-12 text-right">{result.durationText || '—'}</span>
                                             <button
                                                 onClick={() => setAddToPlaylistSong(result)}
-                                                className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                                                className="p-1.5 text-[var(--pl-text-muted)] hover:text-[var(--pl-text)] hover:bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                             >
                                                 <PlusCircle className="w-5 h-5" />
                                             </button>
@@ -179,12 +179,12 @@ function SearchPageContent() {
                         {/* Remaining results as grid */}
                         {searchResults.length > 5 && (
                             <div>
-                                <h3 className="text-xl font-bold text-white mb-4">More results</h3>
+                                <h3 className="text-xl font-bold text-[var(--pl-text)] mb-4">More results</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                     {searchResults.slice(5).map((result) => (
                                         <div
                                             key={result.videoId}
-                                            className="bg-[#181818] hover:bg-[#282828] p-4 rounded-md transition-all cursor-pointer group"
+                                            className="bg-[var(--pl-surface)] hover:bg-[var(--pl-elevated)] p-4 rounded-md transition-all cursor-pointer group"
                                         >
                                             <div className="relative aspect-square mb-3 rounded-md overflow-hidden shadow-lg" onClick={() => playInstant(result)}>
                                                 <img src={result.thumbnail} alt="" className="w-full h-full object-cover" />
@@ -194,12 +194,12 @@ function SearchPageContent() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <p className="text-[13px] font-bold text-white truncate">{result.title}</p>
+                                            <p className="text-[13px] font-bold text-[var(--pl-text)] truncate">{result.title}</p>
                                             <div className="flex items-center justify-between mt-1">
-                                                <p className="text-[11px] text-neutral-400 truncate flex-1">{result.channelTitle} • {result.viewCount}</p>
+                                                <p className="text-[11px] text-[var(--pl-text-muted)] truncate flex-1">{result.channelTitle} • {result.viewCount}</p>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setAddToPlaylistSong(result); }}
-                                                    className="p-1 text-neutral-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="p-1 text-[var(--pl-text-muted)] hover:text-[var(--pl-text)] opacity-0 group-hover:opacity-100 transition-all"
                                                 >
                                                     <PlusCircle className="w-4 h-4" />
                                                 </button>
@@ -217,7 +217,7 @@ function SearchPageContent() {
                     <div className="space-y-8 pt-4">
                         {recentlyPlayed.length > 0 && (
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-4">Recently Played</h2>
+                                <h2 className="text-xl font-bold text-[var(--pl-text)] mb-4">Recently Played</h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                     {recentlyPlayed.slice(0, 10).map((s, i) => {
                                         const vid = extractYoutubeId(s.youtube_url);
@@ -228,7 +228,7 @@ function SearchPageContent() {
                                                     const p: Playlist = { id: 'recently-played', name: 'Recently Played', user_id: '', songs: recentlyPlayed };
                                                     playPlaylist(p, i);
                                                 }}
-                                                className="bg-[#181818] hover:bg-[#282828] p-4 rounded-md transition-all cursor-pointer group"
+                                                className="bg-[var(--pl-surface)] hover:bg-[var(--pl-elevated)] p-4 rounded-md transition-all cursor-pointer group"
                                             >
                                                 <div className="relative aspect-square mb-3 rounded-md overflow-hidden shadow-lg">
                                                     <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" />
@@ -238,7 +238,7 @@ function SearchPageContent() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <p className="text-[13px] font-bold text-white truncate">{s.title}</p>
+                                                <p className="text-[13px] font-bold text-[var(--pl-text)] truncate">{s.title}</p>
                                             </div>
                                         );
                                     })}
@@ -247,9 +247,9 @@ function SearchPageContent() {
                         )}
 
                         {recentlyPlayed.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
+                            <div className="flex flex-col items-center justify-center py-20 text-[var(--pl-text-muted)]">
                                 <Search className="w-12 h-12 mb-4" />
-                                <p className="text-lg font-bold">Search for songs</p>
+                                <p className="text-lg font-bold text-[var(--pl-text)]">Search for songs</p>
                                 <p className="text-sm mt-1">Find songs on YouTube and add them to your playlists</p>
                             </div>
                         )}
@@ -259,10 +259,10 @@ function SearchPageContent() {
 
             {/* Add to Playlist Dialog */}
             <Dialog open={!!addToPlaylistSong} onOpenChange={(open) => !open && setAddToPlaylistSong(null)}>
-                <DialogContent className="bg-[#282828] border-none text-white max-w-sm rounded-2xl p-6">
+                <DialogContent className="bg-[var(--pl-elevated)] border-none text-[var(--pl-text)] max-w-sm rounded-2xl p-6">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-bold">Add to Playlist</DialogTitle>
-                        <DialogDescription className="text-neutral-400 text-sm truncate">
+                        <DialogDescription className="text-[var(--pl-text-muted)] text-sm truncate">
                             {addToPlaylistSong?.title}
                         </DialogDescription>
                     </DialogHeader>
@@ -273,12 +273,12 @@ function SearchPageContent() {
                                 onClick={() => addToPlaylistSong && addSongToPlaylist(pl.id, addToPlaylistSong)}
                                 className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-white/10 transition-colors text-left"
                             >
-                                <div className="w-10 h-10 bg-[#181818] rounded flex items-center justify-center flex-shrink-0">
-                                    <Music className="w-5 h-5 text-neutral-500" />
+                                <div className="w-10 h-10 bg-[var(--pl-surface)] rounded flex items-center justify-center flex-shrink-0">
+                                    <Music className="w-5 h-5 text-[var(--pl-text-muted)]" />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[14px] font-medium text-white truncate">{pl.name}</p>
-                                    <p className="text-[11px] text-neutral-400">{pl.songs?.length || 0} songs</p>
+                                    <p className="text-[14px] font-medium text-[var(--pl-text)] truncate">{pl.name}</p>
+                                    <p className="text-[11px] text-[var(--pl-text-muted)]">{pl.songs?.length || 0} songs</p>
                                 </div>
                             </button>
                         ))}
