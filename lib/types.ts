@@ -16,4 +16,5 @@ export interface Session {
     tag_id: string;
     duration: number;
     created_at: string;
+    is_sprint?: boolean;
 }

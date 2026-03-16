@@ -76,6 +76,12 @@ export function useRecord() {
         calculateDistribution(isToday, activeSession?.tag_id || null, activeStartTime),
         [isToday, activeSession, activeStartTime, calculateDistribution]);
 
+    const totalSprintToday = useMemo(() => {
+        return sessions
+            .filter(s => s.is_sprint)
+            .reduce((acc, curr) => acc + curr.duration, 0);
+    }, [sessions]);
+
     return {
         user,
         tags,
@@ -88,6 +94,7 @@ export function useRecord() {
         getTagTotal,
         groupedTotals,
         totalToday,
+        totalSprintToday,
         hourData,
         fetchData
     };

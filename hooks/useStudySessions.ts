@@ -18,7 +18,7 @@ export function useStudySessions(userId: string | undefined, selectedDate: Date)
 
             const { data } = await supabase
                 .from('study_sessions')
-                .select('id, tag_id, duration, created_at')
+                .select('id, tag_id, duration, created_at, is_sprint')
                 .eq('user_id', userId)
                 .gte('created_at', startOfDay.toISOString())
                 .lte('created_at', endOfDay.toISOString())

@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, BarChart2, Music } from "lucide-react";
+import { Clock, BarChart2, Music, Flame } from "lucide-react";
 
 interface MobileMenuProps {
     isOpen: boolean;
@@ -27,6 +27,7 @@ export function MobileMenu({ isOpen, setIsOpen }: MobileMenuProps) {
                 >
                     <div className="flex flex-col p-4 gap-2">
                         <MobileNavLink href="/" icon={<Clock className="w-5 h-5" />} label="Timer" onClick={() => setIsOpen(false)} />
+                        <MobileNavLink href="/sprint" icon={<Flame className="w-5 h-5" />} label="Sprint" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/record" icon={<BarChart2 className="w-5 h-5" />} label="Records" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/playlist" icon={<Music className="w-5 h-5" />} label="Playlist" onClick={() => setIsOpen(false)} />
                     </div>

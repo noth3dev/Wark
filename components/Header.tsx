@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Clock, BarChart2, Music, CheckCircle2, Menu, X } from "lucide-react"
+import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
@@ -62,6 +62,7 @@ export function Header() {
 
                     <nav className="hidden md:flex items-center gap-1 border-l border-border pl-4">
                         <NavLink href="/" title="Timer" icon={<Clock className="w-4 h-4" />} />
+                        <NavLink href="/sprint" title="Sprint" icon={<Flame className="w-4 h-4" />} />
                         <NavLink href="/record" title="Records" icon={<BarChart2 className="w-4 h-4" />} />
                         <NavLink href="/playlist" title="Playlist" icon={<Music className="w-4 h-4" />} />
                     </nav>

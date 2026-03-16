@@ -42,7 +42,7 @@ export const sessionService = {
     async fetchDailyTotals(userId: string, startOfDay: string) {
         return await supabase
             .from('study_sessions')
-            .select('tag_id, duration')
+            .select('tag_id, duration, is_sprint')
             .eq('user_id', userId)
             .gte('created_at', startOfDay);
     }
