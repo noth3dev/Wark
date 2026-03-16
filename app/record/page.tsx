@@ -37,6 +37,7 @@ export default function RecordPage() {
     const [editTagId, setEditTagId] = useState("");
     const [editDuration, setEditDuration] = useState({ h: 0, m: 0, s: 0 });
     const [editCreatedAt, setEditCreatedAt] = useState("");
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     const handleEditStart = (session: Session) => {
         setEditingSession(session);
@@ -95,7 +96,8 @@ export default function RecordPage() {
         const day = date.getDate().toString().padStart(2, '0');
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}`);
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
 
         setEditingSession({ id: 'new', tag_id: defaultTagId, duration: durationMs, created_at: date.toISOString() });
     };
@@ -110,11 +112,13 @@ export default function RecordPage() {
         // Overlap defense
         const isOverlap = sessions.some(s => {
             if (editingSession.id !== 'new' && s.id === editingSession.id) return false;
+            // Floor everything to seconds to avoid precision issues
             const sStart = Math.floor(new Date(s.created_at).getTime() / 1000) * 1000;
-            const sEnd = sStart + s.duration;
-            // Use a 1-second margin or just strictly check. 
-            // The user complained about ms, so rounding to seconds should fix it.
-            return Math.max(sStart, newStart) < Math.min(sEnd, newEnd);
+            const sEnd = sStart + Math.floor(s.duration / 1000) * 1000;
+            const targetStart = newStart;
+            const targetEnd = newStart + Math.floor(newDuration / 1000) * 1000;
+            
+            return Math.max(sStart, targetStart) < Math.min(sEnd, targetEnd);
         });
 
         if (isOverlap) {
@@ -156,6 +160,53 @@ export default function RecordPage() {
         }
     };
 
+    const handleFillAll = async () => {
+        if (!user || sessions.length < 2) return;
+
+        // Sort sessions by start time
+        const sorted = [...sessions].sort((a, b) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+
+        const gapsToFill = [];
+        for (let i = 0; i < sorted.length - 1; i++) {
+            const current = sorted[i];
+            const next = sorted[i+1];
+
+            const currentStart = Math.floor(new Date(current.created_at).getTime() / 1000) * 1000;
+            const currentEnd = currentStart + Math.floor(current.duration / 1000) * 1000;
+            const nextStart = Math.floor(new Date(next.created_at).getTime() / 1000) * 1000;
+
+            if (nextStart > currentEnd + 1000) { // Gap > 1s
+                gapsToFill.push({
+                    user_id: user.id,
+                    tag_id: next.tag_id, // Fill with B's tag
+                    duration: nextStart - currentEnd,
+                    created_at: new Date(currentEnd).toISOString()
+                });
+            }
+        }
+
+        if (gapsToFill.length === 0) {
+            alert("채울 수 있는 빈 공간이 없습니다.");
+            return;
+        }
+
+        if (!confirm(`${gapsToFill.length}개의 빈 공간을 뒷 세션의 태그로 채우시겠습니까?`)) return;
+
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.from('study_sessions').insert(gapsToFill);
+            if (error) throw error;
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert("Failed to fill all gaps");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this session?")) return;
         setIsSaving(true);
@@ -170,6 +221,32 @@ export default function RecordPage() {
         } catch (error) {
             console.error(error);
             alert("Failed to delete session");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleToggleSelect = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteMultiple = async (ids: string[]) => {
+        if (!confirm(`${ids.length}개의 기록을 삭제하시겠습니까?`)) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('study_sessions')
+                .delete()
+                .in('id', ids);
+
+            if (error) throw error;
+            setSelectedIds([]);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert("Failed to delete sessions");
         } finally {
             setIsSaving(false);
         }
@@ -206,6 +283,7 @@ export default function RecordPage() {
                         hourData={hourData}
                         tags={tags}
                         onFillGap={handleFillGap}
+                        onFillAll={handleFillAll}
                     />
                 </div>
 
@@ -220,6 +298,10 @@ export default function RecordPage() {
                     onAddRecord={handleAddStart}
                     onEditSession={handleEditStart}
                     onDeleteSession={handleDelete}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onSelectAll={setSelectedIds}
+                    onDeleteMultiple={handleDeleteMultiple}
                 />
             </div>
 

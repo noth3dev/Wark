@@ -92,6 +92,12 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --animate-spin-slow: spin 8s linear infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
 }
 
 @layer base {

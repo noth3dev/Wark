@@ -7,6 +7,15 @@ import { useActiveSession } from "./useActiveSession";
 import { sessionService } from "@/lib/services/sessionService";
 import { calculateDaySegments } from "@/lib/timeUtils";
 import { persistenceService } from "@/lib/services/persistenceService";
+const SPRINT_SESSION_KEY = 'active_sprint_session';
+
+export interface LocalSprintData {
+    status: SprintStatus;
+    startTime: number;
+    duration: number; // minutes
+    tag: { id: string, name: string, color: string };
+    lastTimeLeft: number;
+}
 
 export type SprintStatus = "idle" | "sprinting" | "breaking" | "finished";
 
@@ -36,7 +45,56 @@ export function useSprint() {
         } else {
             setActiveTag(null);
         }
+
+        // Restore sprint from local storage
+        const savedSprint = localStorage.getItem(SPRINT_SESSION_KEY);
+        if (savedSprint) {
+            try {
+                const data: LocalSprintData = JSON.parse(savedSprint);
+                const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+                const totalSeconds = data.status === "sprinting" ? data.duration * 60 : data.duration * 0.1 * 60;
+                
+                if (elapsed < totalSeconds) {
+                    setStatus(data.status);
+                    setDuration(data.duration);
+                    setStartTime(data.startTime);
+                    setActiveTag(data.tag);
+                    setTimeLeft(totalSeconds - elapsed);
+                } else {
+                    // Logic to handle completed sprint while away
+                    if (data.status === "sprinting") {
+                        // We need to complete it
+                        // Set state so completeSprint can run
+                        setStatus("sprinting");
+                        setDuration(data.duration);
+                        setStartTime(data.startTime);
+                        setActiveTag(data.tag);
+                        setTimeLeft(1); // Set to 1 to trigger the interval completion
+                    } else {
+                        localStorage.removeItem(SPRINT_SESSION_KEY);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to restore sprint state", e);
+            }
+        }
     }, [mounted]);
+
+    // Persist sprint state whenever it changes
+    useEffect(() => {
+        if (status !== "idle" && status !== "finished" && startTime && activeTag) {
+            const data: LocalSprintData = {
+                status,
+                startTime,
+                duration,
+                tag: activeTag,
+                lastTimeLeft: timeLeft
+            };
+            localStorage.setItem(SPRINT_SESSION_KEY, JSON.stringify(data));
+        } else {
+            localStorage.removeItem(SPRINT_SESSION_KEY);
+        }
+    }, [status, startTime, duration, activeTag, timeLeft]);
 
     const completeSprint = useCallback(async () => {
         if (!user || !activeTag || !startTime) return;
@@ -47,12 +105,6 @@ export function useSprint() {
         if (segments.length > 0) {
             const sprintSegments = segments.map(s => ({ ...s, is_sprint: true }));
             await sessionService.saveStudySessions(sprintSegments);
-        }
-
-        // Clean up active session
-        const { data: activeSessions } = await sessionService.getActiveSession(user.id);
-        if (activeSessions && activeSessions.length > 0) {
-            await sessionService.deleteActiveSession(activeSessions[0].id);
         }
 
         // Start break
@@ -77,16 +129,22 @@ export function useSprint() {
     const cancelSprint = useCallback(async () => {
         if (!user) return;
         
-        const { data: activeSessions } = await sessionService.getActiveSession(user.id);
-        if (activeSessions && activeSessions.length > 0) {
-            await sessionService.deleteActiveSession(activeSessions[0].id);
+        // Handle partial save if aborting during sprint
+        if (status === "sprinting" && startTime && activeTag) {
+            const endTime = Date.now();
+            const segments = calculateDaySegments(new Date(startTime), new Date(endTime), activeTag.id, user.id);
+            if (segments.length > 0) {
+                const sprintSegments = segments.map(s => ({ ...s, is_sprint: true }));
+                await sessionService.saveStudySessions(sprintSegments);
+            }
         }
-        
+
         setStatus("idle");
         setTimeLeft(0);
         setStartTime(null);
+        localStorage.removeItem(SPRINT_SESSION_KEY);
         if (timerRef.current) clearInterval(timerRef.current);
-    }, [user]);
+    }, [user, status, startTime, activeTag]);
 
     useEffect(() => {
         if ((status === "sprinting" || status === "breaking") && timeLeft > 0) {

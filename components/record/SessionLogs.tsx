@@ -11,38 +11,86 @@ interface SessionLogsProps {
     onAddRecord: () => void;
     onEditSession: (session: Session) => void;
     onDeleteSession: (id: string) => void;
+    selectedIds: string[];
+    onToggleSelect: (id: string) => void;
+    onSelectAll: (ids: string[]) => void;
+    onDeleteMultiple: (ids: string[]) => void;
 }
 
-export function SessionLogs({ sessions, tags, onAddRecord, onEditSession, onDeleteSession }: SessionLogsProps) {
+export function SessionLogs({ 
+    sessions, tags, onAddRecord, onEditSession, onDeleteSession,
+    selectedIds, onToggleSelect, onSelectAll, onDeleteMultiple 
+}: SessionLogsProps) {
+    const isAllSelected = sessions.length > 0 && selectedIds.length === sessions.length;
+
     return (
         <section className="space-y-6">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <div className="space-y-1">
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Session Narrative</h2>
+                <div className="flex items-center gap-4">
+                    <div className="space-y-1">
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Session Narrative</h2>
+                    </div>
+                    {sessions.length > 0 && (
+                        <button
+                            onClick={() => isAllSelected ? onSelectAll([]) : onSelectAll(sessions.map(s => s.id))}
+                            className="text-[9px] font-bold uppercase text-neutral-500 hover:text-white transition-colors"
+                        >
+                            {isAllSelected ? "Deselect All" : "Select All"}
+                        </button>
+                    )}
                 </div>
-                <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={onAddRecord}
-                    className="flex items-center gap-2 px-6 py-2 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                >
-                    <Plus className="w-3.5 h-3.5" />
-                    Archive New
-                </motion.button>
+                
+                <div className="flex items-center gap-3">
+                    {selectedIds.length > 0 && (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            onClick={() => onDeleteMultiple(selectedIds)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete {selectedIds.length}
+                        </motion.button>
+                    )}
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onAddRecord}
+                        className="flex items-center gap-2 px-6 py-2 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Archive New
+                    </motion.button>
+                </div>
             </div>
 
             <div className="grid gap-4">
                 {sessions.map((session, idx) => {
                     const tag = tags.find(t => t.id === session.tag_id);
+                    const isSelected = selectedIds.includes(session.id);
                     return (
                         <motion.div
                             key={session.id}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.03 }}
-                            className="group flex items-center justify-between p-6 rounded-[2.5rem] bg-neutral-900/60 border border-white/5 hover:border-white/10 transition-all"
+                            className={`group flex items-center justify-between p-6 rounded-[2.5rem] border transition-all ${
+                                isSelected 
+                                    ? "bg-white/5 border-white/20" 
+                                    : "bg-neutral-900/60 border-white/5 hover:border-white/10"
+                            }`}
                         >
                             <div className="flex items-center gap-6">
+                                <button 
+                                    onClick={() => onToggleSelect(session.id)}
+                                    className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                                        isSelected 
+                                            ? "bg-white border-white text-black" 
+                                            : "border-white/10 hover:border-white/30"
+                                    }`}
+                                >
+                                    {isSelected && <div className="w-2.5 h-2.5 bg-black rounded-sm" />}
+                                </button>
                                 <div className="relative">
                                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-white/10 transition-colors">
                                         <div className="w-2 h-2 rounded-full shadow-[0_0_10px_currentcolor]" style={{ backgroundColor: tag?.color || '#22d3ee' }} />
@@ -55,6 +103,14 @@ export function SessionLogs({ sessions, tags, onAddRecord, onEditSession, onDele
                                             {new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                         </p>
                                         <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                                        {session.is_sprint && (
+                                            <>
+                                                <div className="px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                                                    <span className="text-[8px] font-black text-cyan-500 uppercase tracking-tighter">Sprint</span>
+                                                </div>
+                                                <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                                            </>
+                                        )}
                                         <p className="text-[10px] text-neutral-700 font-bold uppercase tracking-widest">Entry #{session.id.slice(0, 4)}</p>
                                     </div>
                                 </div>

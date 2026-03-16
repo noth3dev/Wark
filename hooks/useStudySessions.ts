@@ -45,14 +45,24 @@ export function useStudySessions(userId: string | undefined, selectedDate: Date)
             }).map(s => {
                 const sStart = new Date(s.created_at).getTime();
                 const sEnd = sStart + s.duration;
-                return { tag_id: s.tag_id, start: Math.max(sStart, hStart), end: Math.min(sEnd, hEnd) };
+                return { 
+                    tag_id: s.tag_id, 
+                    start: Math.max(sStart, hStart), 
+                    end: Math.min(sEnd, hEnd),
+                    isSprint: s.is_sprint 
+                };
             });
 
             if (isToday && activeStartTime && activeTagId) {
                 const sStart = activeStartTime;
                 const sEnd = Date.now();
                 if (Math.max(sStart, hStart) < Math.min(sEnd, hEnd)) {
-                    hourSessions.push({ tag_id: activeTagId, start: Math.max(sStart, hStart), end: Math.min(sEnd, hEnd) });
+                    hourSessions.push({ 
+                        tag_id: activeTagId, 
+                        start: Math.max(sStart, hStart), 
+                        end: Math.min(sEnd, hEnd),
+                        isSprint: false 
+                    });
                 }
             }
 
@@ -67,7 +77,13 @@ export function useStudySessions(userId: string | undefined, selectedDate: Date)
                     currentLeft = s.start;
                 }
                 if (s.end > currentLeft) {
-                    segments.push({ type: 'session', start: currentLeft, duration: s.end - currentLeft, tagId: s.tag_id });
+                    segments.push({ 
+                        type: 'session', 
+                        start: currentLeft, 
+                        duration: s.end - currentLeft, 
+                        tagId: s.tag_id,
+                        isSprint: s.isSprint
+                    });
                     currentLeft = s.end;
                 }
             });

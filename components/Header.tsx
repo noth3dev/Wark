@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame } from "lucide-react"
 
@@ -20,7 +21,32 @@ import { ActiveSessionIndicator } from "./header/ActiveSessionIndicator"
 
 export function Header() {
     const { user } = useAuth()
+    const pathname = usePathname()
     const status = useActiveSessionSync()
+    
+    // Check if we are in an active sprint to hide the header
+    const [isSprintActive, setIsSprintActive] = useState(false);
+
+    useEffect(() => {
+        const checkSprint = () => {
+            const saved = localStorage.getItem('active_sprint_session');
+            if (saved && pathname === '/sprint') {
+                try {
+                    const data = JSON.parse(saved);
+                    // Hide header if sprinting or breaking
+                    setIsSprintActive(data.status === 'sprinting' || data.status === 'breaking');
+                } catch (e) {
+                    setIsSprintActive(false);
+                }
+            } else {
+                setIsSprintActive(false);
+            }
+        };
+
+        checkSprint();
+        const interval = setInterval(checkSprint, 500);
+        return () => clearInterval(interval);
+    }, [pathname]);
 
     // Solved Problems State
     const { totalCount, increment, decrement, count } = useSolvedProblems(status.tagId)
@@ -49,7 +75,7 @@ export function Header() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isSolvedProblemsOpen, increment]);
 
-    if (!user) return null;
+    if (!user || isSprintActive) return null;
 
     return (
         <>

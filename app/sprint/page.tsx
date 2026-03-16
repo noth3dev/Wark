@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSprint, SprintStatus } from "@/hooks/useSprint";
 import { formatDuration } from "@/lib/utils";
 import { ChevronLeft, Play, X, Coffee, CheckCircle2, Flame, Timer, Activity, Zap, AlertTriangle } from "lucide-react";
+import { StickmanRunner } from "@/components/sprint/StickmanRunner";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -20,12 +21,49 @@ export default function SprintPage() {
         mounted
     } = useSprint();
 
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [showHalfway, setShowHalfway] = useState(false);
+    const [halfwayTriggered, setHalfwayTriggered] = useState(false);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
+        if (status === "sprinting" && !halfwayTriggered) {
+            const currentSeconds = duration * 60 - timeLeft;
+            const targetSeconds = (duration * 60) / 2;
+            if (currentSeconds >= targetSeconds) {
+                setHalfwayTriggered(true);
+                setShowHalfway(true);
+                setTimeout(() => setShowHalfway(false), 5000);
+            }
+        } else if (status === "idle") {
+            setHalfwayTriggered(false);
+        }
+    }, [timeLeft, status, duration, halfwayTriggered]);
+
+
+    const toggleFullscreen = async (enter: boolean) => {
+        try {
+            if (enter) {
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                }
+            } else {
+                if (document.fullscreenElement) {
+                    await document.exitFullscreen();
+                }
+            }
+        } catch (err) {
+            console.error("Fullscreen error", err);
+        }
+    };
+
+    const handleStartSprint = (mins: number) => {
+        startSprint(mins);
+        toggleFullscreen(true);
+    };
+
+    const handleCancelSprint = () => {
+        cancelSprint();
+        toggleFullscreen(false);
+    };
 
     if (!mounted) return null;
 
@@ -35,34 +73,37 @@ export default function SprintPage() {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const isSprinting = status === "sprinting" || status === "breaking";
+
     return (
         <main className="min-h-screen bg-black text-white selection:bg-white/10 selection:text-white flex flex-col items-center overflow-y-auto">
             <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24 space-y-16 sm:space-y-24">
                 
-                {/* Minimal Header */}
-                <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                    <div className="space-y-6">
-                        <Link href="/" className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
-                            <ChevronLeft className="w-3 h-3 text-neutral-400" />
-                            <span className="text-[10px] font-semibold uppercase text-neutral-500">Back to Hub</span>
-                        </Link>
-                        
-                        <div>
-                            <p className="text-[10px] font-semibold uppercase text-neutral-500 mb-0.5">Focus Terminal</p>
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white">
-                                Sprint Mode
-                                <span className="text-neutral-600 ml-3 text-xl font-normal lowercase tracking-normal">active</span>
-                            </h1>
-                        </div>
-                    </div>
-
-                    <div className="text-left md:text-right">
-                        <p className="text-[10px] font-semibold uppercase text-neutral-500 mb-0.5">System Clock</p>
-                        <p className="text-2xl font-light tracking-tight text-white font-mono">
-                            {currentTime.toLocaleTimeString('en-US', { hour12: false })}
-                        </p>
-                    </div>
-                </header>
+                {/* Minimal Header - Hide when sprinting */}
+                <AnimatePresence>
+                    {!isSprinting && (
+                        <motion.header 
+                            initial={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="flex flex-col md:flex-row md:items-end md:justify-between gap-6"
+                        >
+                            <div className="space-y-6">
+                                <Link href="/" className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
+                                    <ChevronLeft className="w-3 h-3 text-neutral-400" />
+                                    <span className="text-[10px] font-semibold uppercase text-neutral-500">Back to Hub</span>
+                                </Link>
+                                
+                                <div>
+                                    <p className="text-[10px] font-semibold uppercase text-neutral-500 mb-0.5">Focus Terminal</p>
+                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white">
+                                        Sprint Mode
+                                        <span className="text-neutral-600 ml-3 text-xl font-normal lowercase tracking-normal">active</span>
+                                    </h1>
+                                </div>
+                            </div>
+                        </motion.header>
+                    )}
+                </AnimatePresence>
 
                 <AnimatePresence mode="wait">
                     {status === "idle" && (
@@ -71,57 +112,63 @@ export default function SprintPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="grid lg:grid-cols-12 gap-12 sm:gap-16"
+                            className="space-y-16"
                         >
-                            {/* Left Side: Setup */}
-                            <div className="lg:col-span-12 space-y-12">
-                                {activeTag ? (
-                                    <div className="flex flex-col md:flex-row gap-12 items-center">
-                                        <div className="flex-1 space-y-8 w-full md:w-auto">
-                                            <div className="flex items-center gap-4 p-6 rounded-[2rem] bg-card border border-border">
-                                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-black/40 border border-white/5">
-                                                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: activeTag.color }} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-semibold uppercase text-neutral-500 mb-0.5">Current Focus</p>
-                                                    <p className="text-2xl font-semibold text-white tracking-tight">{activeTag.name}</p>
-                                                </div>
-                                            </div>
+                            {/* Minimal Top Tag Bar */}
+                            {activeTag && (
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 w-fit mx-auto"
+                                >
+                                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: activeTag.color }} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Current Focus:</span>
+                                    <span className="text-[11px] font-black uppercase text-white">{activeTag.name}</span>
+                                </motion.div>
+                            )}
 
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-2 border-b border-border pb-4">
-                                                    <Timer className="w-3 h-3 text-neutral-500" />
-                                                    <h2 className="text-[10px] font-semibold uppercase text-neutral-500">Select Sprint Duration</h2>
-                                                </div>
-                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                                    {SPRINT_OPTIONS.map((mins) => (
-                                                        <button
-                                                            key={mins}
-                                                            onClick={() => startSprint(mins)}
-                                                            className="p-6 rounded-[2rem] bg-card border border-border hover:border-neutral-700 hover:bg-secondary/30 transition-all text-center group"
-                                                        >
-                                                            <span className="block text-3xl font-semibold text-neutral-300 group-hover:text-white mb-1">{mins}</span>
-                                                            <span className="text-[9px] font-semibold uppercase text-neutral-600">Minutes</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
+                            <div className="flex flex-col items-center justify-center space-y-12 w-full max-w-4xl mx-auto">
+                                {/* Starting Runner Container */}
+                                <div className="h-64 flex items-center justify-center w-full">
+                                    <StickmanRunner speed={1} />
+                                </div>
+
+                                <div className="space-y-12 w-full">
+                                    {activeTag ? (
+                                        <div className="space-y-6 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Timer className="w-3 h-3 text-neutral-500" />
+                                                <h2 className="text-[10px] font-semibold uppercase text-neutral-500 tracking-[0.3em]">Initialize Operational Duration</h2>
+                                            </div>
+                                            <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
+                                                {SPRINT_OPTIONS.map((mins) => (
+                                                    <button
+                                                        key={mins}
+                                                        onClick={() => handleStartSprint(mins)}
+                                                        className="px-8 py-3 rounded-full bg-black/60 backdrop-blur-md border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all group relative overflow-hidden"
+                                                    >
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                                                        <span className="text-2xl font-semibold text-neutral-300 group-hover:text-white transition-colors">{mins}</span>
+                                                        <span className="text-[8px] font-black uppercase text-neutral-600 group-hover:text-neutral-400 ml-2 tracking-tighter">Min</span>
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-20 bg-card/30 border border-dashed border-red-500/20 rounded-[3rem] space-y-6">
-                                        <AlertTriangle className="w-12 h-12 text-red-500/50" />
-                                        <div className="text-center space-y-2">
-                                            <h3 className="text-xl font-semibold text-white">No Active Tag Detected</h3>
-                                            <p className="text-neutral-500 text-sm max-w-xs mx-auto">
-                                                Sprint mode requires an active study session. Please start the main timer first.
-                                            </p>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-20 bg-card/30 border border-dashed border-red-500/20 rounded-[3rem] space-y-6">
+                                            <AlertTriangle className="w-12 h-12 text-red-500/50" />
+                                            <div className="text-center space-y-2">
+                                                <h3 className="text-xl font-semibold text-white">No Active Tag Detected</h3>
+                                                <p className="text-neutral-500 text-sm max-w-xs mx-auto">
+                                                    Sprint mode requires an active study session. Please start the main timer first.
+                                                </p>
+                                            </div>
+                                            <Link href="/" className="px-6 py-2 rounded-xl bg-white text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors">
+                                                Go to Timer
+                                            </Link>
                                         </div>
-                                        <Link href="/" className="px-6 py-2 rounded-xl bg-white text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors">
-                                            Go to Timer
-                                        </Link>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -134,30 +181,9 @@ export default function SprintPage() {
                             exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center space-y-16 py-12"
                         >
-                            <div className="relative w-72 h-72 sm:w-96 sm:h-96 flex items-center justify-center">
-                                <svg className="absolute w-full h-full -rotate-90">
-                                    <circle cx="50%" cy="50%" r="48%" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                                    <motion.circle
-                                        cx="50%"
-                                        cy="50%"
-                                        r="48%"
-                                        fill="none"
-                                        stroke={status === "sprinting" ? "white" : "#10b981"}
-                                        strokeWidth="2"
-                                        strokeDasharray="100 100"
-                                        initial={{ pathLength: 1 }}
-                                        animate={{ pathLength: timeLeft / (status === "sprinting" ? duration * 60 : duration * 0.1 * 60) }}
-                                        transition={{ duration: 1, ease: "linear" }}
-                                    />
-                                </svg>
-                                
-                                <div className="text-center space-y-2">
-                                    <h2 className="text-7xl sm:text-9xl font-light tracking-tighter tabular-nums leading-none">
-                                        {formatTime(timeLeft)}
-                                    </h2>
-                                    <p className={`text-[10px] font-bold uppercase tracking-[0.4em] ${status === "sprinting" ? "text-neutral-500" : "text-emerald-500"}`}>
-                                        {status === "sprinting" ? "Operational" : "Recovery"}
-                                    </p>
+                            <div className="relative w-full max-w-4xl flex items-center justify-center min-h-[320px]">
+                                <div className="flex items-center justify-center w-full">
+                                    <StickmanRunner speed={status === "sprinting" ? 2.5 : 1.2} />
                                 </div>
                             </div>
 
@@ -175,7 +201,7 @@ export default function SprintPage() {
                                 </div>
 
                                 <button
-                                    onClick={cancelSprint}
+                                    onClick={handleCancelSprint}
                                     className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-700 hover:text-red-500 transition-colors"
                                 >
                                     <X className="w-4 h-4" />
@@ -202,7 +228,7 @@ export default function SprintPage() {
                             </div>
 
                             <button
-                                onClick={cancelSprint}
+                                onClick={handleCancelSprint}
                                 className="px-12 py-4 rounded-2xl bg-white text-black text-[11px] font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-colors shadow-2xl"
                             >
                                 New Operation
@@ -211,14 +237,16 @@ export default function SprintPage() {
                     )}
                 </AnimatePresence>
 
-                {/* Footer Info */}
-                <footer className="pt-16 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-neutral-700">
-                    <div className="flex items-center gap-2">
-                        <Flame className="w-3 h-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-[0.3em]">Antigravity Focus Module v1.0.42</span>
-                    </div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.3em]">Station Status: Online</p>
-                </footer>
+                {/* Footer Info - Hide when sprinting */}
+                {!isSprinting && (
+                    <footer className="pt-16 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-neutral-700">
+                        <div className="flex items-center gap-2">
+                            <Flame className="w-3 h-3" />
+                            <span className="text-[9px] font-semibold uppercase tracking-[0.3em]">Antigravity Focus Module v1.0.42</span>
+                        </div>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.3em]">Station Status: Online</p>
+                    </footer>
+                )}
             </div>
         </main>
     );
