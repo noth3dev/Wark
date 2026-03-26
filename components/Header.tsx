@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame } from "lucide-react"
+import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
@@ -18,6 +18,7 @@ import { UserProfile } from "./header/UserProfile"
 import { MobileMenu } from "./header/MobileMenu"
 import { MusicPlayer } from "./header/MusicPlayer"
 import { ActiveSessionIndicator } from "./header/ActiveSessionIndicator"
+import { MemoPanel } from "./header/MemoPanel"
 
 export function Header() {
     const { user } = useAuth()
@@ -52,6 +53,7 @@ export function Header() {
     const { totalCount, increment, decrement, count } = useSolvedProblems(status.tagId)
     const { dailyTimes, fetchDailyTotals } = useDailyTotals()
     const [isSolvedProblemsOpen, setIsSolvedProblemsOpen] = useState(false)
+    const [isMemoOpen, setIsMemoOpen] = useState(false)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     // Sync daily study totals for average calculation
@@ -114,6 +116,20 @@ export function Header() {
                         <span className="text-[11px] font-medium font-mono tabular-nums">{totalCount}</span>
                     </motion.button>
 
+                    {/* Memo Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setIsMemoOpen(!isMemoOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isMemoOpen
+                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                            : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
+                            }`}
+                    >
+                        <StickyNote className={`w-3.5 h-3.5 ${isMemoOpen ? 'text-amber-400' : 'text-neutral-500'}`} />
+                        <span className="text-[11px] font-medium">메모</span>
+                    </motion.button>
+
                     <BatteryIndicator />
                     <UserProfile />
 
@@ -134,6 +150,11 @@ export function Header() {
                 tagId={status.tagId}
                 dailyTimes={dailyTimes}
                 activeSeconds={status.seconds}
+            />
+
+            <MemoPanel
+                isOpen={isMemoOpen}
+                onClose={() => setIsMemoOpen(false)}
             />
         </>
     )
