@@ -29,7 +29,7 @@ function MemoEditor({
 }) {
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [title, setTitle] = useState(memo.title);
-    const initializedRef = useRef(false);
+    const lastSessionIdRef = useRef<string | null>(null);
 
     const editor = useCreateBlockNote({
         domAttributes: {
@@ -37,21 +37,31 @@ function MemoEditor({
         },
     });
 
-    // Load content when memo changes
+    // Load content when memo changes or when content becomes available
     useEffect(() => {
-        if (editor && memo.content && Array.isArray(memo.content) && memo.content.length > 0) {
+        if (!editor) return;
+        
+        // Prevent re-loading the same content unnecessarily if we are already editing it
+        if (lastSessionIdRef.current === memo.id && editor.document.length > 0) {
+            return;
+        }
+
+        if (memo.content && Array.isArray(memo.content) && memo.content.length > 0) {
             try {
                 editor.replaceBlocks(editor.document, memo.content as Block[]);
-            } catch {
-                // ignore
+                lastSessionIdRef.current = memo.id;
+            } catch (e) {
+                console.error("Failed to load content into BlockNote:", e);
             }
-        } else if (editor && (!memo.content || (Array.isArray(memo.content) && memo.content.length === 0))) {
-            if (!initializedRef.current) {
-                initializedRef.current = true;
-            }
+        } else {
+            // New or empty memo - just set initialized bit
+            lastSessionIdRef.current = memo.id;
         }
+    }, [editor, memo.id, memo.content]);
+
+    useEffect(() => {
         setTitle(memo.title);
-    }, [memo.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [memo.title]);
 
     // Debounced auto-save
     const handleEditorChange = useCallback(() => {
@@ -59,7 +69,7 @@ function MemoEditor({
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             onContentChange(editor.document as unknown[]);
-        }, 800);
+        }, 500); // Snappier save at 500ms
     }, [editor, onContentChange]);
 
     const handleTitleChange = useCallback((newTitle: string) => {
@@ -67,7 +77,7 @@ function MemoEditor({
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             onTitleChange(newTitle);
-        }, 800);
+        }, 500);
     }, [onTitleChange]);
 
     useEffect(() => {
@@ -229,9 +239,12 @@ export function MemoPanel({ isOpen, onClose }: MemoPanelProps) {
 
     const handleDelete = useCallback(
         async (id: string) => {
-            await deleteMemo(id);
+            const memoToDelete = memos.find(m => m.id === id);
+            if (window.confirm(`"${memoToDelete?.title || '제목 없음'}" 메모를 삭제하시겠습니까?`)) {
+                await deleteMemo(id);
+            }
         },
-        [deleteMemo]
+        [deleteMemo, memos]
     );
 
     const handleSelectMemo = useCallback(

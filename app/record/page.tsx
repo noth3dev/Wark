@@ -13,6 +13,7 @@ import { DailyTimetable } from "@/components/record/DailyTimetable";
 import { SessionLogs } from "@/components/record/SessionLogs";
 import { SessionModal } from "@/components/record/SessionModal";
 import { SolvedProblemsStats } from "@/components/record/SolvedProblemsStats";
+import { DailyMemoStats } from "@/components/record/DailyMemoStats";
 
 export default function RecordPage() {
     const {
@@ -291,6 +292,8 @@ export default function RecordPage() {
                     date={selectedDate}
                     tags={tags}
                 />
+
+                <DailyMemoStats date={selectedDate} />
 
                 <SessionLogs
                     sessions={sessions}

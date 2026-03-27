@@ -63,7 +63,7 @@ export function Header() {
         }
     }, [user, isSolvedProblemsOpen, fetchDailyTotals])
 
-    // Keyboard Shortcuts (Space to increment)
+    // Keyboard Shortcuts (Space to increment, Alt + M to toggle memo)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (isSolvedProblemsOpen && e.code === 'Space') {
@@ -71,6 +71,11 @@ export function Header() {
                     e.preventDefault();
                     increment();
                 }
+            }
+            // Alt + M: Toggle Memo
+            if (e.altKey && e.code === 'KeyM') {
+                e.preventDefault();
+                setIsMemoOpen(prev => !prev);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
