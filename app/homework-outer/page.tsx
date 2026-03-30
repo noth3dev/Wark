@@ -10,6 +10,8 @@ import { Check, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, ChevronRight
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, formatDuration } from "../../lib/utils";
 import * as Utils from "../../lib/homework-utils";
+import { ExportDialog } from "../../components/ExportDialog";
+import { Share2 } from "lucide-react";
 
 function getFormattedWeek(dateStr: string | Date) {
     const date = new Date(dateStr);
@@ -82,6 +84,7 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
     const [viewDate, setViewDate] = useState(new Date());
     const [newHomework, setNewHomework] = useState("");
     const [isPlusAlpha, setIsPlusAlpha] = useState(false);
+    const [isExportOpen, setIsExportOpen] = useState(false);
 
     const weekInfo = useMemo(() => getWeekInfo(viewDate), [viewDate]);
     const weekKey = useMemo(() => formatWeekKey(weekInfo), [weekInfo]);
@@ -165,6 +168,16 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                                 <ChevronRight className="w-4 h-4 text-neutral-400" />
                             </button>
                         </div>
+                        
+                        {!!user && (
+                            <button 
+                                onClick={() => setIsExportOpen(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[10px] font-black text-blue-400 hover:bg-blue-500/20 transition-all uppercase tracking-tighter"
+                            >
+                                <Share2 className="w-3 h-3" />
+                                Export Summary
+                            </button>
+                        )}
                         
                         <div className="h-4 w-px bg-white/10" />
 
@@ -341,6 +354,17 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                 </div>
                 </Tabs>
             </div>
+
+            <ExportDialog 
+                isOpen={isExportOpen}
+                onOpenChange={setIsExportOpen}
+                homeworks={homeworks}
+                tags={tags}
+                dailyTimes={dailyTimes}
+                currentTimeMs={time}
+                activeTagId={activeTagId}
+                userName={user?.email?.split('@')[0]}
+            />
         </main>
     );
 }
