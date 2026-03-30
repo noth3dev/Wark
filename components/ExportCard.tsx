@@ -28,21 +28,21 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-white" />
-                                <span className="text-[10px] font-black uppercase text-neutral-500">CHRONICLE</span>
+                                <span className="text-[10px] font-black uppercase text-neutral-500">리포트</span>
                             </div>
-                            <h1 className="text-4xl font-semibold leading-none">
+                            <h1 className="text-4xl font-semibold leading-none whitespace-nowrap">
                                 {new Date(date).toLocaleDateString("en-US", { 
                                     month: 'long', 
                                     day: 'numeric', 
                                     year: 'numeric'
                                 })}
                             </h1>
-                            <p className="text-xs text-neutral-500 font-medium">
-                                {new Date(date).toLocaleDateString("ko-KR", { weekday: 'long' })} achievement report summary.
+                            <p className="text-xs text-neutral-500 font-medium whitespace-nowrap">
+                                {new Date(date).toLocaleDateString("ko-KR", { weekday: 'long' })} 한일
                             </p>
                         </div>
-                        <div className="text-right">
-                             <span className="text-[56px] font-mono font-light text-neutral-800 leading-none">
+                        <div className="text-right shrink-0 ml-12">
+                             <span className="text-[56px] font-mono font-light text-neutral-800 leading-none whitespace-nowrap">
                                 {String(new Date(date).getDate()).padStart(2, '0')}
                              </span>
                         </div>
@@ -66,26 +66,28 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                                     const color = t.color || '#ffffff';
                                     
                                     return (
-                                        <div key={idx} className="group flex items-center justify-between border-b border-neutral-900 pb-4 last:border-0">
-                                            <div className="flex items-center gap-5">
+                                        <div key={idx} className="group flex items-center justify-between border-b border-neutral-900 pb-5 last:border-0">
+                                            <div className="flex items-center gap-6 min-w-0">
                                                 <div 
-                                                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5"
+                                                    className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/[0.03] border border-white/5 shrink-0"
                                                     style={{ borderColor: `${color}33` }}
                                                 >
                                                     {IconComponent ? (
-                                                        <IconComponent className="w-5 h-5" style={{ color }} />
+                                                        <IconComponent className="w-6 h-6" style={{ color }} />
                                                     ) : (
-                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
                                                     )}
                                                 </div>
-                                                <div className="space-y-0.5">
-                                                    <span className="text-xs font-bold text-neutral-600 uppercase block leading-none">Category</span>
-                                                    <span className="text-sm font-medium text-neutral-200 uppercase">{t.name}</span>
+                                                <div className="space-y-1 min-w-0">
+                                                    <span className="text-[10px] font-bold text-neutral-600 uppercase block leading-tight font-mono whitespace-nowrap">Category</span>
+                                                    <span className="text-[15px] font-medium text-neutral-200 uppercase whitespace-nowrap overflow-hidden">
+                                                        {t.name.length > 20 ? t.name.slice(0, 20) + '...' : t.name}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="text-right space-y-0.5">
-                                                <span className="text-[10px] font-mono text-neutral-700 block leading-none">DURATION</span>
-                                                <span className="text-xl font-mono text-white tabular-nums">
+                                            <div className="text-right space-y-1 shrink-0 ml-12 min-w-[100px]">
+                                                <span className="text-[10px] font-mono text-neutral-700 block leading-tight whitespace-nowrap">DURATION</span>
+                                                <span className="text-2xl font-mono text-white tabular-nums leading-none tracking-tighter">
                                                     {formatDuration(t.duration)}
                                                 </span>
                                             </div>
@@ -103,14 +105,14 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                         <div className="grid grid-cols-1 gap-1">
                             {completedTasks.length > 0 ? (
                                 completedTasks.map((task, idx) => (
-                                    <div key={idx} className="flex gap-6 py-4 border-t border-neutral-900 first:border-0 items-start">
-                                        <Check className="w-3.5 h-3.5 text-white mt-1 shrink-0" />
-                                        <div className="space-y-1">
-                                            <p className="text-sm text-neutral-200 font-medium leading-snug">
+                                    <div key={idx} className="flex gap-6 py-5 border-t border-neutral-900 first:border-0 items-start">
+                                        <Check className="w-4 h-4 text-white mt-1 shrink-0" />
+                                        <div className="space-y-1.5 min-w-0">
+                                            <p className="text-[15px] text-neutral-200 font-medium leading-relaxed break-words">
                                                 {task.content}
                                             </p>
                                             {task.rootContent && (
-                                                <span className="text-[9px] text-neutral-600 font-bold uppercase block">
+                                                <span className="text-[10px] text-neutral-600 font-bold uppercase block">
                                                     {task.rootContent}
                                                 </span>
                                             )}

@@ -92,14 +92,27 @@ export function ExportDialog({
         
         setIsExporting(true);
         try {
+            // Wait for fonts to be ready
+            if (typeof document !== 'undefined' && 'fonts' in document) {
+                await (document as any).fonts.ready;
+            }
+
+            // Add a small delay for DOM to settle and styles to apply
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const node = exportRef.current;
+            const canvasWidth = 600;
+            const canvasHeight = node.offsetHeight;
+
             // Render the hidden export component and convert to image
-            const dataUrl = await toPng(exportRef.current, {
+            const dataUrl = await toPng(node, {
                 cacheBust: true,
+                pixelRatio: 2.5,
+                width: canvasWidth,
+                height: canvasHeight,
                 style: {
-                    position: 'absolute',
-                    top: '0',
-                    left: '0',
-                    zIndex: '-1000'
+                    width: `${canvasWidth}px`,
+                    height: `${canvasHeight}px`,
                 }
             });
             
@@ -224,7 +237,11 @@ export function ExportDialog({
                 </DialogFooter>
 
                 {/* Hidden Export component for actual image generation (scaled 1:1) */}
-                <div className="fixed -left-[2000px] top-0 opacity-0 pointer-events-none">
+                <div 
+                    style={{ position: 'fixed', left: '-9999px', top: '0', width: '600px', height: 'auto', zIndex: -100 }} 
+                    className="opacity-0 pointer-events-none"
+                    aria-hidden="true"
+                >
                     <ExportCard 
                         ref={exportRef}
                         date={todayStr}
