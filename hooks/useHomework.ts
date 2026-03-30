@@ -26,17 +26,21 @@ export interface Homework {
     planned_date?: string | null;
 }
 
-export function useHomework() {
+export function useHomework(userIdOverride?: string) {
     const { user } = useAuth();
     const [homeworks, setHomeworks] = useState<Homework[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const currentUser = userIdOverride || user?.id;
+
     const fetchHomeworks = useCallback(async () => {
+        if (!currentUser) return;
         setLoading(true);
         try {
             const { data, error } = await supabase
                 .from("homeworks")
                 .select("*")
+                .eq("user_id", currentUser)
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
@@ -52,7 +56,7 @@ export function useHomework() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
         fetchHomeworks();

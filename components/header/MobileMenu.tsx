@@ -3,14 +3,15 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, BarChart2, Music, Flame } from "lucide-react";
+import { Clock, BarChart2, Music, Flame, ClipboardList } from "lucide-react";
 
 interface MobileMenuProps {
     isOpen: boolean;
     setIsOpen: (open: boolean) => void;
+    user: any;
 }
 
-export function MobileMenu({ isOpen, setIsOpen }: MobileMenuProps) {
+export function MobileMenu({ isOpen, setIsOpen, user }: MobileMenuProps) {
     useEffect(() => {
         document.body.style.overflow = isOpen ? "hidden" : "unset";
         return () => { document.body.style.overflow = "unset"; };
@@ -30,6 +31,7 @@ export function MobileMenu({ isOpen, setIsOpen }: MobileMenuProps) {
                         <MobileNavLink href="/sprint" icon={<Flame className="w-5 h-5" />} label="Sprint" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/record" icon={<BarChart2 className="w-5 h-5" />} label="Records" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/playlist" icon={<Music className="w-5 h-5" />} label="Playlist" onClick={() => setIsOpen(false)} />
+                        <MobileNavLink href={`/homework-outer/${user?.id}`} icon={<ClipboardList className="w-5 h-5" />} label="Homework" onClick={() => setIsOpen(false)} />
                     </div>
                 </motion.nav>
             )}

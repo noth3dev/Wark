@@ -7,9 +7,11 @@ import { useTimer } from "./useTimer";
 import { useStopwatchSync } from "./useStopwatchSync";
 import { persistenceService } from "../lib/services/persistenceService";
 
-export function useStopwatch(onSave?: () => void) {
+export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     const { user } = useAuth();
     const switchingRef = useRef(false);
+
+    const targetUserId = userIdOverride || user?.id;
 
     // Fragmented Hooks
     const { tags, fetchTags, addTag: addTagBase, updateTag: updateTagBase, deleteTag: deleteTagBase } = useTags();
@@ -19,14 +21,14 @@ export function useStopwatch(onSave?: () => void) {
         startSession,
         endSession,
         cleanupOrphanedSessions
-    } = useActiveSession(user?.id);
+    } = useActiveSession(targetUserId);
     const { dailyTimes, fetchDailyTotals } = useDailyTotals();
     const time = useTimer(activeSession?.start_time || null, activeSession ? (dailyTimes[activeSession.tag_id] || 0) : 0);
 
     const refreshAll = useCallback(async () => {
-        if (!user) return;
-        const currentTags = await fetchTags();
-        const totals = await fetchDailyTotals(user.id);
+        if (!targetUserId) return;
+        const currentTags = await fetchTags(userIdOverride);
+        const totals = await fetchDailyTotals(targetUserId);
         const session = await fetchActiveSession();
 
         if (session && currentTags) {
@@ -46,8 +48,8 @@ export function useStopwatch(onSave?: () => void) {
     }, [user, fetchTags, fetchDailyTotals, fetchActiveSession]);
 
     useEffect(() => {
-        if (user) refreshAll();
-    }, [user, refreshAll]);
+        if (targetUserId) refreshAll();
+    }, [targetUserId, refreshAll]);
 
     // Real-time synchronization
     useStopwatchSync(user?.id, refreshAll);

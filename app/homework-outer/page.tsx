@@ -54,11 +54,16 @@ function formatWeekKey(info: { year: number; month: number; week: number }) {
     return `${info.year}-${info.month}-${info.week}`;
 }
 
-export default function HomeworkOuterPage() {
-    const { user } = useAuth();
+export default function HomeworkOuterPage({ userId }: { userId?: string }) {
+    const { user, loading: authLoading } = useAuth();
+    
+    // Explicitly define which user we are viewing
+    const viewedUserId = userId || user?.id;
+    const canEdit = !!user && user.id === viewedUserId;
+
     const { 
         homeworks = [], 
-        loading, 
+        loading: homeworkLoading, 
         addHomework, 
         toggleHomework, 
         deleteHomework, 
@@ -67,8 +72,11 @@ export default function HomeworkOuterPage() {
         deleteSubtask,
         setPlannedDate,
         smartPlan
-    } = useHomework();
-    const { tags, dailyTimes, time, activeTagId } = useStopwatch();
+    } = useHomework(viewedUserId);
+    
+    const { tags, dailyTimes, time, activeTagId } = useStopwatch(undefined, viewedUserId);
+
+    const loading = homeworkLoading || (authLoading && !userId);
 
     const [activeTab, setActiveTab] = useState("tasks");
     const [viewDate, setViewDate] = useState(new Date());
@@ -176,7 +184,7 @@ export default function HomeworkOuterPage() {
                             </Tabs>
                         </div>
 
-                        {activeTab === 'planner' && (
+                        {activeTab === 'planner' && canEdit && (
                             <button 
                                 onClick={() => smartPlan(filtered)}
                                 className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-[10px] font-bold hover:bg-blue-500/20 transition-all flex items-center gap-2"
@@ -195,7 +203,7 @@ export default function HomeworkOuterPage() {
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsContent value="tasks" className="m-0 outline-none space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             {/* New task input */}
-                            {user && (
+                            {canEdit && (
                                 <form onSubmit={e => { e.preventDefault(); if (newHomework.trim()) { addHomework(newHomework.trim(), isPlusAlpha); setNewHomework(""); setIsPlusAlpha(false); } }} className="relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
                                     <div className="relative flex items-center gap-4 bg-white/[0.02] border border-white/5 rounded-xl px-6 h-16 focus-within:border-white/10 transition-all">
@@ -245,7 +253,7 @@ export default function HomeworkOuterPage() {
                                                     key={h.id}
                                                     node={h}
                                                     depth={0}
-                                                    canEdit={!!user}
+                                                    canEdit={canEdit}
                                                     onToggle={() => toggleHomework(h.id, h.is_completed)}
                                                     onDelete={() => deleteHomework(h.id)}
                                                     onAddSub={(pId: string, c: string) => addSubtask(h.id, pId, c)}
@@ -351,15 +359,18 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
         setAdding(false);
     };
 
+    // Responsive Indentation
+    const indentSize = typeof window !== 'undefined' && window.innerWidth < 768 ? 16 : 32;
+
     return (
         <div className={cn("transition-opacity duration-1000", node.is_completed && depth === 0 && "opacity-20")}>
             <div
-                className="group relative flex items-center gap-4 py-4 hover:bg-white/[0.02] transition-all -mx-4 px-4 rounded-xl"
-                style={{ paddingLeft: `${depth * 32 + 16}px` }}
+                className="group relative flex items-center gap-2 md:gap-4 py-3 md:py-4 hover:bg-white/[0.02] transition-all rounded-xl -mx-2 md:-mx-4 px-2 md:px-4"
+                style={{ paddingLeft: `${depth * indentSize + (depth > 0 ? 8 : 16)}px` }}
             >
                 {/* Indent line */}
                 {depth > 0 && (
-                    <div className="absolute w-px bg-white/[0.03]" style={{ left: `${depth * 32 - 4}px`, top: 0, bottom: 0 }} />
+                    <div className="absolute w-px bg-white/[0.03]" style={{ left: `${depth * indentSize}px`, top: 0, bottom: 0 }} />
                 )}
 
                 {/* Expand toggle */}
@@ -368,8 +379,8 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                     className={cn("text-neutral-800 hover:text-neutral-400 transition-colors shrink-0 p-1", !hasChildren && "invisible")}
                 >
                     {expanded
-                        ? <ChevronDown className="w-3.5 h-3.5" />
-                        : <ChevronRightIcon className="w-3.5 h-3.5" />
+                        ? <ChevronDown className="w-3 md:w-3.5 h-3 md:h-3.5" />
+                        : <ChevronRightIcon className="w-3 md:w-3.5 h-3 md:h-3.5" />
                     }
                 </button>
 
@@ -386,7 +397,7 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                     <AnimatePresence>
                         {node.is_completed && (
                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
+                                <Check className="w-2 md:w-2.5 h-2 md:h-2.5 text-white stroke-[4]" />
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -394,19 +405,19 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
 
                 {/* Content */}
                 <div className={cn(
-                    "flex-1 flex flex-col gap-0.5 transition-all",
-                    depth === 0 ? "text-lg font-medium tracking-tight" : "text-sm text-neutral-400",
+                    "flex-1 flex flex-col gap-0.5 transition-all overflow-hidden",
+                    depth === 0 ? "text-base md:text-lg font-medium tracking-tight" : "text-xs md:text-sm text-neutral-400",
                     node.is_completed && "line-through text-neutral-800"
                 )}>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 md:gap-3">
                         {depth === 0 && node.is_plus_alpha && (
-                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+                            <span className="text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
                                 ALPHA
                             </span>
                         )}
-                        <span>{node.content}</span>
+                        <span className="truncate">{node.content}</span>
                         {node.planned_date && (
-                             <span className="ml-auto text-[9px] font-bold text-neutral-700 bg-white/5 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                             <span className="ml-auto text-[8px] md:text-[9px] font-bold text-neutral-700 bg-white/5 px-1 md:px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">
                                 {new Date(node.planned_date).toLocaleDateString('ko-KR', { weekday: 'short' })}
                              </span>
                         )}
@@ -415,12 +426,12 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
 
                 {/* Actions */}
                 {canEdit && (
-                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                        <button onClick={() => setAdding(!adding)} className="text-[9px] font-bold text-neutral-700 hover:text-white transition-colors bg-white/5 px-2 py-1 rounded-md border border-white/5">
-                            SUB
+                    <div className="flex items-center gap-2 md:gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={() => setAdding(!adding)} className="text-[8px] md:text-[9px] font-bold text-neutral-700 hover:text-white transition-colors bg-white/5 px-1.5 md:px-2 py-0.5 md:py-1 rounded-md border border-white/5">
+                            ADD
                         </button>
-                        <button onClick={() => depth === 0 ? onDelete() : onDeleteSub(node.id)} className="text-neutral-800 hover:text-red-500 transition-colors p-1.5">
-                            <X className="w-4 h-4" />
+                        <button onClick={() => depth === 0 ? onDelete() : onDeleteSub(node.id)} className="text-neutral-800 hover:text-red-500 transition-colors p-1 md:p-1.5">
+                            <X className="w-3.5 md:w-4 h-3.5 md:h-4" />
                         </button>
                     </div>
                 )}
@@ -452,19 +463,19 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 onSubmit={submit}
-                                className="flex items-center gap-4 py-4"
-                                style={{ paddingLeft: `${(depth + 1) * 32 + 16 + 24}px` }}
+                                className="flex items-center gap-3 py-3"
+                                style={{ paddingLeft: `${(depth + 1) * indentSize + (depth > 0 ? 8 : 16) + 20}px` }}
                             >
                                 <Input
                                     autoFocus
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
-                                    placeholder="Sub-task name..."
-                                    className="h-8 bg-transparent border-0 border-b border-white/5 rounded-none px-0 text-sm font-light focus:border-white/20 focus:ring-0 placeholder:text-neutral-800 shadow-none flex-1"
+                                    placeholder="Task name..."
+                                    className="h-7 bg-transparent border-0 border-b border-white/5 rounded-none px-0 text-xs md:text-sm font-light focus:border-white/20 focus:ring-0 placeholder:text-neutral-800 shadow-none flex-1"
                                 />
-                                <div className="flex items-center gap-3">
-                                    <button type="submit" className="text-[9px] font-black text-white hover:text-blue-400 transition-colors uppercase tracking-widest">Commit</button>
-                                    <button type="button" onClick={() => setAdding(false)} className="text-[9px] font-black text-neutral-700 hover:text-white transition-colors uppercase tracking-widest">Cancel</button>
+                                <div className="flex items-center gap-2">
+                                    <button type="submit" className="text-[8px] font-black text-white hover:text-blue-400 transition-colors uppercase tracking-widest">OK</button>
+                                    <button type="button" onClick={() => setAdding(false)} className="text-[8px] font-black text-neutral-700 hover:text-white transition-colors uppercase tracking-widest">X</button>
                                 </div>
                             </motion.form>
                         )}
@@ -564,19 +575,19 @@ function PlannerBoard({ homeworks, onUpdateDate }: { homeworks: Homework[], onUp
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="space-y-12 pb-24 mt-12 animate-in fade-in duration-700">
+            <div className="space-y-8 md:space-y-12 pb-24 mt-8 md:mt-12 animate-in fade-in duration-700">
                 {weekDates.map(date => {
                     const dayItems = flatItems.filter(i => i.planned_date === date);
                     const isToday = date === new Date().toISOString().split('T')[0];
                     return (
-                        <div key={date} className="space-y-4 group">
-                             <div className="flex items-center gap-6">
-                                <div className="text-right w-16 space-y-0.5">
-                                    <span className="text-[9px] text-neutral-800 font-black uppercase tracking-[0.3em] block leading-none">
+                        <div key={date} className="space-y-3 md:space-y-4 group">
+                             <div className="flex items-center gap-4 md:gap-6">
+                                <div className="text-right w-12 md:w-16 space-y-0.5">
+                                    <span className="text-[8px] md:text-[9px] text-neutral-800 font-black uppercase tracking-[0.2em] md:tracking-[0.3em] block leading-none">
                                         {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
                                     </span>
                                     <span className={cn(
-                                        "text-2xl font-mono leading-none block",
+                                        "text-xl md:text-2xl font-mono leading-none block",
                                         isToday ? "text-blue-500" : "text-neutral-700 group-hover:text-neutral-500 transition-colors"
                                     )}>
                                         {new Date(date).getDate()}
@@ -588,7 +599,7 @@ function PlannerBoard({ homeworks, onUpdateDate }: { homeworks: Homework[], onUp
                              <div 
                                 id={date}
                                 className={cn(
-                                    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 rounded-3xl pb-2 transition-all min-h-[40px]",
+                                    "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 rounded-3xl pb-2 transition-all min-h-[40px]",
                                     dayItems.length === 0 ? "opacity-30" : "bg-transparent"
                                 )}
                              >
@@ -598,8 +609,8 @@ function PlannerBoard({ homeworks, onUpdateDate }: { homeworks: Homework[], onUp
                                     ))}
                                 </SortableContext>
                                 {dayItems.length === 0 && (
-                                    <div className="md:col-span-3 py-2 text-center opacity-10 group-hover:opacity-30 transition-opacity">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.4em]">Empty</p>
+                                    <div className="sm:col-span-2 xl:col-span-3 py-2 text-center opacity-10 group-hover:opacity-30 transition-opacity">
+                                        <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.4em]">Empty</p>
                                     </div>
                                 )}
                              </div>
@@ -608,15 +619,15 @@ function PlannerBoard({ homeworks, onUpdateDate }: { homeworks: Homework[], onUp
                 })}
                 
                 {/* Backlog Column */}
-                <div className="space-y-6 pt-16">
-                    <div className="flex items-center gap-6">
-                        <span className="text-[10px] text-neutral-800 font-black uppercase tracking-[0.4em] whitespace-nowrap">Unscheduled</span>
+                <div className="space-y-4 md:space-y-6 pt-12 md:pt-16">
+                    <div className="flex items-center gap-4 md:gap-6">
+                        <span className="text-[8px] md:text-[10px] text-neutral-800 font-black uppercase tracking-[0.3em] md:tracking-[0.4em] whitespace-nowrap">Unscheduled</span>
                         <div className="h-[1px] flex-1 bg-blue-500/10" />
                     </div>
                     
                     <div 
                         id="unplanned"
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-h-[100px] p-6 rounded-2xl bg-white/[0.01] border border-white/5 border-dashed"
+                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 min-h-[100px] p-4 md:p-6 rounded-2xl bg-white/[0.01] border border-white/5 border-dashed"
                     >
                         {flatItems.filter(i => !i.planned_date).map(item => (
                             <PlannerItem key={item.id} item={item} isGhost={activeId === item.id} />
@@ -627,15 +638,15 @@ function PlannerBoard({ homeworks, onUpdateDate }: { homeworks: Homework[], onUp
 
             <DragOverlay>
                 {activeId && activeItem ? (
-                    <div className="bg-[#121212] border border-blue-500/30 rounded-xl p-4 shadow-[0_15px_35px_rgba(0,0,0,0.8)] scale-105 transition-transform cursor-grabbing ring-1 ring-white/5">
-                         <div className="space-y-2">
+                    <div className="bg-[#121212] border border-blue-500/30 rounded-xl p-3 md:p-4 shadow-[0_15px_35px_rgba(0,0,0,0.8)] scale-105 transition-transform cursor-grabbing ring-1 ring-white/5 max-w-[250px] md:max-w-none">
+                         <div className="space-y-1.5 md:space-y-2">
                             <div className="flex items-center gap-2">
                                 <div className="w-1 h-1 rounded-full bg-blue-500" />
-                                <span className="text-[8px] text-blue-400 font-black uppercase tracking-[0.3em] font-suit">
+                                <span className="text-[7px] md:text-[8px] text-blue-400 font-black uppercase tracking-[0.3em] font-suit truncate">
                                     {activeItem.rootContent}
                                 </span>
                             </div>
-                            <h4 className="text-base font-medium tracking-tight text-white font-suit leading-tight">
+                            <h4 className="text-sm md:text-base font-medium tracking-tight text-white font-suit leading-tight truncate">
                                 {activeItem.content}
                             </h4>
                         </div>
@@ -662,20 +673,20 @@ function PlannerItem({ item, isGhost }: { item: any, isGhost?: boolean }) {
             {...attributes}
             {...listeners}
             className={cn(
-                "group relative bg-[#0a0a0a]/50 border border-white/[0.05] rounded-xl p-4 transition-all hover:border-white/10 active:scale-98 cursor-grab",
+                "group relative bg-[#0a0a0a]/50 border border-white/[0.05] rounded-xl p-3 md:p-4 transition-all hover:border-white/10 active:scale-98 cursor-grab",
                 item.is_completed && "opacity-30 grayscale-[50%]",
                 isDragging && "z-10 bg-blue-500/5 border-blue-500/20"
             )}
         >
-            <div className="space-y-2">
-                 <div className="flex items-center gap-2">
-                    <div className="w-1 h-1 rounded-full bg-neutral-900 group-hover:bg-blue-500 transition-colors" />
-                    <span className="text-[9px] text-neutral-700 font-bold uppercase tracking-widest font-suit truncate max-w-full group-hover:text-neutral-500 transition-colors">
+            <div className="space-y-1.5 md:space-y-2">
+                 <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="w-1 h-1 rounded-full bg-neutral-900 group-hover:bg-blue-500 transition-colors shrink-0" />
+                    <span className="text-[8px] md:text-[9px] text-neutral-700 font-bold uppercase tracking-widest font-suit truncate group-hover:text-neutral-500 transition-colors">
                         {item.rootContent}
                     </span>
                  </div>
                  <h4 className={cn(
-                     "text-base font-medium tracking-tight text-neutral-400 group-hover:text-white transition-colors font-suit leading-tight",
+                     "text-sm md:text-base font-medium tracking-tight text-neutral-400 group-hover:text-white transition-colors font-suit leading-tight truncate",
                      item.is_completed && "line-through text-neutral-700"
                  )}>
                     {item.content}

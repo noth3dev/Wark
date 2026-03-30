@@ -82,7 +82,7 @@ export function Header() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isSolvedProblemsOpen, increment]);
 
-    if (!user || isSprintActive) return null;
+    if (isSprintActive) return null;
 
     return (
         <>
@@ -93,59 +93,72 @@ export function Header() {
                         <img src="/wark.svg" alt="Logo" className="h-5 w-auto" />
                     </Link>
 
-                    <nav className="hidden md:flex items-center gap-1 border-l border-border pl-4">
-                        <NavLink href="/" title="Timer" icon={<Clock className="w-4 h-4" />} />
-                        <NavLink href="/sprint" title="Sprint" icon={<Flame className="w-4 h-4" />} />
-                        <NavLink href="/record" title="Records" icon={<BarChart2 className="w-4 h-4" />} />
-                        <NavLink href="/playlist" title="Playlist" icon={<Music className="w-4 h-4" />} />
-                        <NavLink href="/homework-outer" title="Homework" icon={<ClipboardList className="w-4 h-4" />} />
-                    </nav>
+                    {user && (
+                        <nav className="hidden md:flex items-center gap-1 border-l border-border pl-4">
+                            <NavLink href="/" title="Timer" icon={<Clock className="w-4 h-4" />} />
+                            <NavLink href="/sprint" title="Sprint" icon={<Flame className="w-4 h-4" />} />
+                            <NavLink href="/record" title="Records" icon={<BarChart2 className="w-4 h-4" />} />
+                            <NavLink href="/playlist" title="Playlist" icon={<Music className="w-4 h-4" />} />
+                            <NavLink href={`/homework-outer/${user?.id}`} title="Homework" icon={<ClipboardList className="w-4 h-4" />} />
+                        </nav>
+                    )}
 
-                    <ActiveSessionIndicator status={status} />
+                    {user && <ActiveSessionIndicator status={status} />}
                 </div>
 
                 {/* Right: Tools & Profile */}
                 <div className="flex items-center gap-2 sm:gap-3">
-                    <MusicPlayer />
+                    {user ? (
+                        <>
+                            <MusicPlayer />
 
-                    {/* Solved Problems Button */}
-                    <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => setIsSolvedProblemsOpen(!isSolvedProblemsOpen)}
-                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isSolvedProblemsOpen
-                            ? 'bg-secondary border-primary/20 text-primary'
-                            : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
-                            }`}
-                    >
-                        <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-primary' : 'text-neutral-500'}`} />
-                        <span className="text-[11px] font-medium font-mono tabular-nums">{totalCount}</span>
-                    </motion.button>
+                            {/* Solved Problems Button */}
+                            <motion.button
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                onClick={() => setIsSolvedProblemsOpen(!isSolvedProblemsOpen)}
+                                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isSolvedProblemsOpen
+                                    ? 'bg-secondary border-primary/20 text-primary'
+                                    : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
+                                    }`}
+                            >
+                                <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-primary' : 'text-neutral-500'}`} />
+                                <span className="text-[11px] font-medium font-mono tabular-nums">{totalCount}</span>
+                            </motion.button>
 
-                    {/* Memo Button */}
-                    <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => setIsMemoOpen(!isMemoOpen)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isMemoOpen
-                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                            : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
-                            }`}
-                    >
-                        <StickyNote className={`w-3.5 h-3.5 ${isMemoOpen ? 'text-amber-400' : 'text-neutral-500'}`} />
-                        <span className="text-[11px] font-medium">메모</span>
-                    </motion.button>
+                            {/* Memo Button */}
+                            <motion.button
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                onClick={() => setIsMemoOpen(!isMemoOpen)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isMemoOpen
+                                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                                    : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
+                                    }`}
+                            >
+                                <StickyNote className={`w-3.5 h-3.5 ${isMemoOpen ? 'text-amber-400' : 'text-neutral-500'}`} />
+                                <span className="text-[11px] font-medium">메모</span>
+                            </motion.button>
 
-                    <BatteryIndicator />
-                    <UserProfile />
+                            <BatteryIndicator />
+                            <UserProfile />
 
-                    {/* Mobile Menu Toggle */}
-                    <button className="md:hidden p-2 text-white ml-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                        {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                    </button>
+                            {/* Mobile Menu Toggle */}
+                            <button className="md:hidden p-2 text-white ml-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                            </button>
+                        </>
+                    ) : (
+                        <Link 
+                            href="/"
+                            className="text-[10px] font-black text-white bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-full border border-white/10 transition-all uppercase tracking-widest"
+                        >
+                            Entrance
+                        </Link>
+                    )}
                 </div>
 
-                <MobileMenu isOpen={isMenuOpen} setIsOpen={setIsMenuOpen} />
+                <MobileMenu isOpen={isMenuOpen} setIsOpen={setIsMenuOpen} user={user} />
             </header>
 
             <SolvedProblemsPanel

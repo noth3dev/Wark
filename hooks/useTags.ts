@@ -5,8 +5,8 @@ import { tagService } from '../lib/services/tagService';
 export function useTags() {
     const [tags, setTags] = useState<Tag[]>([]);
 
-    const fetchTags = useCallback(async () => {
-        const { data } = await tagService.fetchTags();
+    const fetchTags = useCallback(async (targetUserId?: string) => {
+        const { data } = await tagService.fetchTags(targetUserId);
         if (data) setTags(data);
         return data;
     }, []);

@@ -2,8 +2,12 @@ import { supabase } from '../supabase';
 import { Tag } from '../types';
 
 export const tagService = {
-    async fetchTags() {
-        return await supabase.from('tags').select('*');
+    async fetchTags(userId?: string) {
+        let query = supabase.from('tags').select('*').order('name');
+        if (userId) {
+            query = query.eq('user_id', userId);
+        }
+        return await query;
     },
 
     async addTag(name: string, userId: string) {
