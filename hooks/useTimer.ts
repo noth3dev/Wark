@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 
 export function useTimer(activeStartTime: string | null, initialAccumulated: number) {
-    const [time, setTime] = useState(0);
+    const [time, setTime] = useState(initialAccumulated);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (activeStartTime) {
-            if (timerRef.current) clearInterval(timerRef.current);
-
-            timerRef.current = setInterval(() => {
+        const updateTimer = () => {
+            if (activeStartTime) {
                 const startTime = new Date(activeStartTime);
                 const now = new Date();
 
@@ -18,10 +16,18 @@ export function useTimer(activeStartTime: string | null, initialAccumulated: num
 
                 const elapsed = Date.now() - effectiveStartTime;
                 setTime(initialAccumulated + elapsed);
-            }, 100);
+            } else {
+                setTime(initialAccumulated);
+            }
+        };
+
+        updateTimer();
+        
+        if (activeStartTime) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(updateTimer, 100);
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
-            setTime(0);
         }
 
         return () => {
