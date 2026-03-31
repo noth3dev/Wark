@@ -38,7 +38,9 @@ export default function ObjectivesPage() {
         deleteHomework,
         addSubtask,
         toggleSubtask,
-        deleteSubtask
+        deleteSubtask,
+        updateHomework,
+        updateSubtask
     } = useHomework();
     const [newHomework, setNewHomework] = useState("");
 
@@ -162,6 +164,8 @@ export default function ObjectivesPage() {
                                     onAddSub={(parentId: string, content: string) => addSubtask(h.id, parentId, content)}
                                     onToggleSub={(subId: string) => toggleSubtask(h.id, subId)}
                                     onDeleteSub={(subId: string) => deleteSubtask(h.id, subId)}
+                                    onUpdate={(updates: any) => updateHomework(h.id, updates)}
+                                    onUpdateSub={(subId: string, updates: any) => updateSubtask(h.id, subId, updates)}
                                 />
                             </div>
                         ))
@@ -172,11 +176,12 @@ export default function ObjectivesPage() {
     );
 }
 
-function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onToggleSub, onDeleteSub }: any) {
+function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onToggleSub, onDeleteSub, onUpdate, onUpdateSub }: any) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(node.content);
     const [subInput, setSubInput] = useState("");
-
     const hasChildren = node.subtasks && node.subtasks.length > 0;
 
     return (
@@ -247,6 +252,8 @@ function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onTog
                                 onToggleSub={onToggleSub}
                                 onDeleteSub={onDeleteSub}
                                 onAddSub={onAddSub}
+                                onUpdate={onUpdate}
+                                onUpdateSub={onUpdateSub}
                             />
                         ))}
 
