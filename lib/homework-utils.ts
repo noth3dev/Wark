@@ -41,22 +41,35 @@ export const recursiveUpdateSubtasks = (
 };
 
 /**
- * Sets all children in a task tree to a specific completion status
+ * Sets all children in a task tree to a specific status
  */
-export const setAllChildrenStatus = (tasks: Subtask[], status: boolean): Subtask[] => {
+export const setAllChildrenStatus = (tasks: Subtask[], status: "todo" | "in_progress" | "completed", completedAt?: string | null): Subtask[] => {
     return tasks.map(t => ({
         ...t,
-        is_completed: status,
-        subtasks: setAllChildrenStatus(t.subtasks || [], status)
+        status: status,
+        is_completed: status === "completed",
+        completed_at: completedAt,
+        subtasks: setAllChildrenStatus(t.subtasks || [], status, completedAt)
     }));
 };
 
 /**
- * Recalculates parent completion status based on its children
+ * Recalculates parent status based on its children (3-state version)
  */
+export const recalculateParentStatus3 = (tasks: Subtask[]): "todo" | "in_progress" | "completed" => {
+    if (tasks.length === 0) return "todo";
+    
+    const allCompleted = tasks.every(t => t.status === "completed");
+    if (allCompleted) return "completed";
+    
+    const anyProgress = tasks.some(t => t.status === "completed" || t.status === "in_progress");
+    if (anyProgress) return "in_progress";
+    
+    return "todo";
+};
+
 export const recalculateParentStatus = (tasks: Subtask[]): boolean => {
-    if (tasks.length === 0) return false;
-    return tasks.every(t => t.is_completed);
+    return recalculateParentStatus3(tasks) === "completed";
 };
 
 /**

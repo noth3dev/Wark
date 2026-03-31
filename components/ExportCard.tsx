@@ -106,16 +106,21 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                             {completedTasks.length > 0 ? (
                                 completedTasks.map((task, idx) => (
                                     <div key={idx} className="flex gap-6 py-5 border-t border-neutral-900 first:border-0 items-start">
-                                        <Check className="w-4 h-4 text-white mt-1 shrink-0" />
+                                        <div className="w-1 h-1 bg-white rounded-full mt-2.5 shrink-0 shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
                                         <div className="space-y-1.5 min-w-0">
                                             <p className="text-[15px] text-neutral-200 font-medium leading-relaxed break-words">
                                                 {task.content}
                                             </p>
-                                            {task.rootContent && (
-                                                <span className="text-[10px] text-neutral-600 font-bold uppercase block">
-                                                    {task.rootContent}
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                {task.is_plus_alpha && (
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/10 text-white/40 border border-white/5 uppercase">Alpha</span>
+                                                )}
+                                                {task.rootContent && (
+                                                    <span className="text-[10px] text-neutral-600 font-bold uppercase block">
+                                                        {task.rootContent}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))

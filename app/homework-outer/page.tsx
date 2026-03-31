@@ -107,9 +107,9 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                 return { t: acc.t + sub.t, d: acc.d + sub.d };
             }, { t: 0, d: 0 });
             
-        const { t, d } = calc(filtered);
+        const { t, d } = calc(regularTasks);
         return t === 0 ? 0 : Math.round((d / t) * 100);
-    }, [filtered]);
+    }, [regularTasks]);
 
     const shiftWeek = (n: number) => {
         const d = new Date(viewDate);
@@ -267,7 +267,7 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                                                     node={h}
                                                     depth={0}
                                                     canEdit={canEdit}
-                                                    onToggle={() => toggleHomework(h.id, h.is_completed)}
+                                                    onToggle={() => toggleHomework(h.id, h.status)}
                                                     onDelete={() => deleteHomework(h.id)}
                                                     onAddSub={(pId: string, c: string) => addSubtask(h.id, pId, c)}
                                                     onToggleSub={(sId: string) => toggleSubtask(h.id, sId)}
@@ -291,8 +291,8 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                                                         key={h.id}
                                                         node={h}
                                                         depth={0}
-                                                        canEdit={!!user}
-                                                        onToggle={() => toggleHomework(h.id, h.is_completed)}
+                                                        canEdit={canEdit}
+                                                        onToggle={() => toggleHomework(h.id, h.status)}
                                                         onDelete={() => deleteHomework(h.id)}
                                                         onAddSub={(pId: string, c: string) => addSubtask(h.id, pId, c)}
                                                         onToggleSub={(sId: string) => toggleSubtask(h.id, sId)}
@@ -408,22 +408,28 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                     }
                 </button>
 
-                {/* Checkbox with micro-animation */}
+                {/* Checkbox with 3 states: todo, in_progress, completed */}
                 <button
-                    onClick={() => depth === 0 ? onToggle() : onToggleSub(node.id)}
+                    onClick={() => depth === 0 ? onToggle(node.status) : onToggleSub(node.id)}
                     className={cn(
                         "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all duration-300",
-                        node.is_completed
+                        node.status === "completed"
                             ? "bg-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-600 bg-white/[0.02]"
+                            : node.status === "in_progress"
+                                ? "border-blue-500 bg-blue-500/10 shadow-[0_0_8px_rgba(59,130,246,0.2)]"
+                                : "border-neutral-800 hover:border-neutral-600 bg-white/[0.02]"
                     )}
                 >
-                    <AnimatePresence>
-                        {node.is_completed && (
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                    <AnimatePresence mode="wait">
+                        {node.status === "completed" ? (
+                            <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }}>
                                 <Check className="w-2 md:w-2.5 h-2 md:h-2.5 text-white stroke-[4]" />
                             </motion.div>
-                        )}
+                        ) : node.status === "in_progress" ? (
+                            <motion.div key="progress" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                            </motion.div>
+                        ) : null}
                     </AnimatePresence>
                 </button>
 
@@ -431,7 +437,7 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                 <div className={cn(
                     "flex-1 flex flex-col gap-0.5 transition-all overflow-hidden",
                     depth === 0 ? "text-base md:text-lg font-medium tracking-tight" : "text-xs md:text-sm text-neutral-400",
-                    node.is_completed && "line-through text-neutral-800"
+                    node.status === "completed" && "line-through text-neutral-800"
                 )}>
                     <div className="flex items-center gap-2 md:gap-3">
                         {depth === 0 && node.is_plus_alpha && (
@@ -440,6 +446,11 @@ function TreeNode({ node, depth, canEdit, onToggle, onDelete, onAddSub, onToggle
                             </span>
                         )}
                         <span className="truncate">{node.content}</span>
+                        {node.status === "completed" && node.completed_at?.startsWith(new Date().toISOString().split('T')[0]) && (
+                            <span className="text-[7px] md:text-[8px] font-black px-1 md:px-1.5 py-0.5 rounded-md bg-white/5 text-neutral-500 border border-white/5 shrink-0 uppercase tracking-tighter">
+                                Done Today
+                            </span>
+                        )}
                         {node.planned_date && (
                              <span className="ml-auto text-[8px] md:text-[9px] font-bold text-neutral-700 bg-white/5 px-1 md:px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">
                                 {new Date(node.planned_date).toLocaleDateString('ko-KR', { weekday: 'short' })}

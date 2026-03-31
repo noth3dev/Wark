@@ -65,7 +65,11 @@ export function ExportDialog({
              }
         });
         
-        const filtered = allTasks.filter(item => item.is_completed);
+        const filtered = allTasks.filter(item => 
+            item.is_completed && 
+            item.completed_at && 
+            item.completed_at.startsWith(todayStr)
+        );
         
         // Final deduplication by ID just in case
         const seen = new Set();

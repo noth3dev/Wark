@@ -13,6 +13,8 @@ export interface Subtask {
     subtasks: Subtask[];
     created_at: string;
     planned_date?: string | null;
+    completed_at?: string | null;
+    status: "todo" | "in_progress" | "completed";
 }
 
 export interface Homework {
@@ -24,6 +26,8 @@ export interface Homework {
     user_id?: string;
     subtasks?: Subtask[];
     planned_date?: string | null;
+    completed_at?: string | null;
+    status: "todo" | "in_progress" | "completed";
 }
 
 export function useHomework(userIdOverride?: string) {
@@ -47,7 +51,11 @@ export function useHomework(userIdOverride?: string) {
             
             const formattedData = (data || []).map(h => ({
                 ...h,
-                subtasks: Array.isArray(h.subtasks) ? h.subtasks : []
+                status: h.status || (h.is_completed ? "completed" : "todo"),
+                subtasks: Array.isArray(h.subtasks) ? h.subtasks.map((st: any) => ({
+                    ...st,
+                    status: st.status || (st.is_completed ? "completed" : "todo")
+                })) : []
             }));
             
             setHomeworks(formattedData);
@@ -91,17 +99,34 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user]);
 
-    const toggleHomework = useCallback(async (id: string, is_completed: boolean) => {
+    const toggleHomework = useCallback(async (id: string, currentStatus: string) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === id);
         if (!homework) return;
 
-        const newStatus = !is_completed;
-        const updatedSubtasks = Utils.setAllChildrenStatus(homework.subtasks || [], newStatus);
+        // Status Rotation: todo -> in_progress -> completed -> todo
+        let nextStatus: "todo" | "in_progress" | "completed";
+        if (currentStatus === "todo") nextStatus = "in_progress";
+        else if (currentStatus === "in_progress") nextStatus = "completed";
+        else nextStatus = "todo";
+
+        const now = nextStatus === "completed" ? new Date().toISOString() : null;
+        const updatedSubtasks = Utils.setAllChildrenStatus(homework.subtasks || [], nextStatus, now);
 
         try {
-            await saveHomework(id, { is_completed: newStatus, subtasks: updatedSubtasks });
-            setHomeworks(prev => prev.map(h => h.id === id ? { ...h, is_completed: newStatus, subtasks: updatedSubtasks } : h));
+            await saveHomework(id, { 
+                status: nextStatus,
+                is_completed: nextStatus === "completed", 
+                subtasks: updatedSubtasks,
+                completed_at: now 
+            });
+            setHomeworks(prev => prev.map(h => h.id === id ? { 
+                ...h, 
+                status: nextStatus,
+                is_completed: nextStatus === "completed", 
+                subtasks: updatedSubtasks, 
+                completed_at: now 
+            } : h));
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
@@ -121,6 +146,7 @@ export function useHomework(userIdOverride?: string) {
         const newSub: Subtask = { 
             id: Math.random().toString(36).substring(2, 9), 
             content, 
+            status: "todo",
             is_completed: false, 
             is_plus_alpha: false, 
             subtasks: [], 
@@ -132,15 +158,20 @@ export function useHomework(userIdOverride?: string) {
             updatedSubtasks = [...(homework.subtasks || []), newSub];
         } else {
             const { tasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], parentId!, (t) => ({
-                is_completed: false, // Adding a child uncompletes the parent
+                is_completed: false, 
+                completed_at: null, // Adding a child uncompletes the parent
                 subtasks: [...(t.subtasks || []), newSub]
             }));
             updatedSubtasks = tasks;
         }
 
         try {
-            await saveHomework(homeworkId, { is_completed: false, subtasks: updatedSubtasks });
-            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: false, subtasks: updatedSubtasks } : h));
+            await saveHomework(homeworkId, { 
+                is_completed: false, 
+                completed_at: null,
+                subtasks: updatedSubtasks 
+            });
+            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: false, completed_at: null, subtasks: updatedSubtasks } : h));
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
@@ -154,18 +185,32 @@ export function useHomework(userIdOverride?: string) {
             const updated = tasks.map(t => {
                 if (t.id === targetId) {
                     found = true;
-                    const next = !t.is_completed;
+                    let nextStatus: "todo" | "in_progress" | "completed";
+                    if (t.status === "todo") nextStatus = "in_progress";
+                    else if (t.status === "in_progress") nextStatus = "completed";
+                    else nextStatus = "todo";
+
+                    const now = nextStatus === "completed" ? new Date().toISOString() : null;
                     return { 
                         ...t, 
-                        is_completed: next, 
-                        subtasks: Utils.setAllChildrenStatus(t.subtasks || [], next) 
+                        status: nextStatus,
+                        is_completed: nextStatus === "completed", 
+                        completed_at: now,
+                        subtasks: Utils.setAllChildrenStatus(t.subtasks || [], nextStatus, now) 
                     };
                 }
                 if (t.subtasks?.length) {
                     const { tasks: sub, found: subFound } = updateStatusRecursive(t.subtasks, targetId);
                     if (subFound) {
                         found = true;
-                        return { ...t, subtasks: sub, is_completed: Utils.recalculateParentStatus(sub) };
+                        const nextStatus = Utils.recalculateParentStatus3(sub);
+                        return { 
+                            ...t, 
+                            subtasks: sub, 
+                            status: nextStatus,
+                            is_completed: nextStatus === "completed",
+                            completed_at: nextStatus === "completed" ? (t.completed_at || new Date().toISOString()) : null
+                        };
                     }
                 }
                 return t;
@@ -174,11 +219,23 @@ export function useHomework(userIdOverride?: string) {
         };
 
         const { tasks: updatedSubtasks } = updateStatusRecursive(homework.subtasks || [], subtaskId);
-        const allDone = Utils.recalculateParentStatus(updatedSubtasks);
+        const nextStatus = Utils.recalculateParentStatus3(updatedSubtasks);
+        const parentCompletedAt = nextStatus === "completed" ? (homework.completed_at || new Date().toISOString()) : null;
 
         try {
-            await saveHomework(homeworkId, { is_completed: allDone, subtasks: updatedSubtasks });
-            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: allDone, subtasks: updatedSubtasks } : h));
+            await saveHomework(homeworkId, { 
+                status: nextStatus,
+                is_completed: nextStatus === "completed", 
+                subtasks: updatedSubtasks,
+                completed_at: parentCompletedAt
+            });
+            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { 
+                ...h, 
+                status: nextStatus,
+                is_completed: nextStatus === "completed", 
+                subtasks: updatedSubtasks, 
+                completed_at: parentCompletedAt 
+            } : h));
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
@@ -200,7 +257,12 @@ export function useHomework(userIdOverride?: string) {
                 if (subFound) {
                     found = true;
                     const status = sub.length > 0 ? Utils.recalculateParentStatus(sub) : t.is_completed;
-                    return { ...t, subtasks: sub, is_completed: status };
+                    return { 
+                        ...t, 
+                        subtasks: sub, 
+                        is_completed: status,
+                        completed_at: status ? t.completed_at : null 
+                    };
                 }
                 return t;
             });
@@ -211,8 +273,13 @@ export function useHomework(userIdOverride?: string) {
         const allDone = updatedSubtasks.length > 0 ? Utils.recalculateParentStatus(updatedSubtasks) : homework.is_completed;
 
         try {
-            await saveHomework(homeworkId, { is_completed: allDone, subtasks: updatedSubtasks });
-            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: allDone, subtasks: updatedSubtasks } : h));
+            const now = allDone ? (homework.completed_at || new Date().toISOString()) : null;
+            await saveHomework(homeworkId, { 
+                is_completed: allDone, 
+                completed_at: now,
+                subtasks: updatedSubtasks 
+            });
+            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: allDone, completed_at: now, subtasks: updatedSubtasks } : h));
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
