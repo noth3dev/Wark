@@ -72,7 +72,7 @@ export function TaskNode({
     const indentSize = typeof window !== "undefined" && window.innerWidth < 768 ? 16 : 32;
 
     return (
-        <div className={cn("transition-opacity duration-1000", node.status === "completed" && depth === 0 && "opacity-20")}>
+        <div className={cn("transition-opacity duration-1000", node.status === "completed" && depth === 0 && "opacity-50")}>
             {/* ── Row ── */}
             <div
                 onMouseEnter={() => setHovered(true)}
@@ -173,7 +173,7 @@ export function TaskNode({
                             <span className={cn(
                                 "truncate",
                                 depth === 0 ? "text-base font-medium tracking-tight" : "text-sm text-neutral-300 font-light",
-                                node.status === "completed" && "line-through text-neutral-800"
+                                node.status === "completed" && "line-through text-neutral-600"
                             )}>
                                 {depth === 0 && node.is_plus_alpha && (
                                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 mr-2 not-italic">ALPHA</span>
