@@ -38,30 +38,58 @@ export default function RecordPage() {
     const [editTagId, setEditTagId] = useState("");
     const [editDuration, setEditDuration] = useState({ h: 0, m: 0, s: 0 });
     const [editCreatedAt, setEditCreatedAt] = useState("");
+    const [editEndedAt, setEditEndedAt] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+    const syncTimes = (start: string, durationMs: number) => {
+        const startDate = new Date(start);
+        const endDate = new Date(startDate.getTime() + durationMs);
+        
+        const format = (d: Date) => {
+            const year = d.getFullYear();
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const day = d.getDate().toString().padStart(2, '0');
+            const hh = d.getHours().toString().padStart(2, '0');
+            const mm = d.getMinutes().toString().padStart(2, '0');
+            const ss = d.getSeconds().toString().padStart(2, '0');
+            return `${year}-${month}-${day}T${hh}:${mm}:${ss}`;
+        };
+
+        setEditCreatedAt(format(startDate));
+        setEditEndedAt(format(endDate));
+        
+        const h = Math.floor(durationMs / 3600000);
+        const m = Math.floor((durationMs % 3600000) / 60000);
+        const s = Math.floor((durationMs % 60000) / 1000);
+        setEditDuration({ h, m, s });
+    };
+
+    const handleCreatedAtChange = (newStart: string) => {
+        const durationMs = (editDuration.h * 3600000) + (editDuration.m * 60000) + (editDuration.s * 1000);
+        syncTimes(newStart, durationMs);
+    };
+
+    const handleEndedAtChange = (newEnd: string) => {
+        const startMs = new Date(editCreatedAt).getTime();
+        const endMs = new Date(newEnd).getTime();
+        const newDuration = Math.max(0, endMs - startMs);
+        syncTimes(editCreatedAt, newDuration);
+    };
+
+    const handleDurationChange = (newH: number, newM: number, newS: number) => {
+        const newDuration = (newH * 3600000) + (newM * 60000) + (newS * 1000);
+        syncTimes(editCreatedAt, newDuration);
+    };
 
     const handleEditStart = (session: Session) => {
         setEditingSession(session);
         setEditTagId(session.tag_id);
-        const h = Math.floor(session.duration / 3600000);
-        const m = Math.floor((session.duration % 3600000) / 60000);
-        const s = Math.floor((session.duration % 60000) / 1000);
-        setEditDuration({ h, m, s });
-
-        const date = new Date(session.created_at);
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+        syncTimes(session.created_at, session.duration);
     };
 
     const handleAddStart = () => {
         const defaultTagId = tags.length > 0 ? tags[0].id : "";
         setEditTagId(defaultTagId);
-        setEditDuration({ h: 1, m: 0, s: 0 });
 
         const date = new Date(selectedDate);
         if (isToday) {
@@ -71,36 +99,15 @@ export default function RecordPage() {
             date.setHours(12, 0);
         }
 
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
-
+        syncTimes(date.toISOString(), 3600000);
         setEditingSession({ id: 'new', tag_id: defaultTagId, duration: 3600000, created_at: date.toISOString() });
     };
 
     const handleFillGap = (startTime: number, durationMs: number) => {
         const defaultTagId = tags.length > 0 ? tags[0].id : "";
         setEditTagId(defaultTagId);
-
-        const h = Math.floor(durationMs / 3600000);
-        const m = Math.floor((durationMs % 3600000) / 60000);
-        const s = Math.floor((durationMs % 60000) / 1000);
-        setEditDuration({ h, m, s });
-
-        const date = new Date(startTime);
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        setEditCreatedAt(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
-
-        setEditingSession({ id: 'new', tag_id: defaultTagId, duration: durationMs, created_at: date.toISOString() });
+        syncTimes(new Date(startTime).toISOString(), durationMs);
+        setEditingSession({ id: 'new', tag_id: defaultTagId, duration: durationMs, created_at: new Date(startTime).toISOString() });
     };
 
     const handleSave = async () => {
@@ -314,9 +321,11 @@ export default function RecordPage() {
                 editTagId={editTagId}
                 setEditTagId={setEditTagId}
                 editCreatedAt={editCreatedAt}
-                setEditCreatedAt={setEditCreatedAt}
+                setEditCreatedAt={handleCreatedAtChange}
+                editEndedAt={editEndedAt}
+                setEditEndedAt={handleEndedAtChange}
                 editDuration={editDuration}
-                setEditDuration={setEditDuration}
+                setEditDuration={handleDurationChange}
                 isSaving={isSaving}
                 onClose={() => setEditingSession(null)}
                 onSave={handleSave}

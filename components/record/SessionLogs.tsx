@@ -24,12 +24,10 @@ export function SessionLogs({
     const isAllSelected = sessions.length > 0 && selectedIds.length === sessions.length;
 
     return (
-        <section className="space-y-6">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div className="flex items-center gap-4">
-                    <div className="space-y-1">
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Session Narrative</h2>
-                    </div>
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">Session Narrative</h2>
                     {sessions.length > 0 && (
                         <button
                             onClick={() => isAllSelected ? onSelectAll([]) : onSelectAll(sessions.map(s => s.id))}
@@ -40,112 +38,97 @@ export function SessionLogs({
                     )}
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     {selectedIds.length > 0 && (
                         <motion.button
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             onClick={() => onDeleteMultiple(selectedIds)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all"
                         >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                             Delete {selectedIds.length}
                         </motion.button>
                     )}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                    <button
                         onClick={onAddRecord}
-                        className="flex items-center gap-2 px-6 py-2 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white text-black text-[10px] font-black uppercase hover:bg-neutral-200 transition-all"
                     >
-                        <Plus className="w-3.5 h-3.5" />
-                        Archive New
-                    </motion.button>
+                        <Plus className="w-3 h-3" />
+                        Add
+                    </button>
                 </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="space-y-1">
                 {sessions.map((session, idx) => {
                     const tag = tags.find(t => t.id === session.tag_id);
                     const isSelected = selectedIds.includes(session.id);
                     return (
                         <motion.div
                             key={session.id}
-                            initial={{ opacity: 0, x: 20 }}
+                            initial={{ opacity: 0, x: 10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className={`group flex items-center justify-between p-6 rounded-[2.5rem] border transition-all ${
+                            transition={{ delay: idx * 0.02 }}
+                            className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
                                 isSelected 
-                                    ? "bg-white/5 border-white/20" 
-                                    : "bg-neutral-900/60 border-white/5 hover:border-white/10"
+                                    ? "bg-white/5 border-white/15" 
+                                    : "bg-transparent border-transparent hover:bg-white/[0.03]"
                             }`}
                         >
-                            <div className="flex items-center gap-6">
-                                <button 
-                                    onClick={() => onToggleSelect(session.id)}
-                                    className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
-                                        isSelected 
-                                            ? "bg-white border-white text-black" 
-                                            : "border-white/10 hover:border-white/30"
-                                    }`}
+                            {/* Checkbox */}
+                            <button 
+                                onClick={() => onToggleSelect(session.id)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${
+                                    isSelected 
+                                        ? "bg-white border-white text-black" 
+                                        : "border-white/10 hover:border-white/30"
+                                }`}
+                            >
+                                {isSelected && <div className="w-2 h-2 bg-black rounded-sm" />}
+                            </button>
+
+                            {/* Color dot */}
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tag?.color || '#22d3ee' }} />
+
+                            {/* Tag name */}
+                            <span className="text-sm font-medium text-white/90 min-w-0 truncate">{tag?.name || 'Unidentified'}</span>
+
+                            {/* Time */}
+                            <span className="text-[10px] text-neutral-600 font-mono tabular-nums shrink-0">
+                                {new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </span>
+
+                            {/* Sprint badge */}
+                            {session.is_sprint && (
+                                <span className="text-[7px] font-black text-cyan-500 uppercase bg-cyan-500/10 border border-cyan-500/20 px-1 py-0.5 rounded shrink-0">Sprint</span>
+                            )}
+
+                            {/* Duration - push right */}
+                            <span className="ml-auto text-sm font-mono tabular-nums text-white/70 shrink-0">
+                                {formatDurationShort(session.duration)}
+                            </span>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button
+                                    onClick={() => onEditSession(session)}
+                                    className="p-1.5 hover:bg-white/10 rounded-md text-neutral-500 hover:text-white transition-all"
                                 >
-                                    {isSelected && <div className="w-2.5 h-2.5 bg-black rounded-sm" />}
+                                    <Edit2 className="w-3.5 h-3.5" />
                                 </button>
-                                <div className="relative">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-white/10 transition-colors">
-                                        <div className="w-2 h-2 rounded-full shadow-[0_0_10px_currentcolor]" style={{ backgroundColor: tag?.color || '#22d3ee' }} />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-sm font-bold tracking-tight text-white/90">{tag?.name || 'Unidentified'}</p>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-[10px] text-neutral-600 font-black uppercase tracking-widest whitespace-nowrap">
-                                            {new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                                        </p>
-                                        <div className="w-1 h-1 rounded-full bg-neutral-800" />
-                                        {session.is_sprint && (
-                                            <>
-                                                <div className="px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
-                                                    <span className="text-[8px] font-black text-cyan-500 uppercase tracking-tighter">Sprint</span>
-                                                </div>
-                                                <div className="w-1 h-1 rounded-full bg-neutral-800" />
-                                            </>
-                                        )}
-                                        <p className="text-[10px] text-neutral-700 font-bold uppercase tracking-widest">Entry #{session.id.slice(0, 4)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-8">
-                                <div className="text-right">
-                                    <p className="text-lg font-extralight tracking-tighter text-white/80 tabular-nums">
-                                        {formatDurationShort(session.duration).split(':').map((v, i) => (
-                                            <span key={i} className={i === 0 ? "text-white" : "text-neutral-500"}>
-                                                {v}{i < 2 ? <span className="text-[10px] font-bold mx-0.5">:</span> : ""}
-                                            </span>
-                                        ))}
-                                    </p>
-                                    <p className="text-[9px] text-neutral-700 uppercase tracking-[0.2em] font-black">Runtime</p>
-                                </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                                    <button
-                                        onClick={() => onEditSession(session)}
-                                        className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-neutral-500 hover:text-white transition-all active:scale-90"
-                                    >
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => onDeleteSession(session.id)}
-                                        className="p-3 bg-white/5 hover:bg-red-500/10 rounded-2xl text-neutral-500 hover:text-red-400 transition-all active:scale-90"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => onDeleteSession(session.id)}
+                                    className="p-1.5 hover:bg-red-500/10 rounded-md text-neutral-500 hover:text-red-400 transition-all"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                         </motion.div>
                     );
                 })}
                 {sessions.length === 0 && (
-                    <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                    <div className="py-16 text-center border border-dashed border-white/5 rounded-xl">
                         <p className="text-[10px] text-neutral-800 font-bold uppercase tracking-[0.3em]">No Temporal Records Identified</p>
                     </div>
                 )}
