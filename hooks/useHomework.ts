@@ -15,6 +15,8 @@ export interface Subtask {
     planned_date?: string | null;
     completed_at?: string | null;
     status: "todo" | "in_progress" | "completed";
+    tag_id?: string | null;
+    time_spent: number;
 }
 
 export interface Homework {
@@ -28,6 +30,8 @@ export interface Homework {
     planned_date?: string | null;
     completed_at?: string | null;
     status: "todo" | "in_progress" | "completed";
+    tag_id?: string | null;
+    time_spent: number;
 }
 
 export function useHomework(userIdOverride?: string) {
@@ -51,9 +55,11 @@ export function useHomework(userIdOverride?: string) {
             
             const formattedData = (data || []).map(h => ({
                 ...h,
+                time_spent: h.time_spent || 0,
                 status: h.status || (h.is_completed ? "completed" : "todo"),
                 subtasks: Array.isArray(h.subtasks) ? h.subtasks.map((st: any) => ({
                     ...st,
+                    time_spent: st.time_spent || 0,
                     status: st.status || (st.is_completed ? "completed" : "todo")
                 })) : []
             }));
@@ -81,7 +87,7 @@ export function useHomework(userIdOverride?: string) {
         }
     };
 
-    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false) => {
+    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false, tag_id?: string | null) => {
         if (!user) return;
         try {
             const { data, error } = await supabase
@@ -90,8 +96,11 @@ export function useHomework(userIdOverride?: string) {
                     user_id: user.id, 
                     content, 
                     is_completed: false, 
+                    status: "todo",
                     subtasks: [],
-                    is_plus_alpha 
+                    is_plus_alpha,
+                    tag_id,
+                    time_spent: 0
                 })
                 .select().single();
             if (error) throw error;
@@ -138,10 +147,28 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user]);
 
-    const addSubtask = useCallback(async (homeworkId: string, parentId: string | null, content: string) => {
+    const addSubtask = useCallback(async (homeworkId: string, parentId: string | null, content: string, tag_id?: string | null) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === homeworkId);
         if (!homework) return;
+
+        // Inherit tag from parent/root if not provided
+        let inheritedTagId = tag_id;
+        if (!inheritedTagId) {
+            if (parentId === homeworkId) {
+                inheritedTagId = homework.tag_id;
+            } else {
+                const findParentTag = (nodes: Subtask[]): string | null | undefined => {
+                    for (const n of nodes) {
+                        if (n.id === parentId) return n.tag_id;
+                        const childTag = findParentTag(n.subtasks || []);
+                        if (childTag !== undefined) return childTag;
+                    }
+                    return undefined;
+                };
+                inheritedTagId = findParentTag(homework.subtasks || []) || homework.tag_id;
+            }
+        }
 
         const newSub: Subtask = { 
             id: Math.random().toString(36).substring(2, 9), 
@@ -150,7 +177,9 @@ export function useHomework(userIdOverride?: string) {
             is_completed: false, 
             is_plus_alpha: false, 
             subtasks: [], 
-            created_at: new Date().toISOString() 
+            created_at: new Date().toISOString(),
+            tag_id: inheritedTagId,
+            time_spent: 0
         };
         
         let updatedSubtasks: Subtask[];
@@ -173,6 +202,89 @@ export function useHomework(userIdOverride?: string) {
             });
             setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: false, completed_at: null, subtasks: updatedSubtasks } : h));
         } catch (err) { console.error(err); }
+    }, [user, homeworks]);
+
+    const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null }) => {
+        if (!user) return;
+        const homework = homeworks.find(h => h.id === id);
+        if (!homework) return;
+
+        let finalUpdates: any = { ...updates };
+        
+        // If tag_id is changing, propagate to all subtasks
+        if (updates.tag_id !== undefined && updates.tag_id !== homework.tag_id) {
+            const propagateTag = (nodes: Subtask[]): Subtask[] => {
+                return nodes.map(n => ({
+                    ...n,
+                    tag_id: updates.tag_id,
+                    subtasks: propagateTag(n.subtasks || [])
+                }));
+            };
+            const updatedSubs = propagateTag(homework.subtasks || []);
+            finalUpdates.subtasks = updatedSubs;
+        }
+
+        try {
+            await saveHomework(id, finalUpdates);
+            setHomeworks(prev => prev.map(h => h.id === id ? { ...h, ...finalUpdates } : h));
+        } catch (err) { console.error(err); }
+    }, [user, homeworks]);
+
+    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null }) => {
+        if (!user) return;
+        const homework = homeworks.find(h => h.id === homeworkId);
+        if (!homework) return;
+
+        const { tasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], subtaskId, (t) => {
+            const isTagChanging = updates.tag_id !== undefined && updates.tag_id !== t.tag_id;
+            
+            if (isTagChanging) {
+                const propagateTag = (nodes: Subtask[]): Subtask[] => {
+                    return nodes.map(n => ({
+                        ...n,
+                        tag_id: updates.tag_id,
+                        subtasks: propagateTag(n.subtasks || [])
+                    }));
+                };
+                return {
+                    ...t,
+                    ...updates,
+                    subtasks: propagateTag(t.subtasks || [])
+                };
+            }
+            return {
+                ...t,
+                ...updates
+            };
+        });
+
+        try {
+            await saveHomework(homeworkId, { subtasks: tasks });
+            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, subtasks: tasks } : h));
+        } catch (err) { console.error(err); }
+    }, [user, homeworks]);
+
+    const recordTime = useCallback(async (homeworkId: string, taskId: string, additionalMs: number) => {
+        if (!user) return;
+        const homework = homeworks.find(h => h.id === homeworkId);
+        if (!homework) return;
+
+        if (homeworkId === taskId) {
+            const newTotal = (homework.time_spent || 0) + additionalMs;
+            try {
+                await saveHomework(homeworkId, { time_spent: newTotal });
+                setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, time_spent: newTotal } : h));
+            } catch (err) { console.error(err); }
+        } else {
+            const { tasks: updatedSubtasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], taskId, (t) => ({
+                ...t,
+                time_spent: (t.time_spent || 0) + additionalMs
+            }));
+            try {
+                await saveHomework(homeworkId, { subtasks: updatedSubtasks });
+                setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, subtasks: updatedSubtasks } : h));
+            } catch (err) { console.error(err); }
+        }
     }, [user, homeworks]);
 
     const toggleSubtask = useCallback(async (homeworkId: string, subtaskId: string) => {
@@ -339,5 +451,19 @@ export function useHomework(userIdOverride?: string) {
         }
     }, [user, homeworks]);
 
-    return { homeworks, loading, addHomework, toggleHomework, deleteHomework, addSubtask, toggleSubtask, deleteSubtask, setPlannedDate, smartPlan };
+    return { 
+        homeworks, 
+        loading, 
+        addHomework, 
+        toggleHomework, 
+        deleteHomework, 
+        addSubtask, 
+        updateHomework,
+        updateSubtask,
+        recordTime,
+        toggleSubtask, 
+        deleteSubtask, 
+        setPlannedDate, 
+        smartPlan 
+    };
 }
