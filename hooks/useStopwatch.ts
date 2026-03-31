@@ -17,6 +17,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     const { tags, fetchTags, addTag: addTagBase, updateTag: updateTagBase, deleteTag: deleteTagBase } = useTags();
     const {
         activeSession,
+        loading: sessionLoading,
         fetchActiveSession,
         startSession,
         endSession,
@@ -55,11 +56,22 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     useStopwatchSync(user?.id, refreshAll);
 
     const handleTagClick = async (tagId: string) => {
-        if ((activeSession && activeSession.tag_id === tagId) || switchingRef.current || !user) return;
+        if (switchingRef.current || !user) return;
+
+        // If clicking active tag -> STOP
+        if (activeSession && activeSession.tag_id === tagId) {
+            switchingRef.current = true;
+            try {
+                await endSession();
+                persistenceService.clearActiveSession();
+            } finally {
+                switchingRef.current = false;
+            }
+            return;
+        }
 
         switchingRef.current = true;
         try {
-            persistenceService.clearActiveSession();
             await cleanupOrphanedSessions();
             const newSession = await startSession(tagId);
 
@@ -136,6 +148,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
         tags,
         activeTagId: activeSession?.tag_id || null,
         activeSession,
+        sessionLoading,
         dailyTimes,
         groupedDailyTimes,
         handleTagClick,

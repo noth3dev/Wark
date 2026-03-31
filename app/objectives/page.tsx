@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useHomework, Homework, Subtask } from "../../hooks/useHomework";
 import { useAuth } from "../../lib/auth-context";
 import { Input } from "../../components/ui/input";
 import { 
     Check, Loader2, X, ArrowLeft, ChevronLeft, ChevronRight, 
     Folder, FileText, ChevronDown, ChevronRight as ChevronRightIcon, 
-    Plus, Trash2, Calendar, Target 
+    Plus, Trash2, Calendar, Target, Edit2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import Link from "next/link";
+import { supabase } from "../../lib/supabase";
 
 // Week calculation
 function getWeekInfo(date: Date) {
@@ -43,10 +44,19 @@ export default function ObjectivesPage() {
         updateSubtask
     } = useHomework();
     const [newHomework, setNewHomework] = useState("");
+    const [tags, setTags] = useState<any[]>([]);
 
     const [viewDate, setViewDate] = useState(new Date());
     const currentWeekInfo = useMemo(() => getWeekInfo(viewDate), [viewDate]);
     const currentWeekKey = useMemo(() => formatWeekKey(currentWeekInfo), [currentWeekInfo]);
+
+    useEffect(() => {
+        const fetchTags = async () => {
+            const { data } = await supabase.from("tags").select("*");
+            if (data) setTags(data);
+        };
+        fetchTags();
+    }, []);
 
     const navigateWeek = (direction: number) => {
         const nextDate = new Date(viewDate);
@@ -100,55 +110,24 @@ export default function ObjectivesPage() {
 
                     <div className="flex justify-between items-end gap-10">
                         <div className="space-y-4">
-                            <span className="text-[10px] font-black tracking-[0.5em] text-neutral-800 uppercase">Strategic Operation Terminal</span>
-                            <h1 className="text-6xl sm:text-9xl font-suit font-semibold tracking-tighter text-white leading-none">OBJECTIVES</h1>
+                            <h1 className="text-4xl sm:text-6xl font-black italic tracking-tighter uppercase leading-none opacity-90">Protocol Objectives</h1>
+                            <p className="text-[10px] sm:text-xs font-bold text-neutral-600 uppercase tracking-[0.3em] ml-1 font-mono">Mission control of tactical operations</p>
                         </div>
-                        <div className="text-right pb-1">
-                            <div className="text-[10px] font-black text-neutral-700 tracking-widest uppercase mb-2">Completion Rate</div>
-                            <div className="text-8xl font-mono tabular-nums leading-none text-white/10">{progress}%</div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => navigateWeek(-1)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all active:scale-95 group">
+                                <ChevronLeft className="w-5 h-5 text-neutral-600 group-hover:text-white" />
+                            </button>
+                            <button onClick={() => navigateWeek(1)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all active:scale-95 group">
+                                <ChevronRight className="w-5 h-5 text-neutral-600 group-hover:text-white" />
+                            </button>
                         </div>
-                    </div>
-
-                    {/* Navigation Controller */}
-                    <div className="flex items-center gap-8 py-10 border-y border-white/5">
-                        <div className="flex gap-2">
-                             <button onClick={() => navigateWeek(-1)} className="p-3 hover:bg-white/10 rounded-xl transition-all"><ChevronLeft className="w-6 h-6" /></button>
-                             <button onClick={() => navigateWeek(1)} className="p-3 hover:bg-white/10 rounded-xl transition-all"><ChevronRight className="w-6 h-6" /></button>
-                        </div>
-                        <div className="h-10 w-px bg-white/10" />
-                        <div className="flex-1">
-                            <p className="text-[10px] font-black text-neutral-700 dark:text-neutral-600 uppercase tracking-widest">Active Directory</p>
-                            <p className="text-2xl font-suit">{currentWeekInfo.year} / {currentWeekInfo.month}월 {currentWeekInfo.week}주차</p>
-                        </div>
-                        <button onClick={() => setViewDate(new Date())} className="px-6 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold transition-all hover:bg-white/10">GO_TODAY</button>
                     </div>
                 </header>
 
-                {/* Input Surface */}
-                {user && (
-                    <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-4 group focus-within:border-white/20 transition-all duration-500 shadow-2xl">
-                         <form onSubmit={(e) => { e.preventDefault(); if (newHomework.trim()) { addHomework(newHomework.trim()); setNewHomework(""); } }} className="relative flex items-center">
-                            <Folder className="absolute left-8 w-8 h-8 text-neutral-800 group-focus-within:text-blue-500/50 transition-colors" />
-                            <Input
-                                value={newHomework}
-                                onChange={(e) => setNewHomework(e.target.value)}
-                                placeholder="Create new primary node..."
-                                className="h-24 bg-transparent border-none rounded-none pl-24 pr-40 text-4xl font-suit focus:ring-0 placeholder:text-neutral-900"
-                            />
-                            <button type="submit" className="absolute right-6 h-12 px-10 bg-white text-black rounded-3xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">CREATE</button>
-                         </form>
-                    </div>
-                )}
-
-                {/* Infinite Explorer Stack */}
-                <div className="space-y-4">
-                    {homeworkLoading ? (
-                        <div className="py-40 flex flex-col items-center gap-6 opacity-20">
-                            <Loader2 className="w-10 h-10 animate-spin" />
-                            <p className="text-[10px] font-bold tracking-widest uppercase">Initializing Directory Stack...</p>
-                        </div>
-                    ) : filteredHomeworks.length === 0 ? (
-                        <div className="py-40 text-center border border-dashed border-white/5 rounded-[3rem] opacity-20 space-y-6">
+                {/* Status List */}
+                <div className="space-y-6">
+                    {filteredHomeworks.length === 0 ? (
+                        <div className="py-40 text-center space-y-4 border border-dashed border-white/5 rounded-3xl opacity-20">
                             <Target className="w-16 h-16 mx-auto stroke-[1]" />
                             <p className="text-[11px] font-bold tracking-[0.4em] uppercase">No active protocols in this directory.</p>
                         </div>
@@ -159,6 +138,7 @@ export default function ObjectivesPage() {
                                     node={h} 
                                     depth={0} 
                                     isEditable={!!user}
+                                    tags={tags}
                                     onToggle={(id: string) => toggleHomework(h.id, h.status)}
                                     onDelete={(id: string) => deleteHomework(h.id)}
                                     onAddSub={(parentId: string, content: string) => addSubtask(h.id, parentId, content)}
@@ -176,16 +156,28 @@ export default function ObjectivesPage() {
     );
 }
 
-function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onToggleSub, onDeleteSub, onUpdate, onUpdateSub }: any) {
+function TreeNode({ node, depth, isEditable, tags, onToggle, onDelete, onAddSub, onToggleSub, onDeleteSub, onUpdate, onUpdateSub }: any) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(node.content);
+    const [editTagId, setEditTagId] = useState(node.tag_id);
     const [subInput, setSubInput] = useState("");
+
     const hasChildren = node.subtasks && node.subtasks.length > 0;
 
+    const handleSave = () => {
+        if (!editContent.trim()) return;
+        if (depth === 0) {
+            onUpdate({ content: editContent.trim(), tag_id: editTagId });
+        } else {
+            onUpdateSub(node.id, { content: editContent.trim(), tag_id: editTagId });
+        }
+        setIsEditing(false);
+    };
+
     return (
-        <div className={cn("transition-all", node.is_completed && depth === 0 && "opacity-20")}>
+        <div className={cn("transition-all", node.status === "completed" && depth === 0 && "opacity-20")}>
             <div className={cn(
                 "group flex items-center gap-4 py-6 pr-8 hover:bg-white/[0.03] transition-colors",
                 depth > 0 && "py-4"
@@ -207,26 +199,65 @@ function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onTog
                         onClick={() => depth === 0 ? onToggle(node.id) : onToggleSub(node.id)}
                         className={cn(
                             "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
-                            node.is_completed ? "bg-blue-500 border-blue-500 text-white" : "border-neutral-800 hover:border-blue-500/50"
+                            node.status === "completed" ? "bg-blue-500 border-blue-500 text-white" : 
+                            node.status === "in_progress" ? "bg-blue-500/20 border-blue-500/50 text-blue-400" :
+                            "border-neutral-800 hover:border-blue-500/50"
                         )}
                     >
-                        {node.is_completed && <Check className="w-4 h-4 stroke-[3]" />}
+                        {node.status === "completed" && <Check className="w-4 h-4 stroke-[3]" />}
                     </button>
                 </div>
 
                 <div className="flex-1 flex items-center gap-4 group/item">
-                    {depth === 0 ? <Folder className={cn("w-6 h-6 text-neutral-700", node.is_completed && "text-blue-500/30")} /> : <FileText className="w-4 h-4 text-neutral-800" />}
-                    <span className={cn(
-                        "text-white leading-tight transition-all",
-                        depth === 0 ? "text-2xl font-suit" : "text-base font-sans font-medium text-neutral-400",
-                        node.is_completed && "line-through text-neutral-800"
-                    )}>
-                        {node.content}
-                    </span>
+                    {isEditing ? (
+                        <div className="flex-1 flex flex-col gap-3">
+                            <Input 
+                                autoFocus
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                className="bg-transparent border-0 border-b border-blue-500/50 text-white text-xl rounded-none px-0 focus:ring-0 h-auto py-1"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                                {tags.map((tag: any) => (
+                                    <button
+                                        key={tag.id}
+                                        onClick={() => setEditTagId(editTagId === tag.id ? null : tag.id)}
+                                        className={cn(
+                                            "px-2 py-1 rounded text-[9px] font-bold uppercase transition-all",
+                                            editTagId === tag.id ? "bg-white text-black" : "bg-white/5 text-neutral-500 hover:bg-white/10"
+                                        )}
+                                    >
+                                        {tag.name}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleSave} className="text-[10px] font-black text-blue-500">[ SAVE ]</button>
+                                <button onClick={() => setIsEditing(false)} className="text-[10px] font-black text-neutral-600">[ CANCEL ]</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {depth === 0 ? <Folder className={cn("w-6 h-6 text-neutral-700", node.status === "completed" && "text-blue-500/30")} /> : <FileText className="w-4 h-4 text-neutral-800" />}
+                            <span className={cn(
+                                "text-white leading-tight transition-all",
+                                depth === 0 ? "text-2xl font-suit" : "text-base font-sans font-medium text-neutral-400",
+                                node.status === "completed" && "line-through text-neutral-800 text-sm"
+                            )}>
+                                {node.content}
+                            </span>
+                            {node.tag_id && (
+                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tags.find((t: any) => t.id === node.tag_id)?.color || "#444" }} />
+                            )}
+                        </>
+                    )}
 
                     <div className="flex items-center gap-4 opacity-0 group-hover/item:opacity-100 transition-opacity ml-4">
-                        {isEditable && (
+                        {isEditable && !isEditing && (
                             <>
+                                <button onClick={() => setIsEditing(true)} className="p-1.5 text-neutral-700 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/10">
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
                                 <button onClick={() => setIsAdding(!isAdding)} className="p-1.5 text-neutral-700 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/10">
                                     <Plus className="w-4 h-4" />
                                 </button>
@@ -249,6 +280,7 @@ function TreeNode({ node, depth, isEditable, onToggle, onDelete, onAddSub, onTog
                                 node={child}
                                 depth={depth + 1}
                                 isEditable={isEditable}
+                                tags={tags}
                                 onToggleSub={onToggleSub}
                                 onDeleteSub={onDeleteSub}
                                 onAddSub={onAddSub}

@@ -5,6 +5,7 @@ import { calculateDaySegments } from '../lib/timeUtils';
 
 export function useActiveSession(userId: string | undefined) {
     const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
+    const [loading, setLoading] = useState(true);
     const activeSessionRef = useRef<ActiveSession | null>(null);
 
     useEffect(() => {
@@ -12,16 +13,27 @@ export function useActiveSession(userId: string | undefined) {
     }, [activeSession]);
 
     const fetchActiveSession = useCallback(async () => {
-        if (!userId) return null;
+        if (!userId) {
+            setLoading(false);
+            return null;
+        }
+        setLoading(true);
         const { data } = await sessionService.getActiveSession(userId);
         if (data && data.length > 0) {
             setActiveSession(data[0]);
+            setLoading(false);
             return data[0];
         } else {
             setActiveSession(null);
+            setLoading(false);
             return null;
         }
     }, [userId]);
+
+    useEffect(() => {
+        if (userId) fetchActiveSession();
+        else setLoading(false);
+    }, [userId, fetchActiveSession]);
 
     const startSession = async (tagId: string) => {
         if (!userId) return null;
@@ -71,6 +83,7 @@ export function useActiveSession(userId: string | undefined) {
 
     return {
         activeSession,
+        loading,
         setActiveSession,
         fetchActiveSession,
         startSession,

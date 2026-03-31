@@ -15,6 +15,7 @@ import {
 import { cn } from "../../lib/utils";
 import { motion } from "framer-motion";
 import { ExportDialog } from "../../components/ExportDialog";
+import { persistenceService } from "../../lib/services/persistenceService";
 import { TaskNode } from "./TaskNode";
 import { TaskEntry } from "./TaskEntry";
 
@@ -68,20 +69,50 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
     const [activeTask, setActiveTask] = useState<{ hwId: string, taskId: string, tagId: string | null, startTime: number } | null>(null);
     const [sessionMs, setSessionMs] = useState(0);
 
-    const { activeSession, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
+    const { activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
+
+    // PERSISTENCE: Load on mount
+    useEffect(() => {
+        if (!canEdit) return;
+        const saved = persistenceService.getActiveTask();
+        if (saved) {
+            setActiveTask(saved);
+        }
+    }, [canEdit]);
+
+    // Recalculate Ms when activeTask is set or every second
+    useEffect(() => {
+        let interval: any;
+        if (activeTask) {
+            setSessionMs(Date.now() - activeTask.startTime);
+            interval = setInterval(() => {
+                setSessionMs(Date.now() - activeTask.startTime);
+            }, 1000);
+        } else {
+            setSessionMs(0);
+        }
+        return () => clearInterval(interval);
+    }, [activeTask]);
 
     // Sync task stop if global tag changes
     useEffect(() => {
+        if (sessionLoading) return;
+        
         if (activeTask && activeSession && activeTask.tagId !== activeSession.tag_id) {
             pauseTask();
+        } else if (activeTask && !activeSession) {
+            // If tag session was ended elsewhere, stop task too
+            pauseTask();
         }
-    }, [activeSession?.tag_id]);
+    }, [activeSession?.tag_id, activeSession === null, sessionLoading]);
 
     const runTask = (hwId: string, taskId: string, tagId: string | null) => {
         if (activeTask) {
             pauseTask();
         }
-        setActiveTask({ hwId, taskId, tagId, startTime: Date.now() });
+        const taskObj = { hwId, taskId, tagId, startTime: Date.now() };
+        setActiveTask(taskObj);
+        persistenceService.setActiveTask(taskObj);
         setSessionMs(0);
         if (tagId && canEdit) {
             triggerTagTimer(tagId);
@@ -94,23 +125,13 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
         const { hwId, taskId } = activeTask;
         
         setActiveTask(null);
+        persistenceService.clearActiveTask();
         setSessionMs(0);
         
         if (currentMs > 1000) {
             await recordTime(hwId, taskId, currentMs);
         }
     };
-
-    // Global session timer pulse
-    useEffect(() => {
-        let interval: any;
-        if (activeTask) {
-            interval = setInterval(() => {
-                setSessionMs(Date.now() - activeTask.startTime);
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [activeTask]);
 
     const loading = homeworkLoading || (authLoading && !userId);
 
