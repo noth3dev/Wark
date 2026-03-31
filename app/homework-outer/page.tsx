@@ -251,15 +251,15 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                                                     node={h} 
                                                     depth={0} 
                                                     canEdit={canEdit} 
-                                                    onToggle={toggleHomework} 
+                                                    onToggle={(status: string) => toggleHomework(h.id, status)} 
                                                     onDelete={() => deleteHomework(h.id)} 
-                                                    onAddSub={addSubtask} 
-                                                    onToggleSub={toggleSubtask} 
-                                                    onDeleteSub={deleteSubtask} 
-                                                    onUpdate={updateHomework} 
-                                                    onUpdateSub={updateSubtask} 
+                                                    onAddSub={(parentId: string, content: string, tagId?: string | null) => addSubtask(h.id, parentId, content, tagId)} 
+                                                    onToggleSub={(subId: string) => toggleSubtask(h.id, subId)} 
+                                                    onDeleteSub={(subId: string) => deleteSubtask(h.id, subId)} 
+                                                    onUpdate={(updates: any) => updateHomework(h.id, updates)} 
+                                                    onUpdateSub={(subId: string, updates: any) => updateSubtask(h.id, subId, updates)} 
                                                     rootId={h.id} 
-                                                    onSetDate={setPlannedDate} 
+                                                    onSetDate={(targetId: string, date: string | null) => setPlannedDate(h.id, targetId, date)} 
                                                     tags={tags} 
                                                     isRunning={activeTask?.taskId === h.id}
                                                     onRun={runTask}
@@ -283,15 +283,15 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                                                         node={h} 
                                                         depth={0} 
                                                         canEdit={canEdit} 
-                                                        onToggle={toggleHomework} 
+                                                        onToggle={(status: string) => toggleHomework(h.id, status)} 
                                                         onDelete={() => deleteHomework(h.id)} 
-                                                        onAddSub={addSubtask} 
-                                                        onToggleSub={toggleSubtask} 
-                                                        onDeleteSub={deleteSubtask} 
-                                                        onUpdate={updateHomework} 
-                                                        onUpdateSub={updateSubtask} 
+                                                        onAddSub={(parentId: string, content: string, tagId?: string | null) => addSubtask(h.id, parentId, content, tagId)} 
+                                                        onToggleSub={(subId: string) => toggleSubtask(h.id, subId)} 
+                                                        onDeleteSub={(subId: string) => deleteSubtask(h.id, subId)} 
+                                                        onUpdate={(updates: any) => updateHomework(h.id, updates)} 
+                                                        onUpdateSub={(subId: string, updates: any) => updateSubtask(h.id, subId, updates)} 
                                                         rootId={h.id} 
-                                                        onSetDate={setPlannedDate} 
+                                                        onSetDate={(targetId: string, date: string | null) => setPlannedDate(h.id, targetId, date)} 
                                                         tags={tags} 
                                                         isRunning={activeTask?.taskId === h.id}
                                                         onRun={runTask}

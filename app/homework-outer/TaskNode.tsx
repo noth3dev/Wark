@@ -53,9 +53,9 @@ export function TaskNode({
     const handleSave = () => {
         if (!editContent.trim()) return;
         if (depth === 0) {
-            onUpdate(node.id, { content: editContent.trim(), tag_id: editTagId });
+            onUpdate({ content: editContent.trim(), tag_id: editTagId });
         } else {
-            onUpdateSub(rootId, node.id, { content: editContent.trim(), tag_id: editTagId });
+            onUpdateSub(node.id, { content: editContent.trim(), tag_id: editTagId });
         }
         setIsEditing(false);
     };

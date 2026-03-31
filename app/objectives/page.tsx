@@ -157,7 +157,7 @@ export default function ObjectivesPage() {
                                     node={h} 
                                     depth={0} 
                                     isEditable={!!user}
-                                    onToggle={(id: string) => toggleHomework(h.id, h.is_completed)}
+                                    onToggle={(id: string) => toggleHomework(h.id, h.status)}
                                     onDelete={(id: string) => deleteHomework(h.id)}
                                     onAddSub={(parentId: string, content: string) => addSubtask(h.id, parentId, content)}
                                     onToggleSub={(subId: string) => toggleSubtask(h.id, subId)}
