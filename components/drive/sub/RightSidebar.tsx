@@ -4,7 +4,8 @@ import {
     X, FileText, Download, Star, StarOff, 
     Pencil, Tag, Calendar, Database, HardDrive, 
     ExternalLink, Maximize2, Play, Music, Image as ImageIcon,
-    Loader2, Share2, Info, Eye, Folder, ChevronRight, MousePointer2
+    Loader2, Share2, Info, Eye, Folder, ChevronRight, MousePointer2,
+    QrCode, Copy, Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDate, formatBytes, getFileIcon, getFileBg, getFileColor, isFolder } from "@/lib/drive-utils";
@@ -29,6 +30,8 @@ export function RightSidebar({
     const [sharedLink, setSharedLink] = useState<string | null>(null);
     const [subFiles, setSubFiles] = useState<DriveFile[]>([]);
     const [loadingSub, setLoadingSub] = useState(false);
+    const [showQr, setShowQr] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -77,16 +80,25 @@ export function RightSidebar({
 
     useEffect(() => {
         setSharedLink(null);
+        setShowQr(false);
+        setCopied(false);
     }, [file]);
 
     const handleShare = async () => {
         if (!file) return;
+        if (sharedLink) {
+            navigator.clipboard.writeText(sharedLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            return;
+        }
         setSharing(true);
         const link = await shareFile(file.id, file.accountId);
         if (link) {
             setSharedLink(link);
             navigator.clipboard.writeText(link);
-            alert("공유 링크가 클립보드에 복사되었습니다!");
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
         setSharing(false);
     };
@@ -107,7 +119,7 @@ export function RightSidebar({
                         </div>
                     </div>
                     
-                    <div className="space-y-1 max-h-[300px] overflow-y-auto no-scrollbar pr-1">
+                    <div className="space-y-1 max-h-[260px] overflow-y-auto no-scrollbar pr-1">
                         {loadingSub ? (
                             Array.from({ length: 3 }).map((_, i) => (
                                 <div key={i} className="h-10 w-full rounded-xl bg-white/[0.02] border border-white/[0.04] animate-pulse" />
@@ -175,26 +187,6 @@ export function RightSidebar({
             );
         }
 
-        if (file.mimeType.includes("google-apps") || file.webViewLink) {
-             return (
-                <div className="relative w-full aspect-video bg-neutral-900 rounded-2xl border border-white/10 overflow-hidden group">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                         <div className={`w-12 h-12 rounded-2xl ${getFileBg(file.mimeType)} ${getFileColor(file.mimeType)} flex items-center justify-center`}>
-                            {getFileIcon(file.mimeType, "lg")}
-                        </div>
-                        <button 
-                            onClick={() => window.open(file.webViewLink, "_blank")}
-                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Open in Google Drive
-                        </button>
-                    </div>
-                    <div className="absolute inset-0 opacity-10 bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
-                </div>
-            );
-        }
-
         return (
             <div className="w-full aspect-video flex flex-col items-center justify-center bg-white/[0.02] rounded-2xl border border-white/5 gap-3">
                 <div className={`w-12 h-12 rounded-2xl ${getFileBg(file.mimeType)} ${getFileColor(file.mimeType)} flex items-center justify-center`}>
@@ -204,6 +196,10 @@ export function RightSidebar({
             </div>
         );
     };
+
+    const qrUrl = sharedLink 
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(sharedLink)}`
+        : null;
 
     return (
         <div className="w-80 border-l border-white/5 bg-neutral-950/40 backdrop-blur-3xl flex flex-col shadow-[-32px_0_64px_-32px_rgba(0,0,0,0.5)] z-40 transition-all duration-500 ease-in-out">
@@ -272,7 +268,7 @@ export function RightSidebar({
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={() => downloadFile(file.id, file.name, file.mimeType, file.accountId)}
-                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-neutral-200 transition-all shadow-lg shadow-white/5"
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-200 transition-all shadow-lg"
                                     >
                                         <Download className="w-3.5 h-3.5" />
                                         Download
@@ -285,18 +281,44 @@ export function RightSidebar({
                                     </button>
                                 </div>
                                 
-                                <button 
-                                    onClick={handleShare}
-                                    disabled={sharing}
-                                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${
-                                        sharedLink 
-                                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
-                                            : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
-                                    }`}
-                                >
-                                    {sharing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-                                    {sharedLink ? "Shared (Copy Link)" : "Share Public Link"}
-                                </button>
+                                <div className="flex gap-2 w-full">
+                                    <button 
+                                        onClick={handleShare}
+                                        disabled={sharing}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${
+                                            sharedLink 
+                                                ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
+                                                : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
+                                        }`}
+                                    >
+                                        {sharing ? <Loader2 className="w-3 h-3 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                                        {sharedLink ? (copied ? "COPIED" : "COPY LINK") : "GET PUBLIC LINK"}
+                                    </button>
+                                    {sharedLink && (
+                                        <button 
+                                            onClick={() => setShowQr(!showQr)}
+                                            className={`p-2.5 rounded-xl border transition-all ${showQr ? "bg-white text-black border-white" : "bg-white/[0.03] border-white/[0.06] text-neutral-600 hover:text-white"}`}
+                                        >
+                                            <QrCode className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <AnimatePresence>
+                                    {showQr && qrUrl && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="mt-4 p-4 bg-white rounded-2xl flex flex-col items-center gap-3">
+                                                <img src={qrUrl} alt="QR Code" className="w-32 h-32" />
+                                                <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-center">Scan to Access publicly</p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             {/* Detailed Info */}
@@ -322,13 +344,12 @@ export function RightSidebar({
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">Account</span>
-                                                    <span className="text-[11px] text-blue-400/80 font-bold">{file.accountId}</span>
+                                                    <span className="text-[11px] text-blue-400/80 font-bold truncate max-w-[140px]">{file.accountId}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                {/* Tags/Notes omitted for brevity in placeholder but kept for functionality */}
                             </div>
                         </motion.div>
                     ) : (
