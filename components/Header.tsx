@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList } from "lucide-react"
+import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
@@ -100,6 +100,7 @@ export function Header() {
                             <NavLink href="/record" title="Records" icon={<BarChart2 className="w-4 h-4" />} />
                             <NavLink href="/playlist" title="Playlist" icon={<Music className="w-4 h-4" />} />
                             <NavLink href={`/homework-outer/${user?.id}`} title="Homework" icon={<ClipboardList className="w-4 h-4" />} />
+                            <NavLink href="/drive" title="Drive" icon={<HardDrive className="w-4 h-4" />} />
                         </nav>
                     )}
 
