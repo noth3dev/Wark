@@ -30,20 +30,26 @@ function getFormattedWeek(date: Date) {
 }
 
 function getWeekInfo(dateStr: string | Date) {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    const month = date.getMonth() + 1;
-    const offsetDate = date.getDate() + dayOfWeek - 1;
-    const week = Math.floor(offsetDate / 7) + 1;
-    return { month, week, year: date.getFullYear() };
+    const d = new Date(dateStr);
+    // Move to the Monday of this week (Mon-Sun style)
+    const day = d.getDay() || 7; // 1-7
+    d.setHours(-24 * (day - 1));
+    d.setHours(12, 0, 0, 0); // To normalize time
+    
+    return { 
+        year: d.getFullYear(), 
+        month: d.getMonth() + 1, 
+        day: d.getDate() 
+    };
 }
 
-function formatWeekKey(info: { year: number; month: number; week: number }) {
-    return `${info.year}-${info.month}-${info.week}`;
+function formatWeekKey(info: { year: number; month: number; day: number }) {
+    return `${info.year}-${info.month}-${info.day}`;
 }
 
-export default function HomeworkOuterPage({ userId }: { userId?: string }) {
+export default function HomeworkOuterPage({ searchParams }: any) {
     const { user, loading: authLoading } = useAuth();
+    const userId = searchParams?.userId;
     const viewedUserId = userId || user?.id;
     const canEdit = !!user && user.id === viewedUserId;
 
@@ -256,7 +262,7 @@ export default function HomeworkOuterPage({ userId }: { userId?: string }) {
                             </div>
 
                             {loading ? (
-                                <div className="py-32 flex justify-center opacity-10"><Loader2 className="w-8 h-8 animate-spin" /></div>
+                                <div className="py-32 flex justify-center opacity-40"><Loader2 className="w-8 h-8 animate-spin" /></div>
                             ) : statusFiltered.length === 0 ? (
                                 <div className="py-40 text-center space-y-4 opacity-20">
                                     <div className="w-12 h-12 border border-white/20 rounded-full mx-auto flex items-center justify-center"><ChevronRight className="w-5 h-5 text-neutral-400" /></div>

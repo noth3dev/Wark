@@ -42,7 +42,10 @@ export function useHomework(userIdOverride?: string) {
     const currentUser = userIdOverride || user?.id;
 
     const fetchHomeworks = useCallback(async () => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const { data, error } = await supabase
