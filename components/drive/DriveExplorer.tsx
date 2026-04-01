@@ -332,7 +332,7 @@ export default function DriveExplorer() {
                 accounts={accounts} chambers={chambers} activeChamber={activeChamber}
                 setActiveChamber={setActiveChamber} setBreadcrumbs={setBreadcrumbs}
                 setIsSidebarCreateOpen={setIsSidebarCreateOpen} removeChamber={removeChamber}
-                storageQuota={storageQuota} formatBytes={formatBytes} onMove={handleMoveFile}
+                storageQuota={storageQuota} formatBytes={formatBytes} onMove={handleMoveFile} addAccount={addAccount}
             />
 
             <div className="flex-1 flex flex-col min-w-0 bg-background/50">
