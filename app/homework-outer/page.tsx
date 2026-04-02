@@ -47,9 +47,9 @@ function formatWeekKey(info: { year: number; month: number; day: number }) {
     return `${info.year}-${info.month}-${info.day}`;
 }
 
-export default function HomeworkOuterPage({ searchParams }: any) {
+export default function HomeworkOuterPage({ searchParams, userId: propUserId }: any) {
     const { user, loading: authLoading } = useAuth();
-    const userId = searchParams?.userId;
+    const userId = propUserId || searchParams?.userId;
     const viewedUserId = userId || user?.id;
     const canEdit = !!user && user.id === viewedUserId;
 
