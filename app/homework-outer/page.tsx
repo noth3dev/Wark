@@ -69,13 +69,11 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         smartPlan
     } = useHomework(viewedUserId);
 
-    const { tags, dailyTimes, time, activeTagId } = useStopwatch(undefined, viewedUserId);
+    const { tags, dailyTimes, time, activeTagId, activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
     const { addTag } = useTags();
 
     const [activeTask, setActiveTask] = useState<{ hwId: string, taskId: string, tagId: string | null, startTime: number } | null>(null);
     const [sessionMs, setSessionMs] = useState(0);
-
-    const { activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
 
     // PERSISTENCE: Load on mount
     useEffect(() => {
@@ -121,7 +119,9 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         persistenceService.setActiveTask(taskObj);
         setSessionMs(0);
         if (tagId && canEdit) {
-            triggerTagTimer(tagId);
+            if (activeSession?.tag_id !== tagId) {
+                triggerTagTimer(tagId);
+            }
         }
     };
 
@@ -145,6 +145,37 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
     const [viewDate, setViewDate] = useState(new Date());
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "done">("all");
+
+    // Independent tick for real-time UI updates
+    // Initialized to 0 and set on mount to prevent hydration mismatch from Date.now()
+    const [now, setNow] = useState(0);
+    useEffect(() => {
+        setNow(Date.now());
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Calculate live tag durations: saved (dailyTimes) + live (if current tag is running)
+    const liveTagTimes = useMemo(() => {
+        return tags.map(tag => {
+            const saved = dailyTimes[tag.id] || 0;
+            let elapsed = 0;
+            const isLive = activeSession?.tag_id === tag.id;
+            
+            if (isLive && activeSession?.start_time) {
+                const startTime = new Date(activeSession.start_time).getTime();
+                const todayMidnight = new Date().setHours(0,0,0,0);
+                const effectiveStartTime = Math.max(startTime, todayMidnight);
+                elapsed = Math.max(0, now - effectiveStartTime);
+            }
+            
+            return {
+                ...tag,
+                ms: saved + elapsed,
+                isLive
+            };
+        });
+    }, [tags, dailyTimes, activeSession, now]);
 
     const weekInfo = useMemo(() => getWeekInfo(viewDate), [viewDate]);
     const weekKey = useMemo(() => formatWeekKey(weekInfo), [weekInfo]);
@@ -186,10 +217,14 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
     };
 
     const formatDuration = (ms: number) => {
+        if (!ms || ms < 1000) return "0s";
         const s = Math.floor(ms / 1000);
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
-        return `${h}h ${m}m`;
+        const secs = s % 60;
+        if (h > 0) return `${h}h ${m}m ${secs}s`;
+        if (m > 0) return `${m}m ${secs}s`;
+        return `${secs}s`;
     };
 
     return (
@@ -335,30 +370,74 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                         </TabsContent>
 
 
-                        <TabsContent value="timer" className="m-0 animate-in fade-in duration-700">
-                            <div className="bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden mt-8">
-                                {tags.map(tag => {
-                                    const baseTime = dailyTimes[tag.id] || 0;
-                                    const isLive = activeTagId === tag.id;
-                                    const totalMs = isLive ? time : baseTime;
-                                    return { ...tag, ms: totalMs };
-                                }).filter(t => t.ms > 0).sort((a, b) => b.ms - a.ms).map((t, idx) => (
-                                    <div key={t.id} className={cn("flex items-center justify-between px-8 py-8 group hover:bg-white/[0.01]", idx !== 0 && "border-t border-white/[0.03]")}>
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
-                                            <div className="space-y-1">
-                                                <span className="text-[11px] text-neutral-600 font-bold uppercase block">Tag</span>
-                                                <span className="text-lg font-medium text-neutral-400 group-hover:text-white block">{t.name}</span>
+                        <TabsContent value="timer" className="m-0 animate-in fade-in slide-in-from-bottom-2 duration-1000">
+                            <div className="bg-black/40 border border-white/5 rounded-[40px] overflow-hidden mt-8 backdrop-blur-3xl pb-4">
+                                {liveTagTimes.filter(t => t.ms > 0 || t.isLive).sort((a, b) => {
+                                    if (a.isLive && !b.isLive) return -1;
+                                    if (!a.isLive && b.isLive) return 1;
+                                    return b.ms - a.ms;
+                                }).map((t, idx) => (
+                                    <div 
+                                        key={t.id} 
+                                        className={cn(
+                                            "flex items-center justify-between px-10 py-10 group relative transition-all duration-700",
+                                            idx !== 0 && !t.isLive && "border-t border-white/[0.03]",
+                                            t.isLive ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/40 rounded-[32px] mx-4 my-6 shadow-[0_20px_60px_rgba(59,130,246,0.15)] scale-[1.02] z-10" : "hover:bg-white/[0.01]"
+                                        )}
+                                    >
+                                        {t.isLive && (
+                                            <motion.div 
+                                                layoutId="glow"
+                                                className="absolute inset-0 bg-blue-500/5 rounded-[32px] pointer-events-none blur-3xl opacity-50"
+                                                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                                                transition={{ duration: 3, repeat: Infinity }}
+                                            />
+                                        )}
+
+                                        <div className="flex items-center gap-8 relative z-10">
+                                            <div className="relative">
+                                                <div className={cn("w-2 h-2 rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]", t.isLive && "animate-pulse")} style={{ backgroundColor: t.color }} />
+                                                {t.isLive && (
+                                                    <motion.div 
+                                                        animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
+                                                        transition={{ duration: 2, repeat: Infinity }}
+                                                        className="absolute -inset-1.5 rounded-full border border-blue-400/50 pointer-events-none"
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.isLive ? "text-blue-400" : "text-neutral-600")}>
+                                                        {t.isLive ? "Currently Recording" : "Objective Log"}
+                                                    </span>
+                                                    {t.isLive && (
+                                                        <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500 rounded-full text-[8px] font-black text-white uppercase tracking-tighter">
+                                                            <div className="w-1 h-1 bg-white rounded-full animate-ping" />
+                                                            LIVE
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className={cn("text-2xl font-semibold tracking-tight group-hover:text-white transition-colors block", t.isLive ? "text-white" : "text-neutral-400")}>
+                                                    {t.name}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="text-right space-y-1">
-                                            <span className="text-[11px] text-neutral-600 font-bold uppercase block">Duration</span>
-                                            <span className="text-2xl font-mono text-neutral-500 group-hover:text-neutral-200 tabular-nums block">{formatDuration(t.ms)}</span>
+                                        <div className="text-right space-y-2 relative z-10">
+                                            <span className="text-[10px] text-neutral-600 font-black uppercase tracking-widest block">Accumulated Time</span>
+                                            <span className={cn(
+                                                "text-4xl font-mono tabular-nums tracking-tighter transition-all block", 
+                                                t.isLive ? "text-blue-400" : "text-neutral-500 group-hover:text-neutral-100"
+                                            )}>
+                                                {formatDuration(t.ms)}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
-                                {tags.filter(tag => (dailyTimes[tag.id] || 0) > 0 || activeTagId === tag.id).length === 0 && (
-                                    <div className="py-32 text-center opacity-20"><p className="text-[11px] font-bold uppercase tracking-widest">No activity logged for this cycle.</p></div>
+                                {liveTagTimes.filter(t => t.ms > 0 || t.isLive).length === 0 && (
+                                    <div className="py-48 text-center space-y-6 opacity-20">
+                                        <div className="w-16 h-16 border border-white/20 rounded-full mx-auto flex items-center justify-center"><Share2 className="w-6 h-6 text-neutral-400" /></div>
+                                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400">Zero activities tracked in this cycle.</p>
+                                    </div>
                                 )}
                             </div>
                         </TabsContent>

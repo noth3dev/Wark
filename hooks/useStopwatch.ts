@@ -53,7 +53,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     }, [targetUserId, refreshAll]);
 
     // Real-time synchronization
-    useStopwatchSync(user?.id, refreshAll);
+    useStopwatchSync(targetUserId, refreshAll);
 
     const handleTagClick = async (tagId: string) => {
         if (switchingRef.current || !user) return;
