@@ -28,7 +28,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
 
     const refreshAll = useCallback(async () => {
         if (!targetUserId) return;
-        const currentTags = await fetchTags(userIdOverride);
+        const currentTags = await fetchTags(targetUserId);
         const totals = await fetchDailyTotals(targetUserId);
         const session = await fetchActiveSession();
 

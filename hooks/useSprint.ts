@@ -35,8 +35,8 @@ export function useSprint() {
 
     useEffect(() => {
         setMounted(true);
-        fetchTags();
-    }, [fetchTags]);
+        if (user?.id) fetchTags(user.id);
+    }, [fetchTags, user?.id]);
 
     useEffect(() => {
         const session = persistenceService.getActiveSession();

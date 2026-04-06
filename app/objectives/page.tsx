@@ -51,12 +51,13 @@ export default function ObjectivesPage() {
     const currentWeekKey = useMemo(() => formatWeekKey(currentWeekInfo), [currentWeekInfo]);
 
     useEffect(() => {
+        if (!user) return;
         const fetchTags = async () => {
-            const { data } = await supabase.from("tags").select("*");
+            const { data } = await supabase.from("tags").select("*").eq('user_id', user.id);
             if (data) setTags(data);
         };
         fetchTags();
-    }, []);
+    }, [user?.id]);
 
     const navigateWeek = (direction: number) => {
         const nextDate = new Date(viewDate);

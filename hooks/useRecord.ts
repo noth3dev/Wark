@@ -21,7 +21,7 @@ export function useRecord() {
 
     const fetchData = useCallback(async () => {
         if (!user) return;
-        await Promise.all([fetchTags(), fetchSessions(), fetchActiveSession()]);
+        await Promise.all([fetchTags(user.id), fetchSessions(), fetchActiveSession()]);
     }, [user, fetchTags, fetchSessions, fetchActiveSession]);
 
     useEffect(() => {
