@@ -145,6 +145,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
     const [viewDate, setViewDate] = useState(new Date());
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "done">("all");
+    const [hoveredTag, setHoveredTag] = useState<any>(null);
 
     // Independent tick for real-time UI updates
     // Initialized to 0 and set on mount to prevent hydration mismatch from Date.now()
@@ -230,10 +231,10 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
     return (
         <main className="h-full bg-black text-white overflow-y-auto no-scrollbar relative font-suit">
             {/* Progress Bar */}
-            <div className="fixed top-[64px] left-0 w-full z-50 h-[2px] bg-white/5">
+            <div className="fixed top-[64px] left-0 w-full z-50 h-[1.5px] bg-white/5">
                 <motion.div
                     animate={{ width: `${progress}%` }}
-                    className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all duration-1000"
+                    className="h-full bg-blue-500 transition-all duration-1000"
                 />
             </div>
 
@@ -241,12 +242,12 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                 <header className="space-y-10">
                     <div className="flex items-end justify-between">
                         <div className="space-y-2">
-                            <p className="text-[10px] text-neutral-600 font-bold uppercase">숙제좀 잘하자</p>
+                            <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-wider">Plan For</p>
                             <h1 className="text-5xl font-semibold tracking-tighter leading-none">{getFormattedWeek(viewDate)}</h1>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] text-neutral-600 font-bold uppercase mb-2">진행도</p>
-                            <p className="text-4xl font-mono text-white/10">{progress}%</p>
+                            <p className="text-[10px] text-neutral-600 font-bold uppercase mb-2">Completion</p>
+                            <p className="text-4xl font-mono text-white/20">{progress}%</p>
                         </div>
                     </div>
 
@@ -370,8 +371,115 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                         </TabsContent>
 
 
-                        <TabsContent value="timer" className="m-0 animate-in fade-in slide-in-from-bottom-2 duration-1000">
-                            <div className="bg-black/40 border border-white/5 rounded-[40px] overflow-hidden mt-8 backdrop-blur-3xl pb-4">
+                        <TabsContent value="timer" className="m-0 animate-in fade-in duration-500">
+                            {/* 24h Summary Donut */}
+                            {(() => {
+                                const dayMs = 24 * 60 * 60 * 1000;
+                                const totalMs = liveTagTimes.reduce((acc, t) => acc + t.ms, 0);
+                                const displayTag = hoveredTag || { name: "Total", ms: totalMs, color: "#fff" };
+
+                                return (
+                                    <div className="mt-12 flex flex-col items-center justify-center py-12 border border-white/5 rounded-3xl bg-white/[0.01]">
+                                        <div className="relative w-56 h-56">
+                                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                                                {/* Background Circle (24h track) */}
+                                                <circle
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="42"
+                                                    fill="transparent"
+                                                    stroke="currentColor"
+                                                    strokeWidth="6"
+                                                    className="text-white/5"
+                                                />
+                                                {/* Segments */}
+                                                {(() => {
+                                                    let cumulativePercent = 0;
+                                                    const validTags = liveTagTimes.filter(t => t.ms > 10000); // Small filter to avoid tiny slivers
+                                                    return validTags.map((t) => {
+                                                        const percent = (t.ms / dayMs) * 100;
+                                                        // Circumference for r=42 is 263.89
+                                                        const circumference = 2 * Math.PI * 42;
+                                                        const gap = 0.5; // Visual gap percentage
+                                                        const segmentLength = (percent - gap) * (circumference / 100);
+                                                        const offset = -(cumulativePercent * (circumference / 100));
+                                                        
+                                                        cumulativePercent += percent;
+                                                        const isHovered = hoveredTag?.id === t.id;
+
+                                                        return (
+                                                            <motion.circle
+                                                                key={t.id}
+                                                                cx="50"
+                                                                cy="50"
+                                                                r="42"
+                                                                fill="transparent"
+                                                                stroke={t.color}
+                                                                strokeWidth={isHovered ? 10 : 6}
+                                                                strokeDasharray={`${Math.max(0, segmentLength)} ${circumference}`}
+                                                                strokeDashoffset={offset}
+                                                                strokeLinecap="round"
+                                                                onMouseEnter={() => setHoveredTag(t)}
+                                                                onMouseLeave={() => setHoveredTag(null)}
+                                                                animate={{ strokeWidth: isHovered ? 10 : 6 }}
+                                                                className="transition-all cursor-pointer"
+                                                            />
+                                                        );
+                                                    });
+                                                })()}
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                                <motion.span 
+                                                    key={displayTag.name}
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1"
+                                                >
+                                                    {hoveredTag ? "Highlight" : "Total Activity"}
+                                                </motion.span>
+                                                <motion.span 
+                                                    key={displayTag.ms}
+                                                    initial={{ scale: 0.95 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="text-3xl font-mono tabular-nums tracking-tighter text-white"
+                                                >
+                                                    {formatDuration(displayTag.ms)}
+                                                </motion.span>
+                                                <motion.div 
+                                                    key={displayTag.id}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="flex items-center gap-2 mt-2"
+                                                >
+                                                    {hoveredTag && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: displayTag.color }} />}
+                                                    <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-tight">{displayTag.name}</span>
+                                                </motion.div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 px-10">
+                                            {liveTagTimes.filter(t => t.ms > 0).map(t => (
+                                                <div 
+                                                    key={t.id} 
+                                                    onMouseEnter={() => setHoveredTag(t)}
+                                                    onMouseLeave={() => setHoveredTag(null)}
+                                                    className={cn(
+                                                        "flex items-center gap-2.5 cursor-default transition-all duration-300", 
+                                                        hoveredTag && hoveredTag.id !== t.id ? "opacity-30 blur-[1px]" : "opacity-100"
+                                                    )}
+                                                >
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t.name}</span>
+                                                    <span className="text-[10px] font-mono text-neutral-600">
+                                                        {Math.round((t.ms / dayMs) * 1000) / 10}%
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="mt-8 space-y-3">
                                 {liveTagTimes.filter(t => t.ms > 0 || t.isLive).sort((a, b) => {
                                     if (a.isLive && !b.isLive) return -1;
                                     if (!a.isLive && b.isLive) return 1;
@@ -380,53 +488,37 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                     <div 
                                         key={t.id} 
                                         className={cn(
-                                            "flex items-center justify-between px-10 py-10 group relative transition-all duration-700",
-                                            idx !== 0 && !t.isLive && "border-t border-white/[0.03]",
-                                            t.isLive ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/40 rounded-[32px] mx-4 my-6 shadow-[0_20px_60px_rgba(59,130,246,0.15)] scale-[1.02] z-10" : "hover:bg-white/[0.01]"
+                                            "flex items-center justify-between px-8 py-8 transition-all duration-300 rounded-2xl border",
+                                            t.isLive 
+                                              ? "bg-blue-500/5 border-blue-500/20" 
+                                              : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
                                         )}
                                     >
-                                        {t.isLive && (
-                                            <motion.div 
-                                                layoutId="glow"
-                                                className="absolute inset-0 bg-blue-500/5 rounded-[32px] pointer-events-none blur-3xl opacity-50"
-                                                animate={{ opacity: [0.3, 0.6, 0.3] }}
-                                                transition={{ duration: 3, repeat: Infinity }}
-                                            />
-                                        )}
-
-                                        <div className="flex items-center gap-8 relative z-10">
+                                        <div className="flex items-center gap-6">
                                             <div className="relative">
-                                                <div className={cn("w-2 h-2 rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]", t.isLive && "animate-pulse")} style={{ backgroundColor: t.color }} />
+                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
                                                 {t.isLive && (
-                                                    <motion.div 
-                                                        animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
-                                                        transition={{ duration: 2, repeat: Infinity }}
-                                                        className="absolute -inset-1.5 rounded-full border border-blue-400/50 pointer-events-none"
-                                                    />
+                                                    <div className="absolute -inset-1.5 rounded-full border border-blue-500/20 animate-pulse" />
                                                 )}
                                             </div>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-3">
-                                                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.isLive ? "text-blue-400" : "text-neutral-600")}>
-                                                        {t.isLive ? "Currently Recording" : "Objective Log"}
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn("text-[9px] font-bold uppercase tracking-widest", t.isLive ? "text-blue-400" : "text-neutral-600")}>
+                                                        {t.isLive ? "Recording" : "Total Time"}
                                                     </span>
                                                     {t.isLive && (
-                                                        <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500 rounded-full text-[8px] font-black text-white uppercase tracking-tighter">
-                                                            <div className="w-1 h-1 bg-white rounded-full animate-ping" />
-                                                            LIVE
-                                                        </span>
+                                                        <span className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" />
                                                     )}
                                                 </div>
-                                                <span className={cn("text-2xl font-semibold tracking-tight group-hover:text-white transition-colors block", t.isLive ? "text-white" : "text-neutral-400")}>
+                                                <span className={cn("text-lg font-medium tracking-tight transition-colors block", t.isLive ? "text-white" : "text-neutral-400")}>
                                                     {t.name}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="text-right space-y-2 relative z-10">
-                                            <span className="text-[10px] text-neutral-600 font-black uppercase tracking-widest block">Accumulated Time</span>
+                                        <div className="text-right space-y-1">
                                             <span className={cn(
-                                                "text-4xl font-mono tabular-nums tracking-tighter transition-all block", 
-                                                t.isLive ? "text-blue-400" : "text-neutral-500 group-hover:text-neutral-100"
+                                                "text-3xl font-mono tabular-nums tracking-tighter transition-all block", 
+                                                t.isLive ? "text-blue-400" : "text-neutral-500"
                                             )}>
                                                 {formatDuration(t.ms)}
                                             </span>
@@ -434,9 +526,9 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                     </div>
                                 ))}
                                 {liveTagTimes.filter(t => t.ms > 0 || t.isLive).length === 0 && (
-                                    <div className="py-48 text-center space-y-6 opacity-20">
-                                        <div className="w-16 h-16 border border-white/20 rounded-full mx-auto flex items-center justify-center"><Share2 className="w-6 h-6 text-neutral-400" /></div>
-                                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400">Zero activities tracked in this cycle.</p>
+                                    <div className="py-40 text-center space-y-4 opacity-20 border border-dashed border-white/10 rounded-3xl">
+                                        <Share2 className="w-6 h-6 text-neutral-400 mx-auto" />
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Zero activities tracked.</p>
                                     </div>
                                 )}
                             </div>
