@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { Tag } from '../types';
+import { getTagColor } from '../tag-variants';
 
 export const tagService = {
     async fetchTags(userId: string) {
@@ -11,10 +12,12 @@ export const tagService = {
     },
 
     async addTag(name: string, userId: string) {
+        const defaultIcon = 'Cpu';
         return await supabase.from('tags').insert([{
             name: name.trim(),
             user_id: userId,
-            icon: 'Cpu'
+            icon: defaultIcon,
+            color: getTagColor(defaultIcon)
         }]).select().single();
     },
 

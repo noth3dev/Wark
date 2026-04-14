@@ -77,3 +77,30 @@ export function getEffectiveStartTime(startTimeStr: string): number {
         ? new Date(now.setHours(0, 0, 0, 0)).getTime()
         : startTime.getTime();
 }
+
+export function getFormattedWeek(date: Date) {
+    const d = new Date(date);
+    const day = d.getDay() || 7;
+    d.setHours(-24 * (day - 1));
+    const start = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    d.setHours(24 * 6);
+    const end = d.toLocaleDateString('ko-KR', { day: 'numeric' });
+    return `${start} — ${end}`;
+}
+
+export function getWeekInfo(dateStr: string | Date | number) {
+    const d = new Date(dateStr);
+    const day = d.getDay() || 7;
+    d.setHours(-24 * (day - 1));
+    d.setHours(12, 0, 0, 0);
+    
+    return { 
+        year: d.getFullYear(), 
+        month: d.getMonth() + 1, 
+        day: d.getDate() 
+    };
+}
+
+export function formatWeekKey(info: { year: number; month: number; day: number }) {
+    return `${info.year}-${info.month}-${info.day}`;
+}

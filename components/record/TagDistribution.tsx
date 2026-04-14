@@ -68,7 +68,14 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, totalToday, 
                             >
                                 <div className="flex items-center justify-between mb-2.5">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color || '#22d3ee' }} />
+                                        {tag.icon && (Icons as any)[tag.icon] ? (
+                                            (() => {
+                                                const Icon = (Icons as any)[tag.icon];
+                                                return <Icon className="w-3 h-3" style={{ color: tag.color || '#22d3ee' }} />;
+                                            })()
+                                        ) : (
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color || '#22d3ee' }} />
+                                        )}
                                         <span className="text-[11px] font-medium text-neutral-400 group-hover:text-white transition-colors">{tag.name}</span>
                                     </div>
                                     <span className="text-[9px] font-mono text-neutral-600 tabular-nums">{percentage}%</span>

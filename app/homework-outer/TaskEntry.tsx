@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import * as Icons from "lucide-react";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
 
@@ -69,7 +69,14 @@ export function TaskEntry({ onCommit, tags, onAddTag }: TaskEntryProps) {
                                  : "bg-white/5 border-white/5 text-neutral-500 hover:text-neutral-300 hover:border-white/10"
                          )}
                      >
-                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                         {tag.icon && (Icons as any)[tag.icon] ? (
+                             (() => {
+                                 const Icon = (Icons as any)[tag.icon];
+                                 return <Icon className="w-3 h-3" style={{ color: selectedTagId === tag.id ? undefined : (tag.color || '#22d3ee') }} />;
+                             })()
+                         ) : (
+                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedTagId === tag.id ? undefined : (tag.color || '#22d3ee') }} />
+                         )}
                          {tag.name}
                      </button>
                  ))}
@@ -95,7 +102,7 @@ export function TaskEntry({ onCommit, tags, onAddTag }: TaskEntryProps) {
                                  className="bg-transparent border-0 text-[10px] text-white focus:ring-0 p-0 w-24 placeholder:text-neutral-700 font-suit"
                              />
                              <button onClick={() => setIsAddingTag(false)} className="text-neutral-600 hover:text-white">
-                                 <X className="w-2.5 h-2.5" />
+                                 <Icons.X className="w-2.5 h-2.5" />
                              </button>
                          </div>
                      ) : (

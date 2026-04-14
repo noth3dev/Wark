@@ -1,10 +1,9 @@
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { X, Trash2 } from "lucide-react";
-
 import { useState } from "react";
-
 import { Tag } from "../../lib/types";
+import { TAG_VARIANTS } from "../../lib/tag-variants";
 
 interface TagModalProps {
     tag: Tag;
@@ -13,21 +12,11 @@ interface TagModalProps {
     onDelete: (id: string) => void;
 }
 
-const COLORS = [
-    '#22d3ee', '#818cf8', '#c084fc', '#f472b6',
-    '#fb7185', '#fb923c', '#fbbf24', '#a3e635',
-    '#4ade80', '#2dd4bf', '#94a3b8', '#ffffff'
-];
-
-const ICONS = [
-    'Cpu', 'Moon', 'Sun', 'Book', 'Code', 'Coffee', 'Gamepad2',
-    'Music', 'Dumbbell', 'Briefcase', 'Heart', 'Star', 'Camera'
-];
 
 export function TagModal({ tag, onClose, onUpdate, onDelete }: TagModalProps) {
     const [name, setName] = useState(tag.name);
     const [color, setColor] = useState(tag.color || '#22d3ee');
-    const [icon, setIcon] = useState(tag.icon || 'Moon');
+    const [icon, setIcon] = useState(tag.icon || 'Cpu');
 
     return (
         <motion.div
@@ -61,31 +50,21 @@ export function TagModal({ tag, onClose, onUpdate, onDelete }: TagModalProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Visual Signature</label>
-                        <div className="grid grid-cols-6 gap-2">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c}
-                                    onClick={() => setColor(c)}
-                                    className={`aspect-square rounded-full border-2 transition-all ${color === c ? 'border-white scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`}
-                                    style={{ backgroundColor: c }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Protocol Icon</label>
-                        <div className="grid grid-cols-6 gap-2">
-                            {ICONS.map(i => {
-                                const IconComp = (Icons as any)[i];
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Symbol Selection</label>
+                        <div className="grid grid-cols-5 gap-3">
+                            {TAG_VARIANTS.map(v => {
+                                const IconComp = (Icons as any)[v.icon];
+                                const isSelected = icon === v.icon;
                                 return (
                                     <button
-                                        key={i}
-                                        onClick={() => setIcon(i)}
-                                        className={`aspect-square flex items-center justify-center rounded-xl border-2 transition-all ${icon === i ? 'bg-white/10 border-white/40 scale-110' : 'bg-white/5 border-transparent opacity-40 hover:opacity-100'}`}
+                                        key={v.icon}
+                                        onClick={() => {
+                                            setIcon(v.icon);
+                                            setColor(v.color);
+                                        }}
+                                        className={`aspect-square flex items-center justify-center rounded-2xl border-2 transition-all ${isSelected ? 'bg-white/10 border-white/40 scale-110' : 'bg-white/5 border-transparent opacity-40 hover:opacity-100'}`}
                                     >
-                                        <IconComp className="w-4 h-4" style={{ color: icon === i ? color : undefined }} />
+                                        <IconComp className="w-5 h-5" style={{ color: isSelected ? v.color : undefined }} />
                                     </button>
                                 );
                             })}
