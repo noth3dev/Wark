@@ -144,19 +144,26 @@ export function TaskNode({
                                 className="h-8 bg-transparent border-0 border-b border-white/20 rounded-none px-0 text-base font-medium focus:border-white/50 focus:ring-0 placeholder:text-neutral-800 shadow-none text-white"
                             />
                             <div className="flex flex-wrap gap-1.5">
-                                {tags?.map((tag: any) => (
-                                    <button
-                                        key={tag.id}
-                                        onClick={() => setEditTagId(editTagId === tag.id ? null : tag.id)}
-                                        className={cn(
-                                            "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[9px] font-bold transition-all",
-                                            editTagId === tag.id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-600 hover:text-neutral-400"
-                                        )}
-                                    >
-                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                                        {tag.name}
-                                    </button>
-                                ))}
+                                {tags?.map((tag: any) => {
+                                    const Icon = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
+                                    return (
+                                        <button
+                                            key={tag.id}
+                                            onClick={() => setEditTagId(editTagId === tag.id ? null : tag.id)}
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[9px] font-bold transition-all",
+                                                editTagId === tag.id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-600 hover:text-neutral-400"
+                                            )}
+                                        >
+                                            {Icon ? (
+                                                <Icon className="w-2.5 h-2.5" style={{ color: tag.color || "#22d3ee" }} />
+                                            ) : (
+                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color || "#22d3ee" }} />
+                                            )}
+                                            {tag.name}
+                                        </button>
+                                    );
+                                })}
                             </div>
                             <div className="flex items-center gap-4">
                                 <button onClick={handleSave} className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 hover:text-blue-300 transition-colors uppercase">
@@ -187,12 +194,21 @@ export function TaskNode({
 
                             {/* Badges: tag + time */}
                             <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                                {node.tag_id && (
-                                    <span className="h-6 px-2 rounded-md bg-white/[0.04] border border-white/5 text-[8px] font-bold text-neutral-500 flex items-center gap-1.5 uppercase">
-                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tags?.find((t: any) => t.id === node.tag_id)?.color || "#444" }} />
-                                        {tags?.find((t: any) => t.id === node.tag_id)?.name}
-                                    </span>
-                                )}
+                                                {(() => {
+                                                    const tag = tags?.find((t: any) => t.id === node.tag_id);
+                                                    if (!tag) return null;
+                                                    const Icon = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
+                                                    return (
+                                                        <span className="h-6 px-2 rounded-md bg-white/[0.04] border border-white/5 text-[8px] font-bold text-neutral-500 flex items-center gap-1.5 uppercase transition-colors hover:text-neutral-300">
+                                                            {Icon ? (
+                                                                <Icon className="w-3 h-3" style={{ color: tag.color || "#22d3ee" }} />
+                                                            ) : (
+                                                                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: tag.color || "#444" }} />
+                                                            )}
+                                                            {tag.name}
+                                                        </span>
+                                                    );
+                                                })()}
                                 {totalTime > 0 && (
                                     <span className={cn(
                                         "h-6 px-2 rounded-md border font-mono text-[9px] flex items-center",

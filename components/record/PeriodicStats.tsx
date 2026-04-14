@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Tag } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Loader2, ArrowUpRight, ArrowDownRight, Edit2 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
     const [prevSessions, setPrevSessions] = useState<any[]>([]);
     const [groupNames, setGroupNames] = useState<Record<string, string>>({});
     const [editingGroup, setEditingGroup] = useState<string | null>(null);
+    const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
     const [newName, setNewName] = useState("");
 
     const fetchRangeData = async () => {
@@ -100,14 +101,13 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
 
     const saveGroupName = async (icon: string, color: string, name: string) => {
         if (!userId) return;
-        const key = `${icon}|${color}`;
         try {
             const { error } = await supabase
                 .from('tag_groups')
                 .upsert({ user_id: userId, icon, color, name }, { onConflict: 'user_id,icon,color' });
             
             if (!error) {
-                setGroupNames(prev => ({ ...prev, [key]: name }));
+                setGroupNames(prev => ({ ...prev, [icon]: name }));
                 setEditingGroup(null);
             }
         } catch (e) {
@@ -115,12 +115,15 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
         }
     };
 
-    const displayStats = useMemo(() => {
-        const tagTotals: Record<string, number> = {};
+    const tagTotals = useMemo(() => {
+        const totals: Record<string, number> = {};
         sessions.forEach(s => {
-            tagTotals[s.tag_id] = (tagTotals[s.tag_id] || 0) + s.duration;
+            totals[s.tag_id] = (totals[s.tag_id] || 0) + s.duration;
         });
+        return totals;
+    }, [sessions]);
 
+    const displayStats = useMemo(() => {
         if (groupMode === "tags") {
             return tags
                 .map(tag => ({
@@ -133,7 +136,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                 .filter(t => t.total > 0)
                 .sort((a, b) => b.total - a.total);
         } else {
-            const groups: Record<string, { key: string, name: string, color: string, icon: string, total: number }> = {};
+            const groups: Record<string, { key: string, name: string, color: string, icon: string, total: number, tags: any[] }> = {};
             tags.forEach(tag => {
                 const key = tag.icon || 'Cpu';
                 const total = tagTotals[tag.id] || 0;
@@ -144,15 +147,19 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                             name: groupNames[key] || "Untitled Group", 
                             color: tag.color || "#fff", 
                             icon: tag.icon || "", 
-                            total: 0 
+                            total: 0,
+                            tags: []
                         };
                     }
                     groups[key].total += total;
+                    groups[key].tags.push({ ...tag, total });
                 }
             });
-            return Object.values(groups).sort((a, b) => b.total - a.total);
+            return Object.values(groups)
+                .map(g => ({ ...g, tags: g.tags.sort((a, b) => b.total - a.total) }))
+                .sort((a, b) => b.total - a.total);
         }
-    }, [tags, sessions, groupMode, groupNames]);
+    }, [tags, tagTotals, groupMode, groupNames]);
 
     const totalDuration = useMemo(() => sessions.reduce((acc, s) => acc + s.duration, 0), [sessions]);
     const prevTotalDuration = useMemo(() => prevSessions.reduce((acc, s) => acc + s.duration, 0), [prevSessions]);
@@ -196,7 +203,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                     {(["tags", "groups"] as const).map(m => (
                         <button 
                             key={m}
-                            onClick={() => setGroupMode(m)} 
+                            onClick={() => { setGroupMode(m); setExpandedGroup(null); }} 
                             className={cn(
                                 "px-4 rounded-md text-[9px] font-black uppercase tracking-widest transition-all", 
                                 groupMode === m ? "bg-white text-black" : "text-neutral-600 hover:text-neutral-400"
@@ -219,11 +226,11 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                 </div>
             ) : (
                 <div className="space-y-16">
-                    {/* Primary Focus: Breakdown */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {displayStats.map((stat: any, idx) => {
                              const IconComponent = stat.icon && (Icons as any)[stat.icon] ? (Icons as any)[stat.icon] : null;
                              const isEditing = groupMode === 'groups' && editingGroup === stat.key;
+                             const isExpanded = groupMode === 'groups' && expandedGroup === stat.key;
 
                              return (
                                 <motion.div
@@ -231,7 +238,12 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    className="p-10 rounded-[40px] border border-white/[0.03] bg-white/[0.01] hover:bg-white/[0.03] transition-all group relative overflow-hidden"
+                                    onClick={() => groupMode === 'groups' && !editingGroup && setExpandedGroup(isExpanded ? null : stat.key)}
+                                    className={cn(
+                                        "p-10 rounded-[40px] border transition-all group relative overflow-hidden",
+                                        isExpanded ? "bg-white/[0.04] border-white/10" : "border-white/[0.03] bg-white/[0.01] hover:bg-white/[0.03]",
+                                        groupMode === 'groups' && !editingGroup && "cursor-pointer"
+                                    )}
                                 >
                                     <div className="flex items-start justify-between relative z-10">
                                         <div className="space-y-6 flex-1 min-w-0">
@@ -253,6 +265,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                                                             className="bg-transparent border-b border-white/20 text-[10px] font-black uppercase tracking-widest text-white focus:outline-none w-full"
                                                             value={newName}
                                                             onChange={e => setNewName(e.target.value)}
+                                                            onClick={e => e.stopPropagation()}
                                                             onBlur={() => saveGroupName(stat.icon, stat.color, newName)}
                                                             onKeyDown={e => e.key === 'Enter' && saveGroupName(stat.icon, stat.color, newName)}
                                                         />
@@ -263,10 +276,10 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                                                             </span>
                                                             {groupMode === 'groups' && (
                                                                 <button 
-                                                                    onClick={() => { setEditingGroup(stat.key); setNewName(stat.name); }}
+                                                                    onClick={(e) => { e.stopPropagation(); setEditingGroup(stat.key); setNewName(stat.name); }}
                                                                     className="opacity-0 group-hover/title:opacity-100 transition-opacity"
                                                                 >
-                                                                    <Icons.Edit2 className="w-2.5 h-2.5 text-neutral-700" />
+                                                                    <Edit2 className="w-2.5 h-2.5 text-neutral-700" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -274,25 +287,62 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                                                     <div className="flex items-center gap-2 text-[10px] font-mono text-neutral-800">
                                                         <span>{((stat.total / totalDuration) * 100).toFixed(0)}%</span>
                                                         <div className="h-2 w-px bg-white/5" />
-                                                        <span>{view === 'week' ? 'Weekly Share' : 'Monthly Share'}</span>
+                                                        <span>{view === 'week' ? 'Weekly' : 'Monthly'}</span>
                                                     </div>
                                                 </div>
+                                                {groupMode === 'groups' && (
+                                                    <div className="text-neutral-700">
+                                                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="text-4xl font-semibold tracking-tighter text-white tabular-nums">
                                                 {formatDuration(stat.total)}
                                             </div>
+
+                                            <AnimatePresence>
+                                                {isExpanded && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        className="pt-6 space-y-4 border-t border-white/5"
+                                                    >
+                                                        {stat.tags.map((tag: any) => {
+                                                            const percent = ((tag.total / stat.total) * 100).toFixed(0);
+                                                            return (
+                                                                <div key={tag.id} className="space-y-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-[10px] font-bold uppercase text-neutral-500 truncate mr-4">{tag.name}</span>
+                                                                        <span className="text-[10px] font-mono text-neutral-700">{formatDuration(tag.total)} ({percent}%)</span>
+                                                                    </div>
+                                                                    <div className="h-0.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                                                                        <motion.div
+                                                                            initial={{ width: 0 }}
+                                                                            animate={{ width: `${percent}%` }}
+                                                                            className="h-full"
+                                                                            style={{ backgroundColor: tag.color || "#fff", opacity: 0.3 }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                     </div>
 
-                                    {/* Minimal Background Progress */}
-                                    <div className="absolute inset-0 pointer-events-none opacity-5 group-hover:opacity-10 transition-opacity">
-                                        <motion.div 
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${(stat.total / totalDuration) * 100}%` }}
-                                            className="h-full"
-                                            style={{ backgroundColor: stat.color || "#fff" }}
-                                        />
-                                    </div>
+                                    {!isExpanded && (
+                                        <div className="absolute inset-0 pointer-events-none opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${(stat.total / totalDuration) * 100}%` }}
+                                                className="h-full"
+                                                style={{ backgroundColor: stat.color || "#fff" }}
+                                            />
+                                        </div>
+                                    )}
                                 </motion.div>
                              );
                         })}
@@ -319,7 +369,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                                         "px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-tighter flex items-center gap-2.5 border backdrop-blur-md",
                                         comparison.diff >= 0 ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/10" : "bg-rose-500/5 text-rose-400 border-rose-500/10"
                                     )}>
-                                        {comparison.diff >= 0 ? <Icons.ArrowUpRight className="w-4 h-4" /> : <Icons.ArrowDownRight className="w-4 h-4" />}
+                                        {comparison.diff >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                                         {Math.abs(comparison.percent).toFixed(1)}% Trend
                                     </div>
                                 </div>

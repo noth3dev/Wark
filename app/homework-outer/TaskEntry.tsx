@@ -72,10 +72,10 @@ export function TaskEntry({ onCommit, tags, onAddTag }: TaskEntryProps) {
                          {tag.icon && (Icons as any)[tag.icon] ? (
                              (() => {
                                  const Icon = (Icons as any)[tag.icon];
-                                 return <Icon className="w-3 h-3" style={{ color: selectedTagId === tag.id ? undefined : (tag.color || '#22d3ee') }} />;
+                                 return <Icon className={cn("w-3 h-3 transition-opacity", selectedTagId === tag.id ? "opacity-100" : "opacity-40")} style={{ color: tag.color || '#22d3ee' }} />;
                              })()
                          ) : (
-                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedTagId === tag.id ? undefined : (tag.color || '#22d3ee') }} />
+                             <div className={cn("w-1.5 h-1.5 rounded-full transition-opacity", selectedTagId === tag.id ? "opacity-100" : "opacity-40")} style={{ backgroundColor: tag.color || '#22d3ee' }} />
                          )}
                          {tag.name}
                      </button>

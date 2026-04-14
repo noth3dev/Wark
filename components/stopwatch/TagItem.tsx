@@ -46,8 +46,8 @@ export function TagItem({ tag, isActive, isEditMode, isFocused, dailyTime, onCli
         >
             {IconComponent ? (
                 <IconComponent
-                    className={`w-3.5 h-3.5 transition-colors duration-200 ${isActive ? '' : 'text-neutral-500'}`}
-                    style={{ color: isActive ? themeColor : undefined }}
+                    className={`w-3.5 h-3.5 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'}`}
+                    style={{ color: themeColor }}
                 />
             ) : (
                 <div
