@@ -6,24 +6,26 @@ import { Tag } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 
 import * as Icons from "lucide-react";
+import { TAG_VARIANTS } from "@/lib/tag-variants";
 
 interface TagDistributionProps {
     tags: Tag[];
     getTagTotal: (tagId: string) => number;
     groupedTotals: Record<string, number>;
+    tagGroups?: Record<string, string>; // Added this
     totalToday: number;
     sessionsCount: number;
 }
 
-export function TagDistribution({ tags, getTagTotal, groupedTotals, totalToday, sessionsCount }: TagDistributionProps) {
+export function TagDistribution({ tags, getTagTotal, groupedTotals, tagGroups = {}, totalToday, sessionsCount }: TagDistributionProps) {
     const [viewType, setViewType] = useState<'individual' | 'grouped'>('individual');
 
     const groupedData = useMemo(() => {
-        const uniqueGroups: Record<string, { icon?: string, color?: string, total: number }> = {};
+        const uniqueGroups: Record<string, { icon: string, color?: string, total: number }> = {};
         tags.forEach(tag => {
-            const key = `${tag.icon || ''}|${tag.color || ''}`;
+            const key = tag.icon || 'Cpu';
             if (!uniqueGroups[key]) {
-                uniqueGroups[key] = { icon: tag.icon, color: tag.color, total: groupedTotals[key] || 0 };
+                uniqueGroups[key] = { icon: key, color: tag.color, total: groupedTotals[key] || 0 };
             }
         });
         return Object.values(uniqueGroups).filter(g => g.total > 0).sort((a, b) => b.total - a.total);
@@ -100,7 +102,7 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, totalToday, 
                     })
                 ) : (
                     groupedData.map((group, idx) => {
-                        const key = `${group.icon}|${group.color}`;
+                        const key = group.icon;
                         const percentage = totalToday > 0 ? ((group.total / totalToday) * 100).toFixed(1) : "0";
                         const IconComponent = group.icon && (Icons as any)[group.icon] ? (Icons as any)[group.icon] : null;
 
@@ -120,7 +122,9 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, totalToday, 
                                         >
                                             {IconComponent ? <IconComponent className="w-3 h-3" /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 group-hover:text-neutral-300">Type Summary</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 group-hover:text-neutral-300">
+                                            {tagGroups[group.icon] || TAG_VARIANTS.find(v => v.icon === group.icon)?.label || group.icon}
+                                        </span>
                                     </div>
                                     <span className="text-[9px] font-mono text-neutral-600 tabular-nums">{percentage}%</span>
                                 </div>

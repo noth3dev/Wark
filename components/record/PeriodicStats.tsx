@@ -84,7 +84,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
             
             const nameMap: Record<string, string> = {};
             groupsRes.data?.forEach(g => {
-                nameMap[`${g.icon || ''}|${g.color || ''}`] = g.name;
+                nameMap[g.icon || 'Cpu'] = g.name;
             });
             setGroupNames(nameMap);
         } catch (error) {
@@ -135,7 +135,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
         } else {
             const groups: Record<string, { key: string, name: string, color: string, icon: string, total: number }> = {};
             tags.forEach(tag => {
-                const key = `${tag.icon || ''}|${tag.color || ''}`;
+                const key = tag.icon || 'Cpu';
                 const total = tagTotals[tag.id] || 0;
                 if (total > 0) {
                     if (!groups[key]) {

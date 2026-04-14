@@ -128,16 +128,8 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     const groupedDailyTimes = (() => {
         const groups: Record<string, number> = {};
         tags.forEach(tag => {
-            const key = `${tag.icon || ''}|${tag.color || ''}`;
-            const baseTime = dailyTimes[tag.id] || 0;
-            const liveTime = (activeSession?.tag_id === tag.id) ? time - baseTime : 0;
-            // Actually, 'time' from useTimer is (activeSessionStartTime ? now - activeSessionStartTime : 0) + accumulated
-            // Wait, useTimer logic:
-            // const [time, setTime] = useState(accumulated);
-            // useEffect(() => { ... setTime(Math.floor((Date.now() - start) / 1000) * 1000 + accumulated); ... })
-            // So 'time' is already the total for that tag.
-
-            const totalForTag = (activeSession?.tag_id === tag.id) ? time : baseTime;
+            const key = tag.icon || 'Cpu';
+            const totalForTag = (activeSession?.tag_id === tag.id) ? time : (dailyTimes[tag.id] || 0);
             groups[key] = (groups[key] || 0) + totalForTag;
         });
         return groups;

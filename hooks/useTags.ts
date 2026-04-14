@@ -4,12 +4,25 @@ import { tagService } from '../lib/services/tagService';
 
 export function useTags() {
     const [tags, setTags] = useState<Tag[]>([]);
+    const [tagGroups, setTagGroups] = useState<Record<string, string>>({});
 
     const fetchTags = useCallback(async (targetUserId: string) => {
         if (!targetUserId) return null;
-        const { data } = await tagService.fetchTags(targetUserId);
-        if (data) setTags(data);
-        return data;
+        const [tagsRes, groupsRes] = await Promise.all([
+            tagService.fetchTags(targetUserId),
+            tagService.fetchTagGroups(targetUserId)
+        ]);
+
+        if (tagsRes.data) setTags(tagsRes.data);
+        if (groupsRes.data) {
+            const nameMap: Record<string, string> = {};
+            groupsRes.data.forEach(g => {
+                // Key by icon for the new system
+                nameMap[g.icon] = g.name;
+            });
+            setTagGroups(nameMap);
+        }
+        return tagsRes.data;
     }, []);
 
     const addTag = async (name: string, userId: string) => {
@@ -36,5 +49,14 @@ export function useTags() {
         return false;
     };
 
-    return { tags, fetchTags, addTag, updateTag, deleteTag, setTags };
+    const updateTagGroup = async (userId: string, icon: string, name: string) => {
+        const { error } = await tagService.updateTagGroup(userId, icon, name);
+        if (!error) {
+            setTagGroups(prev => ({ ...prev, [icon]: name }));
+            return true;
+        }
+        return false;
+    };
+
+    return { tags, tagGroups, fetchTags, addTag, updateTag, deleteTag, updateTagGroup, setTags };
 }

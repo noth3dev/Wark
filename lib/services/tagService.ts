@@ -28,9 +28,21 @@ export const tagService = {
     },
 
     async deleteTag(id: string) {
-        // Dependencies (study_sessions) should be handled (either by DB cascade or manually)
-        // Check if DB has cascade, if not manually delete
         await supabase.from('study_sessions').delete().eq('tag_id', id);
         return await supabase.from('tags').delete().eq('id', id);
+    },
+
+    async fetchTagGroups(userId: string) {
+        return await supabase
+            .from('tag_groups')
+            .select('*')
+            .eq('user_id', userId);
+    },
+
+    async updateTagGroup(userId: string, icon: string, name: string) {
+        const color = getTagColor(icon);
+        return await supabase
+            .from('tag_groups')
+            .upsert({ user_id: userId, icon, color, name }, { onConflict: 'user_id,icon,color' });
     }
 };

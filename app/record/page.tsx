@@ -32,6 +32,7 @@ export default function RecordPage() {
         totalToday,
         totalSprintToday,
         hourData,
+        tagGroups,
         fetchData
     } = useRecord();
 
@@ -297,6 +298,7 @@ export default function RecordPage() {
                                 tags={tags}
                                 getTagTotal={getTagTotal}
                                 groupedTotals={groupedTotals}
+                                tagGroups={tagGroups}
                                 totalToday={totalToday}
                                 sessionsCount={sessions.length}
                             />

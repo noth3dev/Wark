@@ -13,7 +13,7 @@ export function useRecord() {
 
     const isToday = new Date().toDateString() === selectedDate.toDateString();
 
-    const { tags, fetchTags } = useTags();
+    const { tags, tagGroups, fetchTags } = useTags();
     const { activeSession, fetchActiveSession } = useActiveSession(user?.id);
     const { sessions, fetchSessions, calculateDistribution, loading: sessionsLoading } = useStudySessions(user?.id, selectedDate);
 
@@ -64,7 +64,7 @@ export function useRecord() {
     const groupedTotals = useMemo(() => {
         const groups: Record<string, number> = {};
         tags.forEach(tag => {
-            const key = `${tag.icon || ''}|${tag.color || ''}`;
+            const key = tag.icon || 'Cpu';
             const total = getTagTotal(tag.id);
             groups[key] = (groups[key] || 0) + total;
         });
@@ -96,6 +96,7 @@ export function useRecord() {
         totalToday,
         totalSprintToday,
         hourData,
+        tagGroups,
         fetchData
     };
 }
