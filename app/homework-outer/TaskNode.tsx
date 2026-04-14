@@ -78,7 +78,7 @@ export function TaskNode({
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
                 className={cn(
-                    "relative flex items-center gap-4 py-3.5 rounded-xl -mx-4 px-4 transition-colors",
+                    "relative flex items-center gap-4 py-3.5 rounded-xl -mx-4 px-4 transition-colors group",
                     hovered && "bg-white/[0.03]",
                     isEditing && "bg-white/[0.05] ring-1 ring-white/10",
                     isRunning && "bg-blue-500/[0.04] ring-1 ring-blue-500/20"
@@ -208,7 +208,12 @@ export function TaskNode({
 
                 {/* ── Actions ── */}
                 {canEdit && !isEditing && (
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className={cn(
+                        "flex items-center gap-1 shrink-0",
+                        "md:opacity-0 md:group-hover:opacity-100 transition-opacity",
+                        // Force visible on mobile/tablet or if it's the active task
+                        (isRunning || (typeof window !== 'undefined' && window.innerWidth < 1024)) && "opacity-100"
+                    )}>
                         {/* Play / Pause — always visible for leaf tasks */}
                         {!hasChildren && (
                             isRunning ? (
@@ -228,29 +233,24 @@ export function TaskNode({
                             )
                         )}
 
-                        {/* Edit / Add / Delete — shown on hover via React state */}
-                        {hovered && (
-                            <>
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="h-7 w-7 flex items-center justify-center rounded-md text-neutral-600 hover:text-white bg-white/[0.04] border border-white/5 hover:bg-white/[0.1] transition-colors"
-                                >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={() => setAdding(!adding)}
-                                    className="h-7 w-7 flex items-center justify-center rounded-md text-neutral-600 hover:text-white bg-white/[0.04] border border-white/5 hover:bg-white/[0.1] transition-colors"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={() => (depth === 0 ? onDelete() : onDeleteSub(node.id))}
-                                    className="h-7 w-7 flex items-center justify-center rounded-md text-red-500/50 hover:text-red-400 bg-red-500/5 border border-red-500/10 hover:bg-red-500/15 transition-colors"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                            </>
-                        )}
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="h-7 w-7 flex items-center justify-center rounded-md text-neutral-600 hover:text-white bg-white/[0.04] border border-white/5 hover:bg-white/[0.1] transition-colors"
+                        >
+                            <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => setAdding(!adding)}
+                            className="h-7 w-7 flex items-center justify-center rounded-md text-neutral-600 hover:text-white bg-white/[0.04] border border-white/5 hover:bg-white/[0.1] transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => (depth === 0 ? onDelete() : onDeleteSub(node.id))}
+                            className="h-7 w-7 flex items-center justify-center rounded-md text-red-500/50 hover:text-red-400 bg-red-500/5 border border-red-500/10 hover:bg-red-500/15 transition-colors"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
                     </div>
                 )}
             </div>

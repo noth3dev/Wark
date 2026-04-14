@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { 
     Dialog, 
     DialogContent, 
@@ -18,6 +18,7 @@ import { toPng } from "html-to-image";
 import { Share2, Download, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "../lib/utils";
+import { supabase } from "../lib/supabase";
 
 interface ExportDialogProps {
     homeworks: Homework[];
@@ -41,27 +42,52 @@ export function ExportDialog({
     onOpenChange 
 }: ExportDialogProps) {
     const [comment, setComment] = useState("");
+    const [groupNames, setGroupNames] = useState<Record<string, string>>({});
     const [isExporting, setIsExporting] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
 
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+    // Fetch group names on open
+    useEffect(() => {
+        if (!isOpen || !activeTagId) return; // Should probably fetch if userId exists
+        
+        const fetchGroups = async () => {
+            const { data } = await supabase
+                .from('tag_groups')
+                .select('icon, color, name');
+            
+            const nameMap: Record<string, string> = {};
+            data?.forEach(g => {
+                nameMap[`${g.icon || ''}|${g.color || ''}`] = g.name;
+            });
+            setGroupNames(nameMap);
+        };
+        fetchGroups();
+    }, [isOpen]);
+
     const completedToday = useMemo(() => {
         const allTasks: any[] = [];
         
-        const gather = (rootId: string, rootContent: string, nodes: Subtask[]) => {
+        const gather = (rootId: string, rootContent: string, path: string[], nodes: Subtask[]) => {
             nodes.forEach(n => {
-                allTasks.push({ ...n, rootId, rootContent });
+                const currentPath = [...path, n.content];
+                if (!n.subtasks || n.subtasks.length === 0) {
+                    allTasks.push({ ...n, rootId, rootContent, path: currentPath });
+                }
                 if (n.subtasks && n.subtasks.length > 0) {
-                    gather(rootId, rootContent, n.subtasks);
+                    gather(rootId, rootContent, currentPath, n.subtasks);
                 }
             });
         };
 
         homeworks.forEach(h => {
-             allTasks.push({ ...h, rootId: h.id, rootContent: h.content });
+             const path = [h.content];
+             if (!h.subtasks || h.subtasks.length === 0) {
+                allTasks.push({ ...h, rootId: h.id, rootContent: h.content, path });
+             }
              if (h.subtasks && h.subtasks.length > 0) {
-                 gather(h.id, h.content, h.subtasks);
+                 gather(h.id, h.content, path, h.subtasks);
              }
         });
         
@@ -71,7 +97,6 @@ export function ExportDialog({
             item.completed_at.startsWith(todayStr)
         );
         
-        // Final deduplication by ID just in case
         const seen = new Set();
         return filtered.filter(item => {
             if (seen.has(item.id)) return false;
@@ -90,6 +115,28 @@ export function ExportDialog({
             .filter(t => t.duration > 0)
             .sort((a, b) => b.duration - a.duration);
     }, [tags, dailyTimes, currentTimeMs, activeTagId]);
+
+    const timeByGroup = useMemo(() => {
+        const groups: Record<string, { name: string, color: string, icon: string, duration: number }> = {};
+        tags.forEach(tag => {
+            const key = `${tag.icon || ''}|${tag.color || ''}`;
+            const baseTime = dailyTimes[tag.id] || 0;
+            const totalMs = activeTagId === tag.id ? currentTimeMs : baseTime;
+            
+            if (totalMs > 0) {
+                if (!groups[key]) {
+                    groups[key] = { 
+                        name: groupNames[key] || "Untitled Group", 
+                        color: tag.color || "#fff", 
+                        icon: tag.icon || "", 
+                        duration: 0 
+                    };
+                }
+                groups[key].duration += totalMs;
+            }
+        });
+        return Object.values(groups).sort((a, b) => b.duration - a.duration);
+    }, [tags, dailyTimes, currentTimeMs, activeTagId, groupNames]);
 
     const handleExport = async () => {
         if (!exportRef.current) return;
@@ -199,16 +246,17 @@ export function ExportDialog({
                            <ScrollArea className="h-full w-full">
                                 <div className="p-12 flex justify-center">
                                     <div style={{ zoom: 0.45 }} className="w-[600px] h-fit">
-                                        <ExportCard 
-                                            date={todayStr}
-                                            completedTasks={completedToday}
-                                            timeByTag={timeByTag}
-                                            comment={comment}
-                                            userName={userName}
-                                        />
-                                    </div>
-                                </div>
-                           </ScrollArea>
+                                         <ExportCard 
+                                             date={todayStr}
+                                             completedTasks={completedToday}
+                                             timeByTag={timeByTag}
+                                             timeByGroup={timeByGroup}
+                                             comment={comment}
+                                             userName={userName}
+                                         />
+                                     </div>
+                                 </div>
+                            </ScrollArea>
                         </div>
                     </div>
                 </div>
@@ -251,6 +299,7 @@ export function ExportDialog({
                         date={todayStr}
                         completedTasks={completedToday}
                         timeByTag={timeByTag}
+                        timeByGroup={timeByGroup}
                         comment={comment}
                         userName={userName}
                     />

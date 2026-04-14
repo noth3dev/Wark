@@ -238,38 +238,38 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                 />
             </div>
 
-            <div className="max-w-4xl mx-auto px-6 pt-32 pb-40 space-y-16">
-                <header className="space-y-10">
-                    <div className="flex items-end justify-between">
-                        <div className="space-y-2">
-                            <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-wider">Plan For</p>
-                            <h1 className="text-5xl font-semibold tracking-tighter leading-none">{getFormattedWeek(viewDate)}</h1>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-40 space-y-12 sm:space-y-16">
+                <header className="space-y-8 sm:space-y-10">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-0">
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <p className="text-[9px] sm:text-[10px] text-neutral-600 font-bold uppercase tracking-wider">Plan For</p>
+                            <h1 className="text-3xl sm:text-5xl font-semibold tracking-tighter leading-none">{getFormattedWeek(viewDate)}</h1>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[10px] text-neutral-600 font-bold uppercase mb-2">Completion</p>
-                            <p className="text-4xl font-mono text-white/20">{progress}%</p>
+                        <div className="flex sm:block items-end justify-between sm:text-right border-t border-white/5 sm:border-0 pt-4 sm:pt-0">
+                            <p className="text-[9px] sm:text-[10px] text-neutral-600 font-bold uppercase mb-1 sm:mb-2">Completion</p>
+                            <p className="text-3xl sm:text-4xl font-mono text-white/20">{progress}%</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 py-6 border-y border-white/5">
-                        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
-                            <button onClick={() => shiftWeek(-1)} className="p-2 hover:bg-white/5 rounded-md"><ChevronLeft className="w-4 h-4 text-neutral-400" /></button>
-                            <button onClick={() => setViewDate(new Date())} className="px-3 text-[10px] font-bold uppercase text-neutral-400 font-suit">Today</button>
-                            <button onClick={() => shiftWeek(1)} className="p-2 hover:bg-white/5 rounded-md"><ChevronRight className="w-4 h-4 text-neutral-400" /></button>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-6 border-y border-white/5">
+                        <div className="flex items-center justify-between sm:justify-start gap-4">
+                            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                                <button onClick={() => shiftWeek(-1)} className="p-2 hover:bg-white/5 rounded-md"><ChevronLeft className="w-4 h-4 text-neutral-400" /></button>
+                                <button onClick={() => setViewDate(new Date())} className="px-3 text-[10px] font-bold uppercase text-neutral-400 font-suit">Today</button>
+                                <button onClick={() => shiftWeek(1)} className="p-2 hover:bg-white/5 rounded-md"><ChevronRight className="w-4 h-4 text-neutral-400" /></button>
+                            </div>
+
+                            <button onClick={() => setIsExportOpen(true)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[9px] sm:text-[10px] font-black text-blue-400 uppercase tracking-tighter shrink-0">
+                                <Share2 className="w-3 h-3" /> <span className="hidden xs:inline">Export Summary</span><span className="xs:hidden">Export</span>
+                            </button>
                         </div>
 
-                        {!!user && (
-                            <button onClick={() => setIsExportOpen(true)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[10px] font-black text-blue-400 uppercase tracking-tighter">
-                                <Share2 className="w-3 h-3" /> Export Summary
-                            </button>
-                        )}
-
-                        <div className="h-4 w-px bg-white/10" />
+                        <div className="hidden sm:block h-4 w-px bg-white/10" />
                         <div className="flex-1 flex gap-2">
-                            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                                <TabsList className="bg-transparent h-auto p-0 flex gap-6">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                <TabsList className="bg-transparent h-auto p-0 flex gap-6 w-full sm:w-auto">
                                     {["tasks", "timer"].map(t => (
-                                        <TabsTrigger key={t} value={t} className="bg-transparent p-0 pb-2 text-sm transition-all data-[state=active]:text-white data-[state=active]:shadow-[0_2px_0_0_#fff] rounded-none text-neutral-600 font-medium uppercase">{t}</TabsTrigger>
+                                        <TabsTrigger key={t} value={t} className="bg-transparent p-0 pb-2 text-sm transition-all data-[state=active]:text-white data-[state=active]:shadow-[0_2px_0_0_#fff] rounded-none text-neutral-600 font-medium uppercase flex-1 sm:flex-none">{t}</TabsTrigger>
                                     ))}
                                 </TabsList>
                             </Tabs>

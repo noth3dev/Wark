@@ -64,9 +64,9 @@ export function RecordHeader({ selectedDate, isToday, totalToday, totalSprintTod
                 >
                     <div>
                         <p className="text-[10px] font-semibold uppercase text-neutral-500 mb-0.5">Daily Runtime</p>
-                        <p className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-white transition-all">
+                        <p className="text-2xl sm:text-4xl md:text-5xl font-light tracking-tight text-white transition-all">
                             {formatDuration(totalToday).split(' ').map((p, i) => (
-                                <span key={i} className={i % 2 !== 0 ? "text-neutral-500 text-[10px] sm:text-xs font-medium ml-1 mr-2" : ""}>{p}</span>
+                                <span key={i} className={i % 2 !== 0 ? "text-neutral-500 text-[9px] sm:text-xs font-medium ml-1 mr-2" : ""}>{p}</span>
                             ))}
                         </p>
                     </div>

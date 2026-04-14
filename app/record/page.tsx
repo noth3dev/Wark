@@ -14,6 +14,8 @@ import { SessionLogs } from "@/components/record/SessionLogs";
 import { SessionModal } from "@/components/record/SessionModal";
 import { SolvedProblemsStats } from "@/components/record/SolvedProblemsStats";
 import { DailyMemoStats } from "@/components/record/DailyMemoStats";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PeriodicStats } from "@/components/record/PeriodicStats";
 
 export default function RecordPage() {
     const {
@@ -260,6 +262,8 @@ export default function RecordPage() {
         }
     };
 
+    const [activeRecordTab, setActiveRecordTab] = useState("daily");
+
     if (!mounted || loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
@@ -270,49 +274,64 @@ export default function RecordPage() {
 
     return (
         <main className="h-full overflow-y-auto bg-black text-white selection:bg-white/10 selection:text-white pb-20 sm:pb-0">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24 space-y-16 sm:space-y-24">
-                <RecordHeader
-                    selectedDate={selectedDate}
-                    isToday={isToday}
-                    totalToday={totalToday}
-                    totalSprintToday={totalSprintToday}
-                    onDateChange={changeDate}
-                />
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24 space-y-16">
+                <Tabs value={activeRecordTab} onValueChange={setActiveRecordTab} className="w-full">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8 border-b border-white/5 pb-12">
+                        <RecordHeader
+                            selectedDate={selectedDate}
+                            isToday={isToday}
+                            totalToday={totalToday}
+                            totalSprintToday={totalSprintToday}
+                            onDateChange={changeDate}
+                        />
 
-                <div className="grid lg:grid-cols-12 gap-8 sm:gap-16">
-                    <TagDistribution
-                        tags={tags}
-                        getTagTotal={getTagTotal}
-                        groupedTotals={groupedTotals}
-                        totalToday={totalToday}
-                        sessionsCount={sessions.length}
-                    />
-                    <DailyTimetable
-                        hourData={hourData}
-                        tags={tags}
-                        onFillGap={handleFillGap}
-                        onFillAll={handleFillAll}
-                    />
-                </div>
+                        <TabsList className="bg-neutral-900/50 p-1 border border-white/5 h-12 w-full sm:w-auto">
+                            <TabsTrigger value="daily" className="px-8 flex-1 sm:flex-none text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-black">Daily</TabsTrigger>
+                            <TabsTrigger value="stats" className="px-8 flex-1 sm:flex-none text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-black">Analytics</TabsTrigger>
+                        </TabsList>
+                    </div>
 
-                <SolvedProblemsStats
-                    date={selectedDate}
-                    tags={tags}
-                />
+                    <TabsContent value="daily" className="space-y-16 sm:space-y-24 m-0 border-0 p-0 focus-visible:ring-0">
+                        <div className="grid lg:grid-cols-12 gap-8 sm:gap-16 mt-8">
+                            <TagDistribution
+                                tags={tags}
+                                getTagTotal={getTagTotal}
+                                groupedTotals={groupedTotals}
+                                totalToday={totalToday}
+                                sessionsCount={sessions.length}
+                            />
+                            <DailyTimetable
+                                hourData={hourData}
+                                tags={tags}
+                                onFillGap={handleFillGap}
+                                onFillAll={handleFillAll}
+                            />
+                        </div>
 
-                <DailyMemoStats date={selectedDate} />
+                        <SolvedProblemsStats
+                            date={selectedDate}
+                            tags={tags}
+                        />
 
-                <SessionLogs
-                    sessions={sessions}
-                    tags={tags}
-                    onAddRecord={handleAddStart}
-                    onEditSession={handleEditStart}
-                    onDeleteSession={handleDelete}
-                    selectedIds={selectedIds}
-                    onToggleSelect={handleToggleSelect}
-                    onSelectAll={setSelectedIds}
-                    onDeleteMultiple={handleDeleteMultiple}
-                />
+                        <DailyMemoStats date={selectedDate} />
+
+                        <SessionLogs
+                            sessions={sessions}
+                            tags={tags}
+                            onAddRecord={handleAddStart}
+                            onEditSession={handleEditStart}
+                            onDeleteSession={handleDelete}
+                            selectedIds={selectedIds}
+                            onToggleSelect={handleToggleSelect}
+                            onSelectAll={setSelectedIds}
+                            onDeleteMultiple={handleDeleteMultiple}
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="stats" className="m-0 border-0 p-0 focus-visible:ring-0">
+                        <PeriodicStats userId={user?.id} tags={tags} currentDate={selectedDate} />
+                    </TabsContent>
+                </Tabs>
             </div>
 
             <SessionModal

@@ -108,17 +108,19 @@ export function Header() {
                 </div>
 
                 {/* Right: Tools & Profile */}
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1.5 sm:gap-3">
                     {user ? (
                         <>
-                            <MusicPlayer />
+                            <div className="hidden sm:block">
+                                <MusicPlayer />
+                            </div>
 
                             {/* Solved Problems Button */}
                             <motion.button
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
                                 onClick={() => setIsSolvedProblemsOpen(!isSolvedProblemsOpen)}
-                                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isSolvedProblemsOpen
+                                className={`flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all duration-200 ${isSolvedProblemsOpen
                                     ? 'bg-secondary border-primary/20 text-primary'
                                     : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
                                     }`}
@@ -132,20 +134,22 @@ export function Header() {
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
                                 onClick={() => setIsMemoOpen(!isMemoOpen)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-200 ${isMemoOpen
+                                className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all duration-200 ${isMemoOpen
                                     ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                                     : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
                                     }`}
                             >
                                 <StickyNote className={`w-3.5 h-3.5 ${isMemoOpen ? 'text-amber-400' : 'text-neutral-500'}`} />
-                                <span className="text-[11px] font-medium">메모</span>
+                                <span className="text-[11px] font-medium hidden md:inline">메모</span>
                             </motion.button>
 
-                            <BatteryIndicator />
+                            <div className="hidden sm:block">
+                                <BatteryIndicator />
+                            </div>
                             <UserProfile />
 
                             {/* Mobile Menu Toggle */}
-                            <button className="md:hidden p-2 text-white ml-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                            <button className="md:hidden p-2 text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
                                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                             </button>
                         </>
