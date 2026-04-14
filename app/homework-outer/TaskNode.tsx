@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronRight as ChevronRightIcon, Check, X, Save, Edit2, Play, Pause, Plus } from "lucide-react";
+import * as Icons from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Input } from "../../components/ui/input";
 
