@@ -38,12 +38,7 @@ export default function Auth() {
                     <img
                         src="/wark.svg"
                         alt="WArk"
-                        className="h-6 w-auto cursor-pointer"
-                        onClick={() => {
-                            setEmail("zzazzalego@gmail.com");
-                            setPassword("h@rri$onth3deV");
-                            setIsLogin(true);
-                        }}
+                        className="h-6 w-auto"
                     />
                 </div>
 
