@@ -8,6 +8,7 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  turbopack: {}, // Silence Next.js 16 ambiguity warning when plugins inject webpack config
   async headers() {
     return [
       {
