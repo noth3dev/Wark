@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plane, Clock, ChevronLeft, MapPin, Lock, Unlock, ChevronRight, X } from "lucide-react";
+import { Plane, Clock, ChevronLeft, MapPin, Lock, Unlock, ChevronRight, X, Search } from "lucide-react";
 import Link from "next/link";
 import { useFlight } from "@/hooks/useFlight";
 import { Airport, getReachableAirports, HOME_AIRPORT, AIRPORTS } from "@/lib/flight/airports";
@@ -37,12 +37,26 @@ export default function FlightPage() {
     const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
     const [bookingStep, setBookingStep] = useState<"select" | "seat" | "pass">("select");
     const [showList, setShowList] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const reachable = useMemo(() => getReachableAirports(focusMinutes), [focusMinutes]);
+    
+    const filteredAirports = useMemo(() => {
+        if (!searchQuery) return AIRPORTS;
+        const q = searchQuery.toLowerCase();
+        return AIRPORTS.filter(a => 
+            a.code.toLowerCase().includes(q) || 
+            a.city.toLowerCase().includes(q) || 
+            a.country.toLowerCase().includes(q)
+        );
+    }, [searchQuery]);
+
     const selectedTag = tags.find(t => t.id === selectedTagId) || null;
 
     const handleGlobeSelect = (airport: Airport) => {
         setSelectedAirport(airport);
+        // Override focusMinutes: selecting a destination sets the timer to that destination's time.
+        setFocusMinutes(airport.flightMinutes);
     };
 
     const handleTear = () => {
@@ -73,6 +87,7 @@ export default function FlightPage() {
                     isFlying={true}
                     flyingTo={session.destination}
                     flightProgress={progress}
+                    tagColor={tag?.color || "#22d3ee"}
                 />
                 <div className="absolute inset-0 z-10 flex items-end justify-center pb-8 pointer-events-none">
                     <div className="pointer-events-auto w-full max-w-xl px-4">
@@ -247,27 +262,39 @@ export default function FlightPage() {
                                         exit={{ opacity: 0, y: 20 }}
                                         className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl p-3 max-h-[40vh] overflow-y-auto"
                                     >
-                                        <div className="flex items-center justify-between px-1 pb-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                                                {reachable.length}개 도달 가능
-                                            </span>
-                                            <button onClick={() => setShowList(false)}>
-                                                <X className="w-4 h-4 text-neutral-500" />
-                                            </button>
+                                        <div className="flex flex-col px-1 pb-3 gap-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                                                    목적지 검색
+                                                </span>
+                                                <button onClick={() => { setShowList(false); setSearchQuery(""); }}>
+                                                    <X className="w-4 h-4 text-neutral-500" />
+                                                </button>
+                                            </div>
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-500" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="도시, 공항 코드 또는 국가..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-cyan-500/50 transition-colors"
+                                                    autoFocus
+                                                />
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5">
-                                            {AIRPORTS.map(airport => {
+                                            {filteredAirports.map(airport => {
                                                 const isReachable = airport.flightMinutes <= focusMinutes;
                                                 const isSelected = selectedAirport?.code === airport.code;
                                                 return (
                                                     <button
                                                         key={airport.code}
-                                                        onClick={() => { if (isReachable) { handleGlobeSelect(airport); setShowList(false); } }}
-                                                        disabled={!isReachable}
+                                                        onClick={() => { handleGlobeSelect(airport); setShowList(false); setSearchQuery(""); }}
                                                         className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all
                                                             ${isSelected ? "bg-cyan-500/15 border border-cyan-500/30" :
                                                             isReachable ? "hover:bg-white/5 border border-transparent" :
-                                                            "opacity-25 cursor-not-allowed border border-transparent"}`}
+                                                            "hover:bg-white/5 border border-transparent opacity-70"}`}
                                                     >
                                                         <div className="min-w-0">
                                                             <div className="flex items-center gap-1.5">

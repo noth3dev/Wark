@@ -58,7 +58,7 @@ export function Arrival({ destination, tag, durationMinutes, unlockedCount, onRe
             >
                 <h2 className="text-4xl font-black tracking-tight">착륙 완료</h2>
                 <p className="text-neutral-500 text-sm">
-                    {destination.emoji} {destination.city}에 무사히 도착했습니다
+                    {destination.city}에 무사히 도착했습니다
                 </p>
             </motion.div>
 
@@ -94,7 +94,7 @@ export function Arrival({ destination, tag, durationMinutes, unlockedCount, onRe
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">새 도시 해제!</span>
                 </div>
                 <p className="text-2xl font-black">
-                    {destination.emoji} {destination.city}, {destination.country}
+                    {destination.city}, {destination.country}
                 </p>
                 <p className="text-[11px] text-neutral-500">이 도시가 당신의 여행 지도에 추가되었습니다</p>
             </motion.div>

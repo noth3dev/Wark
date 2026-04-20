@@ -103,116 +103,179 @@ export function InFlight({
         </>
     );
 
-    // Pure mode — minimal floating timer
+    // Pure mode — iOS lock screen style glass clock
     if (pureMode) {
+        // Split time into parts for tighter layout
+        const h = Math.floor(timeLeft / 3600);
+        const m = Math.floor((timeLeft % 3600) / 60);
+        const s = timeLeft % 60;
+        const topLine = h > 0 ? `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}` : m.toString().padStart(2, "0");
+        const bottomLine = h > 0 ? s.toString().padStart(2, "0") : s.toString().padStart(2, "0");
+        const displayTime = h > 0
+            ? `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+            : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+
         return (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center space-y-6 cursor-pointer py-8"
+                className="fixed inset-0 z-50 flex flex-col items-center justify-center cursor-pointer"
                 onClick={() => setPureMode(false)}
             >
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500">
-                    {HOME_AIRPORT.code} → {destination.code}
-                </p>
-                <p className="text-7xl sm:text-8xl font-black tabular-nums tracking-tighter text-white font-mono drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]">
-                    {formatTime(timeLeft)}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-600">
-                    탭하여 UI 복원
-                </p>
+                <div className="relative flex flex-col items-center justify-center w-full h-full">
+                    {/* Route label — like the date on iOS */}
+                    <p className="text-sm font-medium text-white/40 tracking-wide mb-2">
+                        {HOME_AIRPORT.code} → {destination.code}
+                    </p>
 
-                {/* Hide Header Style */}
+                    {/* Glass clock text */}
+                    <div className="relative">
+                        <p
+                            className="font-black tabular-nums tracking-tight font-mono leading-[0.85] select-none text-center"
+                            style={{
+                                fontSize: 'clamp(120px, 32vw, 360px)',
+                                WebkitTextStroke: '1.5px rgba(255,255,255,0.15)',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.03) 60%, rgba(255,255,255,0.1) 100%)',
+                                WebkitBackgroundClip: 'text',
+                                backgroundClip: 'text',
+                                paintOrder: 'stroke fill',
+                            }}
+                        >
+                            {displayTime}
+                        </p>
+                    </div>
+
+                    {/* ETA in small text */}
+                    <p className="text-xs font-medium text-white/20 mt-4 tracking-wide">
+                        ETA{' '}
+                        <span className="text-white/30">
+                            {(() => {
+                                const eta = new Date(Date.now() + timeLeft * 1000);
+                                return `${eta.getHours().toString().padStart(2, "0")}:${eta.getMinutes().toString().padStart(2, "0")}`;
+                            })()}
+                        </span>
+                    </p>
+
+                    {/* Tap hint */}
+                    <p className="absolute bottom-12 text-[9px] font-medium uppercase tracking-[0.3em] text-white/10">
+                        Tap to restore
+                    </p>
+                </div>
+
                 <style>{`body.pure-mode header { display: none !important; }`}</style>
                 {noiseControlUI}
             </motion.div>
         );
     }
 
+    // Derived values for HUD
+    const timeRemainingLabel = (() => {
+        const h = Math.floor(timeLeft / 3600);
+        const m = Math.floor((timeLeft % 3600) / 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m} min`;
+    })();
+
+    // Approximate "distance" from flight duration (cruise speed ~900km/h)
+    const totalDistanceKm = Math.round(durationMinutes * 15); // rough avg
+    const remainingKm = Math.round(totalDistanceKm * (1 - progress));
+
+    const currentClock = (() => {
+        const now = new Date();
+        return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    })();
+
+    const etaClock = (() => {
+        const eta = new Date(Date.now() + timeLeft * 1000);
+        return `${eta.getHours().toString().padStart(2, "0")}:${eta.getMinutes().toString().padStart(2, "0")}`;
+    })();
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="w-full"
         >
             <style>{`body.pure-mode header { display: none !important; }`}</style>
             
             {noiseControlUI}
-            {/* Glass card */}
-            <div className="bg-black/50 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 space-y-4">
-                {/* Status bar */}
+
+            {/* HUD Overlay — transparent, floating on globe */}
+            <div className="space-y-4">
+
+                {/* Top bar: Phase + Controls */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
-                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${phaseColor}`}>
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-emerald-400" />
+                        <span className={`text-[9px] font-black uppercase tracking-[0.25em] ${phaseColor}`}>
                             {phaseLabel}
                         </span>
                     </div>
-                    <button
-                        onClick={() => setPureMode(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
-                    >
-                        <EyeOff className="w-3 h-3 text-neutral-500" />
-                        <span className="text-[9px] font-bold text-neutral-500">Pure</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setPureMode(true)}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
+                        >
+                            <EyeOff className="w-3 h-3 text-neutral-500" />
+                            <span className="text-[8px] font-bold text-neutral-500">Pure</span>
+                        </button>
+                        <button
+                            onClick={onCancel}
+                            className="px-2 py-1 rounded-lg text-[8px] font-bold text-neutral-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        >
+                            취소
+                        </button>
+                    </div>
                 </div>
 
-                {/* Route + Progress */}
-                <div className="flex items-center gap-4">
-                    <div className="text-center flex-shrink-0">
-                        <p className="text-xl font-black">{HOME_AIRPORT.code}</p>
-                        <p className="text-[9px] text-neutral-500">{HOME_AIRPORT.city}</p>
-                    </div>
-
-                    <div className="flex-1 relative h-6 flex items-center">
-                        <div className="w-full h-[1.5px] bg-white/10 rounded-full relative">
-                            <motion.div
-                                className="absolute left-0 top-0 h-full rounded-full"
-                                style={{
-                                    width: `${progress * 100}%`,
-                                    background: tag.color || '#22d3ee',
-                                }}
-                            />
-                        </div>
+                {/* Route line: ICN ——✈—— NRT */}
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-neutral-400">{HOME_AIRPORT.code}</span>
+                    <div className="flex-1 relative h-4 flex items-center">
+                        <div className="w-full h-[1px] bg-white/10" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[1px] rounded-full" 
+                             style={{ width: `${progress * 100}%`, background: tag.color || '#22d3ee' }} />
                         <motion.div
                             className="absolute top-1/2 -translate-y-1/2"
-                            style={{ left: `calc(${Math.min(progress * 100, 94)}% - 8px)` }}
-                            animate={{ y: [0, -2, 0] }}
+                            style={{ left: `calc(${Math.min(progress * 100, 95)}% - 6px)` }}
+                            animate={{ y: [0, -1, 0] }}
                             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         >
-                            <Plane className="w-4 h-4" style={{ color: tag.color || '#22d3ee' }} />
+                            <Plane className="w-3 h-3" style={{ color: tag.color || '#22d3ee' }} />
                         </motion.div>
                     </div>
+                    <span className="text-[10px] font-black text-white">{destination.code}</span>
+                </div>
 
-                    <div className="text-center flex-shrink-0">
-                        <p className="text-xl font-black">{destination.code}</p>
-                        <p className="text-[9px] text-neutral-500">{destination.city}</p>
+                {/* Bottom HUD: Time Remaining — Clock — Distance Remaining */}
+                <div className="flex items-end justify-between pt-2">
+                    {/* Left: Time Remaining */}
+                    <div>
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 mb-1">Time Remaining</p>
+                        <p className="text-2xl font-black tabular-nums tracking-tight text-white font-mono">
+                            {timeRemainingLabel}
+                        </p>
+                    </div>
+
+                    {/* Center: Current clock + ETA */}
+                    <div className="text-center flex flex-col items-center">
+                        <p className="text-xl font-black tabular-nums text-white font-mono">{currentClock}</p>
+                        <p className="text-[8px] font-bold text-neutral-500 mt-0.5">
+                            ETA <span className="text-amber-400 font-black">{etaClock}</span>
+                        </p>
+                    </div>
+
+                    {/* Right: Distance Remaining */}
+                    <div className="text-right">
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 mb-1">Distance Remaining</p>
+                        <p className="text-2xl font-black tabular-nums tracking-tight text-white font-mono">
+                            {remainingKm.toLocaleString()} km
+                        </p>
                     </div>
                 </div>
 
-                {/* Timer */}
-                <div className="text-center py-2">
-                    <p className="text-4xl sm:text-5xl font-black tabular-nums tracking-tighter font-mono">
-                        {formatTime(timeLeft)}
-                    </p>
-                </div>
-
-                {/* Info row */}
-                <div className="grid grid-cols-4 gap-3 pt-3 border-t border-white/5">
-                    <InfoCell label="좌석" value={tag.name} color={tag.color} />
-                    <InfoCell label="진행률" value={`${Math.round(progress * 100)}%`} />
-                    <InfoCell label="경과" value={formatTime(elapsed)} />
-                    <InfoCell label="총 시간" value={`${durationMinutes}m`} />
-                </div>
             </div>
-
-            {/* Cancel */}
-            <button
-                onClick={onCancel}
-                className="w-full text-center mt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-600 hover:text-red-500 transition-colors"
-            >
-                비상 착륙 (세션 취소)
-            </button>
         </motion.div>
     );
 }

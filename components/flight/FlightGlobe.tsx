@@ -16,22 +16,24 @@ interface FlightGlobeProps {
     flightProgress?: number;
     isFlying?: boolean;
     flyingTo?: Airport | null;
+    tagColor?: string;
 }
 
 // Apple-inspired Minimalist Dark Theme
 const THEME = {
     bg: "rgba(0, 0, 0, 0)",
     globe: "#000000",
-    atmosphere: "rgba(255, 255, 255, 0.05)",
-    land: "#0a0a0a",
-    borders: "rgba(255, 255, 255, 0.15)",
-    text: "rgba(255, 255, 255, 0.9)",
-    textDim: "rgba(255, 255, 255, 0.3)",
+    atmosphere: "rgba(255, 255, 255, 0.08)",
+    land: "#0d0d0d",
+    borders: "rgba(255, 255, 255, 0.2)",
+    text: "rgba(255, 255, 255, 0.95)",
+    textDim: "rgba(255, 255, 255, 0.4)",
     home: "#ffffff",
-    reachable: "#0ea5e9", // Sleek Sky Blue
+    reachable: "#22d3ee", // Cyan 400
     locked: "rgba(255, 255, 255, 0.1)",
-    unlocked: "#f59e0b", // Warm Amber
-    arc: "#0ea5e9",
+    unlocked: "#fbbf24", // Amber 400
+    arc: "#22d3ee",
+    selected: "#fbbf24",
 };
 
 // @ts-ignore - Missing type definitions for three
@@ -45,11 +47,13 @@ export function FlightGlobe({
     flightProgress = 0,
     isFlying = false,
     flyingTo = null,
+    tagColor = "#22d3ee",
 }: FlightGlobeProps) {
     const globeRef = useRef<any>(null);
     const [globeReady, setGlobeReady] = useState(false);
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
     const [countries, setCountries] = useState<any>({ features: [] });
+    const [hoveredAirport, setHoveredAirport] = useState<Airport | null>(null);
 
     // Interpolate plane position along a Great Circle path
     const currentPlanePos = useMemo(() => {
@@ -129,7 +133,7 @@ export function FlightGlobe({
 
     // Setup Points
     const pointsData = useMemo(() => {
-        if (isFlying) return []; // Hide clutter during flight
+        if (isFlying) return []; 
         const reachableCodes = new Set(reachableAirports.map(a => a.code));
         return AIRPORTS.map(airport => ({
             lat: airport.lat,
@@ -138,9 +142,11 @@ export function FlightGlobe({
             isReachable: reachableCodes.has(airport.code),
             isUnlocked: unlockedCodes.includes(airport.code),
             isSelected: selectedAirport?.code === airport.code,
+            isHome: airport.code === HOME_AIRPORT.code,
+            isHovered: hoveredAirport?.code === airport.code,
             airport
         }));
-    }, [reachableAirports, unlockedCodes, selectedAirport, isFlying]);
+    }, [reachableAirports, unlockedCodes, selectedAirport, hoveredAirport, isFlying]);
 
     // Setup Arcs
     const arcsData = useMemo(() => {
@@ -152,8 +158,8 @@ export function FlightGlobe({
                 arcs.push({
                     startLat: HOME_AIRPORT.lat, startLng: HOME_AIRPORT.lng,
                     endLat: currentPlanePos.lat, endLng: currentPlanePos.lng,
-                    color: [THEME.arc, THEME.arc],
-                    stroke: 0.4, dashLength: 1, dashGap: 0,
+                    color: [tagColor, tagColor],
+                    stroke: 0.6, dashLength: 1, dashGap: 0,
                 });
             }
             // Draw a faint line for the remaining path
@@ -179,24 +185,31 @@ export function FlightGlobe({
 
     // Setup Labels
     const labelsData = useMemo(() => {
-        if (isFlying) return []; // Clean look during flight
-        const reachableCodes = new Set(reachableAirports.map(a => a.code));
-        const items = [{ lat: HOME_AIRPORT.lat, lng: HOME_AIRPORT.lng, text: HOME_AIRPORT.code, color: THEME.home, size: 0.8 }];
+        if (isFlying) return []; 
+        const items: any[] = [];
         
-        AIRPORTS.forEach(a => {
-            if (reachableCodes.has(a.code) || unlockedCodes.includes(a.code) || selectedAirport?.code === a.code) {
-                const color = selectedAirport?.code === a.code ? THEME.text 
-                            : reachableCodes.has(a.code) ? THEME.reachable 
-                            : THEME.unlocked;
-                items.push({
-                    lat: a.lat, lng: a.lng, text: a.code,
-                    color: color,
-                    size: selectedAirport?.code === a.code ? 0.8 : 0.5
-                });
-            }
-        });
+        // Always show HOME
+        items.push({ lat: HOME_AIRPORT.lat, lng: HOME_AIRPORT.lng, text: HOME_AIRPORT.city, color: THEME.home, size: 0.8, weight: 800 });
+
+        // Show selected or hovered
+        if (selectedAirport) {
+            items.push({ 
+                lat: selectedAirport.lat, lng: selectedAirport.lng, 
+                text: selectedAirport.city, 
+                color: THEME.selected, size: 0.9, weight: 800 
+            });
+        }
+
+        if (hoveredAirport && hoveredAirport.code !== selectedAirport?.code && hoveredAirport.code !== HOME_AIRPORT.code) {
+            items.push({ 
+                lat: hoveredAirport.lat, lng: hoveredAirport.lng, 
+                text: hoveredAirport.city, 
+                color: THEME.text, size: 0.7, weight: 600 
+            });
+        }
+
         return items;
-    }, [reachableAirports, unlockedCodes, selectedAirport, isFlying]);
+    }, [selectedAirport, hoveredAirport, isFlying]);
 
     // Rings (Pulse markers)
     const ringsData = useMemo(() => {
@@ -248,10 +261,14 @@ export function FlightGlobe({
     }, [globeReady]);
 
     const handlePointClick = useCallback((point: any) => {
-        if (!isFlying && point.airport && onSelectAirport && point.isReachable) {
+        if (!isFlying && point.airport && onSelectAirport) {
             onSelectAirport(point.airport);
         }
     }, [onSelectAirport, isFlying]);
+
+    const handlePointHover = useCallback((point: any) => {
+        setHoveredAirport(point?.airport || null);
+    }, []);
 
     // Live Orientation Sync
     useEffect(() => {
@@ -278,19 +295,21 @@ export function FlightGlobe({
             <Globe
                 ref={globeRef}
                 onGlobeReady={() => setGlobeReady(true)}
-                globeImageUrl=""
                 backgroundColor={THEME.bg}
                 showGlobe={true}
                 showAtmosphere={true}
                 atmosphereColor={THEME.atmosphere}
                 atmosphereAltitude={0.25}
                 
-                // Fine, minimalist landmasses
+                // Solid dark globe — no texture, infinite zoom quality
+                globeImageUrl=""
+                
+                // Borders only — transparent caps prevent black holes
                 polygonsData={countries.features || []}
-                polygonCapColor={() => THEME.land}
+                polygonCapColor={() => "transparent"}
                 polygonSideColor={() => "transparent"}
                 polygonStrokeColor={() => THEME.borders}
-                polygonAltitude={0.001}
+                polygonAltitude={0}
 
                 // Natively rendered beautiful 2D geometric jet
                 objectsData={objectsData}
@@ -339,19 +358,45 @@ export function FlightGlobe({
                     return planeGroup;
                 }}
                 
-                // Tiny sleek points
-                pointsData={pointsData}
-                pointLat="lat"
-                pointLng="lng"
-                pointColor={(d: any) =>
-                    d.isSelected ? THEME.home
-                    : d.isReachable ? THEME.reachable
-                    : d.isUnlocked ? THEME.unlocked
-                    : THEME.locked
-                }
-                pointAltitude={(d: any) => d.isSelected ? 0.01 : 0.005}
-                pointRadius={(d: any) => d.isSelected ? 0.2 : d.isReachable ? 0.15 : 0.08}
-                onPointClick={handlePointClick}
+                // Premium HTML markers for cleaner UI and better performance
+                htmlElementsData={pointsData}
+                htmlLat="lat"
+                htmlLng="lng"
+                htmlElement={(d: any) => {
+                    const isFocus = d.isSelected || d.isHome || d.isHovered;
+                    const color = d.isHome ? THEME.home : d.isSelected ? THEME.selected : d.isReachable ? THEME.reachable : THEME.locked;
+                    
+                    const el = document.createElement('div');
+                    el.className = 'group flex items-center justify-center';
+                    
+                    // Core dot and pulse with CSS
+                    const size = d.isHome ? 8 : d.isSelected ? 10 : d.isHovered ? 8 : d.isReachable ? 6 : 4;
+                    const opacity = d.isReachable || isFocus ? 1 : 0.3;
+                    
+                    el.innerHTML = `
+                        <div class="relative flex items-center justify-center">
+                            ${isFocus || d.isReachable ? `
+                                <div class="absolute w-full h-full rounded-full animate-ping opacity-20" style="background-color: ${color}; animation-duration: 2s;"></div>
+                                <div class="absolute w-[250%] h-[250%] rounded-full opacity-10" style="background-color: ${color}; filter: blur(4px);"></div>
+                            ` : ''}
+                            <div class="rounded-full shadow-lg transition-all duration-300" style="
+                                width: ${size}px; 
+                                height: ${size}px; 
+                                background-color: ${color}; 
+                                opacity: ${opacity};
+                                border: ${isFocus ? '2px solid white' : 'none'};
+                            "></div>
+                        </div>
+                    `;
+                    
+                    el.style.pointerEvents = 'auto';
+                    el.style.cursor = 'pointer';
+                    el.onclick = () => handlePointClick(d);
+                    el.onmouseenter = () => handlePointHover(d);
+                    el.onmouseleave = () => handlePointHover(null);
+                    
+                    return el;
+                }}
                 
                 // Elegant thin solid lines
                 arcsData={arcsData}
