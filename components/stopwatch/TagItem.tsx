@@ -28,63 +28,41 @@ export function TagItem({ tag, isActive, isEditMode, isFocused, dailyTime, onCli
 
     const formattedDailyTime = formatTimeShort(dailyTime);
 
-    // Glassmorphism version: semi-transparent, blurred background with subtle borders
+    // Matte version of the original design: keep shape and colors, remove glows/gradients
     return (
         <button
             onClick={onClick}
             onMouseEnter={onMouseEnter}
-            className={`group flex items-center gap-3 px-5 py-2.5 rounded-full transition-all duration-300 w-fit h-fit relative isolate overflow-hidden ${isActive
-                ? 'scale-[1.03] shadow-lg shadow-black/20'
+            className={`group flex items-center gap-2.5 px-4 py-2 rounded-full border-2 transition-all duration-200 w-fit h-fit relative ${isActive
+                ? 'scale-[1.02]'
                 : isFocused
-                    ? 'scale-[1.02]'
-                    : 'scale-100'
+                    ? 'bg-white/5 border-white/20 scale-[1.02]'
+                    : 'bg-transparent border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
                 } ${isEditMode ? 'opacity-70' : ''}`}
             style={{
-                backgroundColor: isActive 
-                    ? `${themeColor}22` 
-                    : isFocused ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                border: `1px solid ${isActive ? `${themeColor}66` : 'rgba(255, 255, 255, 0.1)'}`,
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                borderColor: isActive ? themeColor : undefined,
+                background: isActive ? `${themeColor}22` : undefined, // Use 'background' to maintain consistency
             }}
         >
-            {/* Background Gradient Shine for Active State */}
-            {isActive && (
-                <div 
-                    className="absolute inset-0 -z-10 opacity-30 blur-xl"
-                    style={{ background: `radial-gradient(circle at center, ${themeColor}, transparent 70%)` }}
-                />
-            )}
-
             {IconComponent ? (
                 <IconComponent
-                    className={`w-4 h-4 transition-all duration-300 ${isActive ? 'opacity-100 scale-110' : 'opacity-50 group-hover:opacity-80'}`}
-                    style={{ 
-                        color: themeColor,
-                        filter: isActive ? `drop-shadow(0 0 8px ${themeColor}66)` : 'none'
-                    }}
+                    className={`w-3.5 h-3.5 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'}`}
+                    style={{ color: themeColor }}
                 />
             ) : (
                 <div
-                    className="w-2 h-2 rounded-full transition-all duration-300"
-                    style={{ 
-                        backgroundColor: isActive ? themeColor : 'rgba(255, 255, 255, 0.3)',
-                        boxShadow: isActive ? `0 0 10px ${themeColor}` : 'none'
-                    }}
+                    className="w-1.5 h-1.5 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: isActive ? themeColor : '#404040' }}
                 />
             )}
-
             <div className="flex items-baseline gap-2">
                 <span
-                    className={`text-[14px] font-medium tracking-tight transition-all duration-300 ${isActive ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-200'}`}
-                    style={{
-                        textShadow: isActive ? `0 0 12px ${themeColor}44` : 'none'
-                    }}
+                    className={`text-[13px] font-semibold transition-colors duration-200 ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}
                 >
                     {tag.name}
                 </span>
                 {formattedDailyTime && (
-                    <span className={`text-[10px] font-mono tabular-nums tracking-wider opacity-60 ${isActive ? 'text-white' : 'text-neutral-500'}`}>
+                    <span className={`text-[10px] font-mono tabular-nums opacity-60 ${isActive ? 'text-white' : 'text-neutral-600'}`}>
                         {formattedDailyTime}
                     </span>
                 )}
@@ -94,14 +72,21 @@ export function TagItem({ tag, isActive, isEditMode, isFocused, dailyTime, onCli
                 <motion.div
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-white text-black rounded-full flex items-center justify-center z-10 shadow-md"
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-white text-black rounded-full flex items-center justify-center z-10"
                 >
-                    <Icons.Pencil className="w-2.5 h-2.5" />
+                    <Icons.Pencil className="w-2 h-2" />
                 </motion.div>
             )}
 
-            {/* Edge light highlight */}
-            <div className={`absolute inset-0 rounded-full border-t border-white/10 pointer-events-none ${isActive ? 'opacity-40' : 'opacity-10'}`} />
+            {isActive && (
+                <motion.div
+                    layoutId="active-pill"
+                    className="absolute inset-0 rounded-full pointer-events-none border border-white/10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                />
+            )}
         </button>
     );
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive, Coffee, Target } from "lucide-react"
+import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive, Coffee, Plane } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
@@ -102,7 +102,7 @@ export function Header() {
                             <NavLink href={`/homework-outer/${user?.id}`} title="Homework" icon={<ClipboardList className="w-4 h-4" />} />
                             <NavLink href="/drive" title="Drive" icon={<HardDrive className="w-4 h-4" />} />
                             <NavLink href="/overdose" title="Overdose" icon={<Coffee className="w-4 h-4" />} />
-                            <NavLink href="/goal" title="Goal" icon={<Target className="w-4 h-4" />} />
+                            <NavLink href="/flight" title="Flight" icon={<Plane className="w-4 h-4" />} />
                         </nav>
                     )}
 
