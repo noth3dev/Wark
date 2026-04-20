@@ -99,10 +99,14 @@ export function FlightGlobe({
     // Solid Plane Geometric Object (Perfectly embedded in WebGL space)
     const objectsData = useMemo(() => {
         if (!isFlying || !currentPlanePos) return [];
+        // Track the plane on the map with a parabolic altitude
+        // Peek at 0.1 altitude in the middle of flight
+        const altitude = 0.1 * Math.sin(Math.PI * flightProgress);
+        
         return [{
             lat: currentPlanePos.lat,
             lng: currentPlanePos.lng,
-            altitude: 0.005, // Raised safely above the arc
+            altitude: Math.max(0.015, altitude), // Minimum 0.015 to stay above ground
             rotation: currentPlanePos.bearing
         }];
     }, [isFlying, currentPlanePos]);
@@ -153,22 +157,14 @@ export function FlightGlobe({
         const arcs = [];
         
         if (isFlying && flyingTo && currentPlanePos) {
-            // Draw a solid line from HOME to current position to show trajectory
-            if (flightProgress > 0) {
-                arcs.push({
-                    startLat: HOME_AIRPORT.lat, startLng: HOME_AIRPORT.lng,
-                    endLat: currentPlanePos.lat, endLng: currentPlanePos.lng,
-                    color: [tagColor, tagColor],
-                    stroke: 0.6, dashLength: 1, dashGap: 0,
-                });
-            }
             // Draw a faint line for the remaining path
             if (flightProgress < 1) {
                 arcs.push({
                     startLat: currentPlanePos.lat, startLng: currentPlanePos.lng,
                     endLat: flyingTo.lat, endLng: flyingTo.lng,
-                    color: ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.08)"],
+                    color: ["rgba(255,255,255,0.1)", "rgba(255,255,255,0.05)"],
                     stroke: 0.4, dashLength: 1, dashGap: 0,
+                    altitude: 0.1,
                 });
             }
         } else if (selectedAirport) {
@@ -177,7 +173,8 @@ export function FlightGlobe({
                 startLat: HOME_AIRPORT.lat, startLng: HOME_AIRPORT.lng,
                 endLat: selectedAirport.lat, endLng: selectedAirport.lng,
                 color: ["rgba(255, 255, 255, 0.4)", THEME.arc],
-                stroke: 0.4, dashLength: 1, dashGap: 0,
+                stroke: 0.6, dashLength: 1, dashGap: 0,
+                altitude: 0.1, // Fixed preview altitude
             });
         }
         return arcs;
@@ -402,7 +399,8 @@ export function FlightGlobe({
                 arcsData={arcsData}
                 arcStartLat="startLat" arcStartLng="startLng" arcEndLat="endLat" arcEndLng="endLng"
                 arcColor="color" arcStroke="stroke" arcDashLength="dashLength" arcDashGap="dashGap"
-                arcAltitude={0.002} // Sits precisely between land (0.001) and plane (0.005)
+                arcAltitude="altitude"
+                arcAltitudeAutoScale={0.2} // Makes longer flights fly higher
                 
                 // Crisp labels
                 labelsData={labelsData}
