@@ -17,6 +17,7 @@ import { getFormattedWeek, getWeekInfo, formatWeekKey } from "../../lib/timeUtil
 import { HomeworkHeader } from "../../components/homework/HomeworkHeader";
 import { StatsDonut } from "../../components/homework/StatsDonut";
 import { ActivityList } from "../../components/homework/ActivityList";
+import { ExamsView } from "../../components/homework/ExamsView";
 
 export default function HomeworkOuterPage({ searchParams, userId: propUserId }: any) {
     const { user, loading: authLoading } = useAuth();
@@ -307,6 +308,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                             )}
                         </TabsContent>
 
+
                         <TabsContent value="timer" className="m-0 animate-in fade-in duration-500">
                             <StatsDonut 
                                 liveTagTimes={liveTagTimes}
@@ -318,6 +320,10 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                 liveTagTimes={liveTagTimes}
                                 formatDuration={formatDuration}
                             />
+                        </TabsContent>
+
+                        <TabsContent value="exams" className="m-0 animate-in fade-in duration-500">
+                            <ExamsView canEdit={canEdit} tags={tags} userId={viewedUserId} />
                         </TabsContent>
                     </Tabs>
                 </div>

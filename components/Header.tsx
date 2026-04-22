@@ -103,6 +103,7 @@ export function Header() {
                             <NavLink href="/drive" title="Drive" icon={<HardDrive className="w-4 h-4" />} />
                             <NavLink href="/overdose" title="Overdose" icon={<Coffee className="w-4 h-4" />} />
                             <NavLink href="/flight" title="Flight" icon={<Plane className="w-4 h-4" />} />
+                            <NavLink href="/habit" title="Habit" icon={<CheckCircle2 className="w-4 h-4" />} />
                         </nav>
                     )}
 

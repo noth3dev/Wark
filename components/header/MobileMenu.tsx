@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, BarChart2, Music, Flame, ClipboardList, Coffee, Plane } from "lucide-react";
+import { Clock, BarChart2, Music, Flame, ClipboardList, Coffee, Plane, CheckCircle2 } from "lucide-react";
 
 interface MobileMenuProps {
     isOpen: boolean;
@@ -34,6 +34,7 @@ export function MobileMenu({ isOpen, setIsOpen, user }: MobileMenuProps) {
                         <MobileNavLink href={`/homework-outer/${user?.id}`} icon={<ClipboardList className="w-5 h-5" />} label="Homework" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/overdose" icon={<Coffee className="w-5 h-5" />} label="Overdose" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/flight" icon={<Plane className="w-5 h-5" />} label="Flight" onClick={() => setIsOpen(false)} />
+                        <MobileNavLink href="/habit" icon={<CheckCircle2 className="w-5 h-5" />} label="Habit" onClick={() => setIsOpen(false)} />
                     </div>
                 </motion.nav>
             )}

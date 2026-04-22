@@ -58,7 +58,7 @@ export function HomeworkHeader({
                 <div className="flex-1 flex gap-2">
                     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
                         <TabsList className="bg-transparent h-auto p-0 flex gap-6 w-full sm:w-auto">
-                            {["tasks", "timer"].map(t => (
+                            {["tasks", "timer", "exams"].map(t => (
                                 <TabsTrigger key={t} value={t} className="bg-transparent p-0 pb-2 text-sm transition-all data-[state=active]:text-white data-[state=active]:shadow-[0_2px_0_0_#fff] rounded-none text-neutral-600 font-medium uppercase flex-1 sm:flex-none">
                                     {t}
                                 </TabsTrigger>
