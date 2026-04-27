@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight as ChevronRightIcon, Check, X, Save, Edit2, Play, Pause, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight as ChevronRightIcon, Check, X, Save, Edit2, Play, Pause, Plus, ListChecks, SlidersHorizontal } from "lucide-react";
 import * as Icons from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Input } from "../../components/ui/input";
@@ -41,6 +41,9 @@ export function TaskNode({
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(node.content);
     const [editTagId, setEditTagId] = useState(node.tag_id);
+    const [editIsSlider, setEditIsSlider] = useState(!!node.is_slider);
+    const [editTotal, setEditTotal] = useState(node.total_amount || 100);
+    const [editCurrent, setEditCurrent] = useState(node.current_amount || 0);
     const [input, setInput] = useState("");
     const [newTagId, setNewTagId] = useState<string | null>(null);
     const [hovered, setHovered] = useState(false);
@@ -53,10 +56,17 @@ export function TaskNode({
 
     const handleSave = () => {
         if (!editContent.trim()) return;
+        const updates = { 
+            content: editContent.trim(), 
+            tag_id: editTagId,
+            is_slider: editIsSlider,
+            total_amount: editTotal,
+            current_amount: editCurrent
+        };
         if (depth === 0) {
-            onUpdate({ content: editContent.trim(), tag_id: editTagId });
+            onUpdate(updates);
         } else {
-            onUpdateSub(node.id, { content: editContent.trim(), tag_id: editTagId });
+            onUpdateSub(node.id, updates);
         }
         setIsEditing(false);
     };
@@ -98,32 +108,38 @@ export function TaskNode({
                     {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
                 </button>
 
-                {/* Checkbox */}
+                {/* Checkbox or Slider Icon */}
                 <div className="relative shrink-0">
-                    <button
-                        onClick={() => (depth === 0 ? onToggle(node.status) : onToggleSub(node.id))}
-                        className={cn(
-                            "w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all duration-300",
-                            node.status === "completed"
-                                ? "bg-blue-500 border-blue-500"
-                                : node.status === "in_progress"
-                                    ? "border-blue-500/60 bg-blue-500/10"
-                                    : "border-neutral-800 hover:border-neutral-600 bg-white/[0.02]"
-                        )}
-                    >
-                        <AnimatePresence mode="wait">
-                            {node.status === "completed" && (
-                                <motion.div key="c" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                    <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
-                                </motion.div>
+                    {node.is_slider ? (
+                        <div className="w-[18px] h-[18px] flex items-center justify-center">
+                             <SlidersHorizontal className={cn("w-3.5 h-3.5", node.status === 'completed' ? "text-blue-400" : "text-neutral-700")} />
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => (depth === 0 ? onToggle(node.status) : onToggleSub(node.id))}
+                            className={cn(
+                                "w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all duration-300",
+                                node.status === "completed"
+                                    ? "bg-blue-500 border-blue-500"
+                                    : node.status === "in_progress"
+                                        ? "border-blue-500/60 bg-blue-500/10"
+                                        : "border-neutral-800 hover:border-neutral-600 bg-white/[0.02]"
                             )}
-                            {node.status === "in_progress" && (
-                                <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </button>
+                        >
+                            <AnimatePresence mode="wait">
+                                {node.status === "completed" && (
+                                    <motion.div key="c" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                        <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
+                                    </motion.div>
+                                )}
+                                {node.status === "in_progress" && (
+                                    <motion.div key="p" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </button>
+                    )}
                     {isRunning && (
                         <motion.div
                             animate={{ scale: [1, 1.6, 1], opacity: [0.4, 0, 0.4] }}
@@ -144,7 +160,7 @@ export function TaskNode({
                                 onKeyDown={(e) => e.key === "Enter" && handleSave()}
                                 className="h-8 bg-transparent border-0 border-b border-white/20 rounded-none px-0 text-base font-medium focus:border-white/50 focus:ring-0 placeholder:text-neutral-800 shadow-none text-white"
                             />
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                                 {tags?.map((tag: any) => {
                                     const Icon = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
                                     return (
@@ -166,28 +182,150 @@ export function TaskNode({
                                     );
                                 })}
                             </div>
+
+                            <div className="flex flex-col gap-4 p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Type Configuration</span>
+                                    <button 
+                                        onClick={() => setEditIsSlider(!editIsSlider)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all border",
+                                            editIsSlider ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-white/5 text-neutral-400 border-white/5"
+                                        )}
+                                    >
+                                        {editIsSlider ? <SlidersHorizontal className="w-3 h-3" /> : <ListChecks className="w-3 h-3" />}
+                                        {editIsSlider ? "Slider Mode" : "Checklist Mode"}
+                                    </button>
+                                </div>
+
+                                {editIsSlider && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex-1 space-y-1.5">
+                                                <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase">
+                                                    <span>Progress Value</span>
+                                                    <span>{editCurrent} / {editTotal}</span>
+                                                </div>
+                                                <input 
+                                                    type="range"
+                                                    min="0"
+                                                    max={editTotal}
+                                                    value={editCurrent}
+                                                    onChange={(e) => setEditCurrent(parseInt(e.target.value))}
+                                                    className="w-full h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black text-neutral-600 uppercase">Current</label>
+                                                <Input 
+                                                    type="number" 
+                                                    value={editCurrent}
+                                                    onChange={(e) => setEditCurrent(parseInt(e.target.value) || 0)}
+                                                    className="h-9 bg-white/5 border-white/5 text-sm font-bold focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black text-neutral-600 uppercase">Total</label>
+                                                <Input 
+                                                    type="number" 
+                                                    value={editTotal}
+                                                    onChange={(e) => setEditTotal(parseInt(e.target.value) || 1)}
+                                                    className="h-9 bg-white/5 border-white/5 text-sm font-bold focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex items-center gap-4">
                                 <button onClick={handleSave} className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 hover:text-blue-300 transition-colors uppercase">
                                     <Save className="w-3.5 h-3.5" /> CONFIRM
                                 </button>
-                                <button onClick={() => { setIsEditing(false); setEditContent(node.content); setEditTagId(node.tag_id); }} className="text-[10px] font-black text-neutral-600 hover:text-white transition-colors uppercase">
+                                <button onClick={() => { 
+                                    setIsEditing(false); 
+                                    setEditContent(node.content); 
+                                    setEditTagId(node.tag_id);
+                                    setEditIsSlider(!!node.is_slider);
+                                    setEditTotal(node.total_amount || 100);
+                                    setEditCurrent(node.current_amount || 0);
+                                }} className="text-[10px] font-black text-neutral-600 hover:text-white transition-colors uppercase">
                                     CANCEL
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <>
-                            {/* Task name */}
-                            <span className={cn(
-                                "truncate",
-                                depth === 0 ? "text-base font-medium tracking-tight" : "text-sm text-neutral-300 font-light",
-                                node.status === "completed" && "line-through text-neutral-600"
-                            )}>
-                                {depth === 0 && node.is_plus_alpha && (
-                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 mr-2 not-italic">ALPHA</span>
+                            {/* Task name & Progress for Slider */}
+                            <div className="flex flex-col gap-1.5 min-w-0">
+                                <span className={cn(
+                                    "truncate block",
+                                    depth === 0 ? "text-base font-medium tracking-tight" : "text-sm text-neutral-300 font-light",
+                                    node.status === "completed" && "line-through text-neutral-600"
+                                )}>
+                                    {depth === 0 && node.is_plus_alpha && (
+                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 mr-2 not-italic">ALPHA</span>
+                                    )}
+                                    {node.content}
+                                </span>
+                                
+                                {node.is_slider && (
+                                    <div className="flex items-center gap-5 pr-4 w-full sm:w-[240px] min-w-[140px] shrink-0">
+                                        <div className="flex-1 relative h-8 flex items-center group/slider">
+                                            {/* Track Background */}
+                                            <div className="absolute inset-x-0 h-[6px] bg-white/10 rounded-full overflow-hidden">
+                                                {/* Progress Bar with Glow */}
+                                                <motion.div 
+                                                    initial={false}
+                                                    animate={{ width: `${Math.min(100, (node.current_amount / node.total_amount) * 100)}%` }}
+                                                    className={cn(
+                                                        "h-full transition-all duration-300 relative",
+                                                        node.status === "completed" 
+                                                            ? "bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]" 
+                                                            : "bg-blue-500/60 shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+                                                    )}
+                                                />
+                                            </div>
+                                            {canEdit && (
+                                                <input 
+                                                    type="range"
+                                                    min="0"
+                                                    max={node.total_amount}
+                                                    value={node.current_amount}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value);
+                                                        const isDone = val >= node.total_amount;
+                                                        const updates: any = { 
+                                                            current_amount: val,
+                                                            is_completed: isDone,
+                                                            status: isDone ? "completed" : (val > 0 ? "in_progress" : "todo")
+                                                        };
+                                                        if (isDone) updates.completed_at = new Date().toISOString();
+                                                        else updates.completed_at = null;
+
+                                                        if (depth === 0) onUpdate(updates);
+                                                        else onUpdateSub(node.id, updates);
+                                                    }}
+                                                    className="absolute inset-x-0 w-full h-[24px] opacity-0 cursor-pointer z-10"
+                                                />
+                                            )}
+                                            {/* Slider Thumb Visual Overlay */}
+                                            {canEdit && (
+                                                <motion.div 
+                                                    initial={false}
+                                                    animate={{ left: `${Math.min(100, (node.current_amount / node.total_amount) * 100)}%` }}
+                                                    className="absolute w-2 h-5 bg-white rounded-full -ml-1 opacity-0 group-hover/slider:opacity-100 transition-all border-2 border-blue-500 shadow-[0_0_10px_rgba(255,255,255,0.5)] pointer-events-none"
+                                                />
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] font-black text-neutral-500 whitespace-nowrap uppercase tracking-tighter tabular-nums min-w-[60px] text-right">
+                                            {node.current_amount} <span className="text-neutral-800 mx-0.5">/</span> {node.total_amount}
+                                        </span>
+                                    </div>
                                 )}
-                                {node.content}
-                            </span>
+                            </div>
 
                             {node.status === "completed" && node.completed_at?.startsWith(new Date().toISOString().split("T")[0]) && (
                                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white/5 text-neutral-500 border border-white/5 shrink-0 uppercase">Done Today</span>

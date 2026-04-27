@@ -91,11 +91,11 @@ export function ExportDialog({
              }
         });
         
-        const filtered = allTasks.filter(item => 
-            item.is_completed && 
-            item.completed_at && 
-            item.completed_at.startsWith(todayStr)
-        );
+        const filtered = allTasks.filter(item => {
+            const doneToday = item.is_completed && item.completed_at && item.completed_at.startsWith(todayStr);
+            const sliderProgress = item.is_slider && item.current_amount > 0; // Show slider if any progress
+            return doneToday || sliderProgress;
+        });
         
         const seen = new Set();
         return filtered.filter(item => {

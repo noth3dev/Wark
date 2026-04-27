@@ -17,6 +17,9 @@ export interface Subtask {
     status: "todo" | "in_progress" | "completed";
     tag_id?: string | null;
     time_spent: number;
+    is_slider?: boolean;
+    total_amount?: number;
+    current_amount?: number;
 }
 
 export interface Homework {
@@ -32,6 +35,9 @@ export interface Homework {
     status: "todo" | "in_progress" | "completed";
     tag_id?: string | null;
     time_spent: number;
+    is_slider?: boolean;
+    total_amount?: number;
+    current_amount?: number;
 }
 
 export function useHomework(userIdOverride?: string) {
@@ -58,12 +64,16 @@ export function useHomework(userIdOverride?: string) {
             
             const formattedData = (data || []).map(h => ({
                 ...h,
-                time_spent: h.time_spent || 0,
-                status: h.status || (h.is_completed ? "completed" : "todo"),
+                is_slider: !!h.is_slider,
+                total_amount: h.total_amount || 0,
+                current_amount: h.current_amount || 0,
                 subtasks: Array.isArray(h.subtasks) ? h.subtasks.map((st: any) => ({
                     ...st,
                     time_spent: st.time_spent || 0,
-                    status: st.status || (st.is_completed ? "completed" : "todo")
+                    status: st.status || (st.is_completed ? "completed" : "todo"),
+                    is_slider: !!st.is_slider,
+                    total_amount: st.total_amount || 0,
+                    current_amount: st.current_amount || 0
                 })) : []
             }));
             
@@ -207,7 +217,7 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
-    const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null }) => {
+    const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null, is_slider?: boolean, total_amount?: number, current_amount?: number }) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === id);
         if (!homework) return;
@@ -233,7 +243,7 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
-    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null }) => {
+    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null, status?: "todo" | "in_progress" | "completed", is_completed?: boolean, is_slider?: boolean, total_amount?: number, current_amount?: number, completed_at?: string | null }) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === homeworkId);
         if (!homework) return;
@@ -261,9 +271,21 @@ export function useHomework(userIdOverride?: string) {
             };
         });
 
+        const nextStatus = Utils.recalculateParentStatus3(tasks);
+        const parentCompletedAt = nextStatus === "completed" ? (homework.completed_at || new Date().toISOString()) : null;
+
         try {
-            await saveHomework(homeworkId, { subtasks: tasks });
-            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, subtasks: tasks } : h));
+            const finalUpdates = {
+                status: nextStatus,
+                is_completed: nextStatus === "completed",
+                subtasks: tasks,
+                completed_at: parentCompletedAt
+            };
+            await saveHomework(homeworkId, finalUpdates);
+            setHomeworks(prev => prev.map(h => h.id === homeworkId ? { 
+                ...h, 
+                ...finalUpdates
+            } : h));
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 

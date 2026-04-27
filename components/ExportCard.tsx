@@ -83,8 +83,8 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                                                         </div>
                                                         <div className="space-y-1 min-w-0">
                                                             <span className="text-[10px] font-bold text-neutral-600 uppercase block leading-tight font-mono whitespace-nowrap">Category</span>
-                                                            <span className="text-[15px] font-medium text-neutral-200 uppercase whitespace-nowrap overflow-hidden">
-                                                                {t.name.length > 20 ? t.name.slice(0, 20) + '...' : t.name}
+                                                            <span className="text-[15px] font-medium text-neutral-200 uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]">
+                                                                {t.name}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -146,11 +146,32 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                             {completedTasks.length > 0 ? (
                                 completedTasks.map((task, idx) => (
                                     <div key={idx} className="flex gap-6 py-5 border-t border-neutral-900 first:border-0 items-start">
-                                        <div className="w-1 h-1 bg-white rounded-full mt-2.5 shrink-0 shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
-                                        <div className="space-y-1.5 min-w-0">
-                                            <p className="text-[15px] text-neutral-200 font-medium leading-relaxed break-words">
-                                                {task.content}
-                                            </p>
+                                        {task.is_slider ? (
+                                            <div className="w-1 h-3 bg-white mt-1.5 shrink-0" />
+                                        ) : (
+                                            <div className="w-1 h-1 bg-white rounded-full mt-2.5 shrink-0 shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+                                        )}
+                                        <div className="space-y-2.5 flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <p className="text-[15px] text-neutral-200 font-medium leading-tight whitespace-nowrap overflow-hidden text-ellipsis flex-1">
+                                                    {task.content}
+                                                </p>
+                                                {task.is_slider && (
+                                                    <span className="text-[10px] font-mono text-neutral-600 shrink-0">
+                                                        {task.current_amount} / {task.total_amount}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {task.is_slider && (
+                                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-white/30 rounded-full" 
+                                                        style={{ width: `${Math.min(100, (task.current_amount / task.total_amount) * 100)}%` }} 
+                                                    />
+                                                </div>
+                                            )}
+
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 {task.is_plus_alpha && (
                                                     <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/10 text-white/40 border border-white/5 uppercase">Alpha</span>
