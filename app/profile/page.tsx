@@ -7,8 +7,9 @@ import { User, Check, Loader2, Shield, Mail, BadgeCheck, AlertCircle } from "luc
 import { motion } from "framer-motion";
 
 export default function ProfilePage() {
-    const { user, profileName, refreshProfile, loading: authLoading } = useAuth();
+    const { user, profileName, fontPreference, refreshProfile, loading: authLoading } = useAuth();
     const [newName, setNewName] = useState("");
+    const [newFontPreference, setNewFontPreference] = useState("default");
     const [isUpdating, setIsUpdating] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
@@ -16,7 +17,10 @@ export default function ProfilePage() {
         if (profileName) {
             setNewName(profileName);
         }
-    }, [profileName]);
+        if (fontPreference) {
+            setNewFontPreference(fontPreference);
+        }
+    }, [profileName, fontPreference]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,6 +35,7 @@ export default function ProfilePage() {
                 .upsert({
                     id: user.id,
                     display_name: newName.trim(),
+                    font_preference: newFontPreference,
                     updated_at: new Date().toISOString()
                 });
 
@@ -142,6 +147,27 @@ export default function ProfilePage() {
                                 <p className="text-[10px] text-neutral-600 px-1">This name will be visible across the platform in sessions and reports.</p>
                             </div>
 
+                            <div className="space-y-4">
+                                <label className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 px-1">Tag Font Preference</label>
+                                <div className="flex gap-4 px-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewFontPreference("default")}
+                                        className={`px-6 py-3 rounded-xl border ${newFontPreference === 'default' ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' : 'border-white/10 text-neutral-400 hover:bg-white/5'} transition-all`}
+                                    >
+                                        <span className="font-semibold text-sm">Default Font</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewFontPreference("neurimbo")}
+                                        className={`px-6 py-3 rounded-xl border ${newFontPreference === 'neurimbo' ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' : 'border-white/10 text-neutral-400 hover:bg-white/5'} transition-all`}
+                                    >
+                                        <span className="font-neurimbo text-sm">Neurimbo Font</span>
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-neutral-600 px-1">Choose the font used for displaying tag names.</p>
+                            </div>
+
                             <div className="flex items-center justify-between pt-4">
                                 {status && (
                                     <motion.span
@@ -154,7 +180,7 @@ export default function ProfilePage() {
                                 )}
                                 <button
                                     type="submit"
-                                    disabled={isUpdating || newName === profileName}
+                                    disabled={isUpdating}
                                     className="px-8 py-3 bg-white text-black text-xs font-bold rounded-full hover:bg-neutral-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center space-x-2"
                                 >
                                     {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}

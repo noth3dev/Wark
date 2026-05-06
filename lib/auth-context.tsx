@@ -10,6 +10,7 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string) => Promise<void>;
     profileName: string;
+    fontPreference: string;
     loading: boolean;
     refreshProfile: () => Promise<void>;
 }
@@ -20,6 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileName, setProfileName] = useState("");
+    const [fontPreference, setFontPreference] = useState("default");
+
+    useEffect(() => {
+        if (typeof document !== 'undefined') {
+            if (fontPreference === 'neurimbo') {
+                document.body.classList.add('font-theme-neurimbo');
+            } else {
+                document.body.classList.remove('font-theme-neurimbo');
+            }
+        }
+    }, [fontPreference]);
 
     useEffect(() => {
         // Check active sessions and sets the user
@@ -41,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 fetchProfile(currentUser.id);
             } else {
                 setProfileName("");
+                setFontPreference("default");
                 setLoading(false);
             }
         });
@@ -52,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('display_name')
+                .select('display_name, font_preference')
                 .eq('id', userId)
                 .single();
 
@@ -67,9 +80,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 if (!createError && newProfile) {
                     setProfileName(newProfile.display_name);
+                    setFontPreference(newProfile.font_preference || "default");
                 }
             } else if (!error && data) {
                 setProfileName(data.display_name);
+                setFontPreference(data.font_preference || "default");
             }
         } catch (err) {
             console.error("Error fetching profile:", err);
@@ -99,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, loading, refreshProfile }}>
+        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, fontPreference, loading, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );
