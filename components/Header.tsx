@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive, Coffee, Plane } from "lucide-react"
+import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive, Coffee, Plane, Activity } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
 import { useSolvedProblems } from "../hooks/useSolvedProblems"
@@ -24,7 +24,7 @@ export function Header() {
     const { user } = useAuth()
     const pathname = usePathname()
     const status = useActiveSessionSync()
-    
+
     // Check if we are in an active sprint to hide the header
     const [isSprintActive, setIsSprintActive] = useState(false);
 
@@ -104,6 +104,7 @@ export function Header() {
                             <NavLink href="/overdose" title="Overdose" icon={<Coffee className="w-4 h-4" />} />
                             <NavLink href="/flight" title="Flight" icon={<Plane className="w-4 h-4" />} />
                             <NavLink href="/habit" title="Habit" icon={<CheckCircle2 className="w-4 h-4" />} />
+                            <NavLink href="/repeat" title="Repeat" icon={<Activity className="w-4 h-4" />} />
                         </nav>
                     )}
 
@@ -157,7 +158,7 @@ export function Header() {
                             </button>
                         </>
                     ) : (
-                        <Link 
+                        <Link
                             href="/"
                             className="text-[10px] font-black text-white bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-full border border-white/10 transition-all uppercase tracking-widest"
                         >
