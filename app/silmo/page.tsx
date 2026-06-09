@@ -59,7 +59,7 @@ export default function SilmoPage() {
   const [globalTitles, setGlobalTitles] = useState<string[]>([]);
   const [autoStartExamType, setAutoStartExamType] = useState<ExamType | undefined>(undefined);
   const [autoStartExamKey, setAutoStartExamKey] = useState<string | undefined>(undefined);
-  
+
   const [isGlobalScheduleModalOpen, setIsGlobalScheduleModalOpen] = useState(false);
   const [globalScheduleTitle, setGlobalScheduleTitle] = useState('');
   const [globalScheduleType, setGlobalScheduleType] = useState<ExamType>('korean');
@@ -478,10 +478,10 @@ export default function SilmoPage() {
           </div>
           <h2 className="text-xl font-bold text-neutral-100 font-suit">실모단 전용 서비스입니다</h2>
           <p className="text-xs text-neutral-400 font-suit leading-relaxed">
-            죄송합니다. 이 페이지는 실모단(is_silmodan = 1)으로 승인된 계정만 접근하실 수 있습니다.
+            죄송합니다. 이 페이지는 승인된 계정만 접근하실 수 있습니다.
           </p>
           <p className="text-[11px] text-neutral-600 font-suit">
-            가입 및 승인 문의는 세준(김세준)님에게 연락바랍니다.
+            문의는 안받습니다
           </p>
         </div>
       </main>
@@ -583,7 +583,7 @@ export default function SilmoPage() {
                   <CalendarIcon className="w-4 h-4 text-emerald-400" />
                   실모 일정 (오늘 및 예정된 실모)
                 </h3>
-                <button 
+                <button
                   onClick={() => {
                     setGlobalScheduleDate(new Date().toISOString().split('T')[0]);
                     setIsGlobalScheduleModalOpen(true);
@@ -627,14 +627,13 @@ export default function SilmoPage() {
                             완료됨
                           </span>
                         ) : (
-                          <button 
+                          <button
                             disabled={isRunning}
-                            onClick={() => handleTakeGlobalSchedule(schedule)} 
-                            className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${
-                              isRunning
+                            onClick={() => handleTakeGlobalSchedule(schedule)}
+                            className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${isRunning
                                 ? 'bg-neutral-900 text-neutral-600 border-neutral-850 cursor-not-allowed'
                                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                            }`}
+                              }`}
                           >
                             응시
                           </button>
@@ -711,8 +710,8 @@ export default function SilmoPage() {
           <TabsContent value="timer">
             <div className="max-w-xl mx-auto min-h-[380px] py-4">
               <div className="w-full max-w-2xl mx-auto h-[600px]">
-                <ExamTimer 
-                  onExamComplete={handleExamComplete} 
+                <ExamTimer
+                  onExamComplete={handleExamComplete}
                   onSessionChange={handleSessionChange}
                   activeSessionPhase={localPhase}
                   autoStartType={autoStartExamType}
@@ -770,10 +769,10 @@ export default function SilmoPage() {
                 {globalTitles.map(title => {
                   const titleRecords = allRecords.filter(r => r.title === title);
                   const hasTaken = personalRecords.some(r => r.title === title);
-                  
+
                   // Sort records by totalScore descending to make a mini-leaderboard
                   const sortedTitleRecords = [...titleRecords].sort((a, b) => b.totalScore - a.totalScore);
-                  
+
                   return (
                     <div key={title} className="p-4 rounded-xl bg-neutral-900/40 border border-neutral-800/80 space-y-3 hover:border-neutral-700 transition-colors">
                       <div className="flex justify-between items-start border-b border-neutral-800 pb-2">
@@ -789,7 +788,7 @@ export default function SilmoPage() {
                           </span>
                         )}
                       </div>
-                      
+
                       {hasTaken ? (
                         <div className="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
                           {sortedTitleRecords.map((r, i) => {
@@ -908,11 +907,10 @@ export default function SilmoPage() {
                     key={t}
                     onClick={() => setGlobalScheduleType(t)}
                     type="button"
-                    className={`py-1.5 rounded border text-[11px] font-medium transition-all ${
-                      globalScheduleType === t
+                    className={`py-1.5 rounded border text-[11px] font-medium transition-all ${globalScheduleType === t
                         ? 'border-neutral-200 bg-neutral-100 text-neutral-950'
                         : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-750'
-                    }`}
+                      }`}
                   >
                     {t === 'korean' ? '국어' : t === 'math' ? '수학' : '국어+수학'}
                   </button>
