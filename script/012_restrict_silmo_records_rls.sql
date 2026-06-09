@@ -35,3 +35,16 @@ USING (
   OR 
   public.has_taken_exam(title, auth.uid()::text)
 );
+
+-- ====================================================================
+-- 전역 실모 일정(silmo_global_schedules) 삭제 정책 추가
+-- 등록한 본인(created_by = auth.uid()::text)만 삭제가 가능하게 합니다.
+-- ====================================================================
+
+-- 4. 기존 삭제 정책 삭제 후 재생성
+DROP POLICY IF EXISTS "Allow authenticated users to delete silmo_global_schedules" ON public.silmo_global_schedules;
+CREATE POLICY "Allow authenticated users to delete silmo_global_schedules" 
+ON public.silmo_global_schedules FOR DELETE 
+TO authenticated 
+USING (auth.uid()::text = created_by);
+

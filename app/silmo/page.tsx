@@ -26,7 +26,8 @@ import {
   deleteActiveExamSession,
   fetchGlobalSchedules,
   createGlobalSchedule,
-  fetchAllGlobalSchedules
+  fetchAllGlobalSchedules,
+  deleteGlobalSchedule
 } from '@/lib/services/silmoService';
 import { Calendar as CalendarIcon, Trophy, Loader2, Database, AlertCircle, Clock, Activity, BarChart2, Plus } from 'lucide-react';
 
@@ -323,6 +324,28 @@ export default function SilmoPage() {
     }
   };
 
+  const handleDeleteGlobalSchedule = async (id: string, title: string) => {
+    if (!confirm(`'${title}' 일정을 삭제하시겠습니까?`)) return;
+    try {
+      await deleteGlobalSchedule(id);
+      // refetch
+      const todayStr = new Date().toISOString().split('T')[0];
+      const data = await fetchGlobalSchedules(todayStr);
+      const formattedGlobalSchedules: GlobalSchedule[] = (data || []).map(s => ({
+        id: s.id,
+        date: s.date,
+        title: s.title,
+        type: s.type as ExamType,
+        createdBy: s.created_by,
+        createdAt: s.created_at
+      }));
+      setGlobalSchedules(formattedGlobalSchedules);
+    } catch (e) {
+      console.error('Failed to delete global schedule', e);
+      alert('일정 삭제에 실패했습니다.');
+    }
+  };
+
   // Save score to database
   const handleSaveScore = async (title: string, koreanScore: number | null, mathScore: number | null) => {
     if (!authUser || !finishedExamType) return;
@@ -557,14 +580,24 @@ export default function SilmoPage() {
 
                   return (
                     <div key={schedule.id} className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 flex flex-col gap-3 hover:border-neutral-700 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-semibold text-sm text-neutral-100">{schedule.title}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="font-semibold text-sm text-neutral-100 truncate">{schedule.title}</span>
                           <span className="text-[10px] text-neutral-500 font-medium font-suit">{schedule.date}</span>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 font-medium">
-                          {schedule.type === 'korean' ? '국어' : schedule.type === 'math' ? '수학' : '국어+수학'}
-                        </span>
+                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 font-medium">
+                            {schedule.type === 'korean' ? '국어' : schedule.type === 'math' ? '수학' : '국어+수학'}
+                          </span>
+                          {schedule.createdBy === authUser.id && (
+                            <button
+                              onClick={() => handleDeleteGlobalSchedule(schedule.id, schedule.title)}
+                              className="text-[10px] px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-all font-semibold cursor-pointer"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex justify-between items-end mt-2">
                         <span className="text-xs text-neutral-500 font-suit">등록자: {profiles[schedule.createdBy] || (schedule.createdBy && schedule.createdBy.substring(0, 6)) || '알수없음'}</span>

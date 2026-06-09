@@ -111,3 +111,11 @@ export async function fetchAllGlobalSchedules() {
   if (error) throw error;
   return data;
 }
+
+export async function deleteGlobalSchedule(id: string) {
+  const { error } = await supabase
+    .from('silmo_global_schedules')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
