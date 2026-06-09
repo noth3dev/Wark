@@ -32,7 +32,7 @@ import {
 import { Calendar as CalendarIcon, Trophy, Loader2, Database, AlertCircle, Clock, Activity, BarChart2, Plus } from 'lucide-react';
 
 export default function SilmoPage() {
-  const { user: authUser, profileName, loading: authLoading } = useAuth();
+  const { user: authUser, profileName, loading: authLoading, isSilmodan } = useAuth();
 
   // Database vs Local fallback status
   const [isDbConnected, setIsDbConnected] = useState<boolean>(true);
@@ -462,6 +462,27 @@ export default function SilmoPage() {
         </div>
         <div className="w-full max-w-md px-6 mt-6">
           <Auth />
+        </div>
+      </main>
+    );
+  }
+
+  // Not a Silmodan member (is_silmodan !== 1)
+  if (authUser && !isSilmodan) {
+    return (
+      <main className="h-full bg-background text-foreground flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.05),transparent_70%)] pointer-events-none" />
+        <div className="z-10 text-center max-w-md px-6 space-y-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-2">
+            <AlertCircle className="w-6 h-6 animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-100 font-suit">실모단 전용 서비스입니다</h2>
+          <p className="text-xs text-neutral-400 font-suit leading-relaxed">
+            죄송합니다. 이 페이지는 실모단(is_silmodan = 1)으로 승인된 계정만 접근하실 수 있습니다.
+          </p>
+          <p className="text-[11px] text-neutral-600 font-suit">
+            가입 및 승인 문의는 세준(김세준)님에게 연락바랍니다.
+          </p>
         </div>
       </main>
     );

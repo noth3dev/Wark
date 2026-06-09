@@ -13,6 +13,7 @@ interface AuthContextType {
     fontPreference: string;
     loading: boolean;
     refreshProfile: () => Promise<void>;
+    isSilmodan: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [profileName, setProfileName] = useState("");
     const [fontPreference, setFontPreference] = useState("default");
+    const [isSilmodan, setIsSilmodan] = useState(false);
 
     useEffect(() => {
         if (typeof document !== 'undefined') {
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setProfileName("");
                 setFontPreference("default");
+                setIsSilmodan(false);
                 setLoading(false);
             }
         });
@@ -65,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('display_name, font_preference')
+                .select('display_name, font_preference, is_silmodan')
                 .eq('id', userId)
                 .single();
 
@@ -81,10 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!createError && newProfile) {
                     setProfileName(newProfile.display_name);
                     setFontPreference(newProfile.font_preference || "default");
+                    setIsSilmodan(newProfile.is_silmodan === 1);
                 }
             } else if (!error && data) {
                 setProfileName(data.display_name);
                 setFontPreference(data.font_preference || "default");
+                setIsSilmodan(data.is_silmodan === 1);
             }
         } catch (err) {
             console.error("Error fetching profile:", err);
@@ -114,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, fontPreference, loading, refreshProfile }}>
+        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, fontPreference, loading, refreshProfile, isSilmodan }}>
             {children}
         </AuthContext.Provider>
     );

@@ -48,3 +48,8 @@ ON public.silmo_global_schedules FOR DELETE
 TO authenticated 
 USING (auth.uid()::text = created_by);
 
+-- ====================================================================
+-- 5. 프로필(profiles) 테이블에 실모단 가입 여부(is_silmodan) 컬럼 추가
+-- ====================================================================
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_silmodan INTEGER DEFAULT 0;
+
