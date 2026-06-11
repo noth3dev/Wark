@@ -15,6 +15,7 @@ export default function RecordsPage() {
     personalRecords,
     globalTitles,
     globalSchedules,
+    allGlobalSchedules,
     allLeaderboardUsers,
     profiles,
     reviews,
@@ -100,6 +101,11 @@ export default function RecordsPage() {
 
                   const isExpanded = expandedTitle === title;
 
+                  // 해당 타이틀의 문제/해설 PDF URL 조회
+                  const scheduleForTitle = allGlobalSchedules.find(s => s.title === title);
+                  const questionPdfUrl = scheduleForTitle?.questionPdfUrl;
+                  const solutionPdfUrl = scheduleForTitle?.solutionPdfUrl;
+
                   return (
                     <div
                       key={title}
@@ -178,7 +184,39 @@ export default function RecordsPage() {
                                   )}
                                 </div>
 
-                                <div className="mt-auto">
+                                <div className="mt-auto space-y-2">
+                                  {/* 문제지 / 해설지 다운로드 */}
+                                  {(questionPdfUrl || solutionPdfUrl) && (
+                                    <div className="flex gap-1.5">
+                                      {questionPdfUrl && (
+                                        <a
+                                          href={questionPdfUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-neutral-800/60 border border-neutral-700/60 text-neutral-300 hover:bg-neutral-700/60 hover:text-neutral-100 transition-all font-suit font-medium"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          문제지
+                                          <Download className="w-2.5 h-2.5 opacity-60" />
+                                        </a>
+                                      )}
+                                      {solutionPdfUrl && (
+                                        <a
+                                          href={solutionPdfUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-neutral-800/60 border border-neutral-700/60 text-neutral-300 hover:bg-neutral-700/60 hover:text-neutral-100 transition-all font-suit font-medium"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <BookOpen className="w-3 h-3" />
+                                          해설지
+                                          <Download className="w-2.5 h-2.5 opacity-60" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* 총평 */}
                                   {review ? (
                                     <div className="flex items-center justify-between">
                                       <a
@@ -250,6 +288,34 @@ export default function RecordsPage() {
                               <span className="text-[10px] text-neutral-500 font-suit leading-normal">
                                 응시 후 점수와 다른 사람들의 기록을 확인할 수 있습니다.
                               </span>
+                              {(questionPdfUrl || solutionPdfUrl) && (
+                                <div className="flex gap-1.5 mt-3 w-full max-w-[180px]">
+                                  {questionPdfUrl && (
+                                    <a
+                                      href={questionPdfUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-neutral-800/60 border border-neutral-700/60 text-neutral-400 hover:text-neutral-200 transition-all font-suit"
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      문제지
+                                    </a>
+                                  )}
+                                  {solutionPdfUrl && (
+                                    <a
+                                      href={solutionPdfUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-neutral-800/60 border border-neutral-700/60 text-neutral-400 hover:text-neutral-200 transition-all font-suit"
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <BookOpen className="w-3 h-3" />
+                                      해설지
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

@@ -63,7 +63,9 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
   const showMath = examType === 'math' || examType === 'both';
 
   // 수학 계산 파생 상태
-  const mathWrongNumbers = mathWrongVal.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 30);
+  const mathWrongNumbers = Array.from(new Set(
+    mathWrongVal.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 30)
+  ));
   const mathDeduction = mathWrongNumbers.reduce((sum, n) => sum + getMathQuestionScore(n), 0);
   const mathCalculatedScore = Math.max(0, 100 - mathDeduction);
 
@@ -92,6 +94,14 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
       });
       if (invalidNumbers.length > 0) {
         newErrors.math = `유효하지 않은 번호가 포함되어 있습니다: ${invalidNumbers.join(', ')}`;
+      } else {
+        const rawNums = mathWrongVal.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+        const uniqueNums = new Set(rawNums);
+        if (rawNums.length !== uniqueNums.size) {
+          const seen = new Set<number>();
+          const dupes = rawNums.filter(n => seen.has(n) || !seen.add(n));
+          newErrors.math = `중복된 번호가 있습니다: ${Array.from(new Set(dupes)).join(', ')}`;
+        }
       }
     }
 

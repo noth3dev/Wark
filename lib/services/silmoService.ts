@@ -66,7 +66,7 @@ export async function upsertActiveExamSession(
       status: phase === 'break' ? 'break' : 'active',
       current_phase: phase,
       exam_type: type,
-      remaining_seconds: remaining,
+      remaining_seconds: Math.round(remaining),
       updated_at: new Date().toISOString()
     });
   if (error) throw error;

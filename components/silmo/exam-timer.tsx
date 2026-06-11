@@ -26,6 +26,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
   const [totalDuration, setTotalDuration] = useState<number>(0);
   const [isSpeedUp, setIsSpeedUp] = useState<boolean>(false);
   const [examTitle, setExamTitle] = useState<string>('실전 모의고사');
+  const [targetEndTime, setTargetEndTime] = useState<number | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,14 +44,27 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        // Resume session
         setIsActive(data.isActive);
         setIsPaused(data.isPaused);
         setSelectedType(data.type);
         setCurrentPhase(data.currentPhase);
-        setRemainingSeconds(data.remainingSeconds);
         setTotalDuration(data.totalDuration);
         setExamTitle(data.examTitle || '실전 모의고사');
+        
+        if (data.isActive && !data.isPaused && data.targetEndTime) {
+          const now = Date.now();
+          const calculatedRemaining = (data.targetEndTime - now) / 1000;
+          if (calculatedRemaining <= 0) {
+            setRemainingSeconds(0);
+            setTargetEndTime(null);
+          } else {
+            setRemainingSeconds(calculatedRemaining);
+            setTargetEndTime(data.targetEndTime);
+          }
+        } else {
+          setRemainingSeconds(data.remainingSeconds);
+          setTargetEndTime(null);
+        }
       } catch (e) {
         console.error('Failed to parse saved session', e);
       }
@@ -67,30 +81,34 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
         currentPhase,
         remainingSeconds,
         totalDuration,
-        examTitle
+        examTitle,
+        targetEndTime
       }));
       onSessionChange(currentPhase, remainingSeconds, totalDuration, selectedType);
     } else {
       localStorage.removeItem('silmo_active_session');
       onSessionChange('finished', 0, 0, selectedType);
     }
-  }, [isActive, isPaused, selectedType, currentPhase, remainingSeconds, totalDuration, examTitle, onSessionChange]);
+  }, [isActive, isPaused, selectedType, currentPhase, remainingSeconds, totalDuration, examTitle, targetEndTime, onSessionChange]);
 
   // Main timer ticking effect
   useEffect(() => {
     if (isActive && !isPaused) {
-      // Calculate target end time based on the remaining seconds at the moment of start/resume
-      const currentRemaining = remainingSeconds;
-      const msRemaining = currentRemaining * 1000 / (isSpeedUp ? 60 : 1);
-      const targetEndTime = Date.now() + msRemaining;
+      // Calculate target end time if not set yet (e.g. just unpaused or started)
+      let currentTarget = targetEndTime;
+      if (!currentTarget) {
+        currentTarget = Date.now() + remainingSeconds * 1000 / (isSpeedUp ? 60 : 1);
+        setTargetEndTime(currentTarget);
+      }
 
       timerRef.current = setInterval(() => {
         const now = Date.now();
-        const msLeft = targetEndTime - now;
+        const msLeft = currentTarget! - now;
         
         if (msLeft <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
           setRemainingSeconds(0);
+          setTargetEndTime(null);
           handlePhaseTransition();
         } else {
           // Convert back to normal seconds for state
@@ -99,13 +117,16 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
       }, 250); // Tick more frequently for smooth UI and accuracy
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (isPaused && targetEndTime !== null) {
+        setTargetEndTime(null);
+      }
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isPaused, currentPhase, isSpeedUp]);
+  }, [isActive, isPaused, currentPhase, isSpeedUp, targetEndTime]);
 
   const startExam = (type: ExamType, title?: string) => {
     let duration = 0;
@@ -126,6 +147,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     setCurrentPhase(startPhase);
     setRemainingSeconds(duration);
     setTotalDuration(duration);
+    setTargetEndTime(null); // Will be calculated in the ticking effect
     setIsActive(true);
     setIsPaused(false);
     setExamTitle(title || '실전 모의고사');
@@ -138,11 +160,13 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
         setCurrentPhase('break');
         setRemainingSeconds(BREAK_DURATION);
         setTotalDuration(BREAK_DURATION);
+        setTargetEndTime(null);
       } else if (currentPhase === 'break') {
         // Transition to math
         setCurrentPhase('math');
         setRemainingSeconds(MATH_DURATION);
         setTotalDuration(MATH_DURATION);
+        setTargetEndTime(null);
       } else {
         // Both completed
         completeExam();
@@ -158,6 +182,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     setIsPaused(false);
     setCurrentPhase('finished');
     setRemainingSeconds(0);
+    setTargetEndTime(null);
     setIsSpeedUp(false);
     onExamComplete(selectedType);
   };
@@ -174,6 +199,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
       setIsPaused(false);
       setCurrentPhase('finished');
       setRemainingSeconds(0);
+      setTargetEndTime(null);
       setIsSpeedUp(false);
       localStorage.removeItem('silmo_active_session');
       onSessionChange('finished', 0, 0, selectedType);
@@ -186,10 +212,12 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
         setCurrentPhase('break');
         setRemainingSeconds(BREAK_DURATION);
         setTotalDuration(BREAK_DURATION);
+        setTargetEndTime(null);
       } else if (currentPhase === 'break') {
         setCurrentPhase('math');
         setRemainingSeconds(MATH_DURATION);
         setTotalDuration(MATH_DURATION);
+        setTargetEndTime(null);
       } else {
         completeExam();
       }
@@ -199,7 +227,19 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
   };
 
   const togglePause = () => {
-    setIsPaused(!isPaused);
+    setIsPaused((prev) => {
+      const willPause = !prev;
+      if (!willPause) {
+        // If unpausing, clear target end time so it recalculates
+        setTargetEndTime(null);
+      }
+      return willPause;
+    });
+  };
+
+  const handleSpeedUpToggle = () => {
+    setIsSpeedUp(!isSpeedUp);
+    setTargetEndTime(null); // Recalculate target end time with new speed factor
   };
 
   // Time formatter (HH:MM:SS)
@@ -355,7 +395,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
               <span className="text-[10px] text-neutral-500 font-suit font-medium uppercase tracking-wider">Test Control:</span>
               <div className="flex gap-1.5">
                 <button
-                  onClick={() => setIsSpeedUp(!isSpeedUp)}
+                  onClick={handleSpeedUpToggle}
                   className={`px-2 py-1 rounded text-[10px] font-mono border font-medium transition-all ${isSpeedUp 
                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
                     : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-300 hover:border-neutral-700'}`}
