@@ -135,6 +135,13 @@ export function HistoryTable({ records }: HistoryTableProps) {
                 </div>
               </th>
               <th 
+                className="py-3.5 px-4 text-left cursor-pointer group hover:text-neutral-300 transition-colors"
+              >
+                <div className="flex items-center gap-1">
+                  오답 문항
+                </div>
+              </th>
+              <th 
                 className="py-3.5 px-4 text-right cursor-pointer group hover:text-neutral-300 transition-colors pr-6"
                 onClick={() => handleSort('total')}
               >
@@ -169,6 +176,11 @@ export function HistoryTable({ records }: HistoryTableProps) {
                 </td>
                 <td className="py-3.5 px-4 text-right font-mono text-neutral-300 tabular-nums">
                   {record.mathScore !== null ? `${record.mathScore}점` : '-'}
+                </td>
+                <td className="py-3.5 px-4 text-left text-[10px] text-neutral-500 font-mono">
+                  {record.koreanWrongNumbers && <span className="block text-blue-400">국: {record.koreanWrongNumbers}</span>}
+                  {record.mathWrongNumbers && <span className="block text-rose-400">수: {record.mathWrongNumbers}</span>}
+                  {!record.koreanWrongNumbers && !record.mathWrongNumbers && '-'}
                 </td>
                 <td className="py-3.5 px-4 text-right font-mono font-bold text-neutral-100 tabular-nums pr-6">
                   {record.totalScore}점

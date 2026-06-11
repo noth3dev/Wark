@@ -17,6 +17,8 @@ export interface ExamRecord {
   title: string; // 실모 이름
   koreanScore?: number | null;
   mathScore?: number | null;
+  koreanWrongNumbers?: string | null;
+  mathWrongNumbers?: string | null;
   totalScore: number;
   createdAt: string;
 }
@@ -60,6 +62,18 @@ export interface GlobalSchedule {
   createdBy: string;
   createdAt: string;
   is_silvival?: boolean;
+  questionPdfUrl?: string | null;
+  solutionPdfUrl?: string | null;
+  isClosed?: boolean;
+}
+
+export interface ScheduleReview {
+  id: string;
+  scheduleTitle: string;
+  uploaderId: string;
+  reviewPdfUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ExamPoolItem {

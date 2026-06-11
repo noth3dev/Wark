@@ -35,8 +35,18 @@ function SilmoLayoutContent({ children }: { children: React.ReactNode }) {
     setGlobalScheduleType,
     globalScheduleDate,
     setGlobalScheduleDate,
+    globalScheduleQuestionFile,
+    setGlobalScheduleQuestionFile,
+    globalScheduleSolutionFile,
+    setGlobalScheduleSolutionFile,
     handleCreateGlobalSchedule
   } = useSilmo();
+
+  const [isCreatingSchedule, setIsCreatingSchedule] = React.useState(false);
+  const handleCreateScheduleWithLoading = async () => {
+    setIsCreatingSchedule(true);
+    try { await handleCreateGlobalSchedule(); } finally { setIsCreatingSchedule(false); }
+  };
 
   const pathname = usePathname();
 
@@ -232,21 +242,57 @@ function SilmoLayoutContent({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-neutral-400 font-medium flex items-center gap-1">
+                문제지 PDF
+                <span className="text-neutral-600">(선택)</span>
+              </label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={e => setGlobalScheduleQuestionFile(e.target.files?.[0] || null)}
+                className="w-full text-[11px] text-neutral-400 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:bg-neutral-800 file:text-neutral-300 hover:file:bg-neutral-700 cursor-pointer"
+              />
+              {globalScheduleQuestionFile && (
+                <span className="text-[10px] text-emerald-400">✓ {globalScheduleQuestionFile.name}</span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-neutral-400 font-medium flex items-center gap-1">
+                해설지 PDF
+                <span className="text-neutral-600">(선택)</span>
+              </label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={e => setGlobalScheduleSolutionFile(e.target.files?.[0] || null)}
+                className="w-full text-[11px] text-neutral-400 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:bg-neutral-800 file:text-neutral-300 hover:file:bg-neutral-700 cursor-pointer"
+              />
+              {globalScheduleSolutionFile && (
+                <span className="text-[10px] text-emerald-400">✓ {globalScheduleSolutionFile.name}</span>
+              )}
+            </div>
           </div>
 
           <DialogFooter className="flex gap-1.5 justify-end">
             <Button
               variant="outline"
               onClick={() => setIsGlobalScheduleModalOpen(false)}
+              disabled={isCreatingSchedule}
               className="border-neutral-800 text-neutral-400 hover:bg-neutral-900 text-[10px] py-1 h-7 px-3"
             >
               취소
             </Button>
             <Button
-              onClick={handleCreateGlobalSchedule}
-              className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400 text-[10px] py-1 h-7 px-3 font-semibold"
+              onClick={handleCreateScheduleWithLoading}
+              disabled={isCreatingSchedule}
+              className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400 text-[10px] py-1 h-7 px-3 font-semibold min-w-[64px]"
             >
-              등록하기
+              {isCreatingSchedule ? (
+                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />업로드중</span>
+              ) : '등록하기'}
             </Button>
           </DialogFooter>
         </DialogContent>

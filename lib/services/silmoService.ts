@@ -13,7 +13,8 @@ export async function fetchSilmoRecords() {
 export async function fetchUserProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name');
+    .select('id, display_name')
+    .eq('is_silmodan', 1);
   if (error) throw error;
   return data;
 }
@@ -32,7 +33,9 @@ export async function saveScoreRecord(
   type: ExamType,
   koreanScore: number | null,
   mathScore: number | null,
-  totalScore: number
+  totalScore: number,
+  koreanWrongNumbers?: string | null,
+  mathWrongNumbers?: string | null
 ) {
   const { error } = await supabase
     .from('silmo_records')
@@ -42,6 +45,8 @@ export async function saveScoreRecord(
       type,
       korean_score: koreanScore,
       math_score: mathScore,
+      korean_wrong_numbers: koreanWrongNumbers,
+      math_wrong_numbers: mathWrongNumbers,
       total_score: totalScore,
       created_at: new Date().toISOString()
     }]);
@@ -90,7 +95,9 @@ export async function createGlobalSchedule(
   dateStr: string,
   title: string,
   type: ExamType,
-  createdBy: string
+  createdBy: string,
+  questionPdfUrl?: string,
+  solutionPdfUrl?: string
 ) {
   const { error } = await supabase
     .from('silmo_global_schedules')
@@ -99,15 +106,25 @@ export async function createGlobalSchedule(
       title,
       type,
       created_by: createdBy,
+      question_pdf_url: questionPdfUrl || null,
+      solution_pdf_url: solutionPdfUrl || null,
       created_at: new Date().toISOString()
     }]);
+  if (error) throw error;
+}
+
+export async function closeGlobalSchedule(id: string) {
+  const { error } = await supabase
+    .from('silmo_global_schedules')
+    .update({ is_closed: true })
+    .eq('id', id);
   if (error) throw error;
 }
 
 export async function fetchAllGlobalSchedules() {
   const { data, error } = await supabase
     .from('silmo_global_schedules')
-    .select('id, date, title, type, created_by, is_silvival, created_at');
+    .select('id, date, title, type, created_by, is_silvival, created_at, question_pdf_url, solution_pdf_url, is_closed');
   if (error) throw error;
   return data;
 }
@@ -219,7 +236,7 @@ export async function lockInExam(
   }
 }
 
-export async function uploadSilmoPdf(file: File, type: 'question' | 'solution'): Promise<string> {
+export async function uploadSilmoPdf(file: File, type: 'question' | 'solution' | 'review'): Promise<string> {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${type}.${fileExt}`;
   
@@ -234,6 +251,30 @@ export async function uploadSilmoPdf(file: File, type: 'question' | 'solution'):
     .getPublicUrl(fileName);
 
   return data.publicUrl;
+}
+
+export async function fetchScheduleReviews() {
+  const { data, error } = await supabase
+    .from('silmo_schedule_reviews')
+    .select('*');
+  if (error) throw error;
+  return data;
+}
+
+export async function saveScheduleReview(
+  scheduleTitle: string,
+  uploaderId: string,
+  reviewPdfUrl: string
+) {
+  const { error } = await supabase
+    .from('silmo_schedule_reviews')
+    .upsert({
+      schedule_title: scheduleTitle,
+      uploader_id: uploaderId,
+      review_pdf_url: reviewPdfUrl,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'schedule_title' });
+  if (error) throw error;
 }
 
 export async function fetchSilvivalRounds(seasonIndex: number = 0) {

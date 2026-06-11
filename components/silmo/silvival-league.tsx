@@ -454,7 +454,7 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
         <div className="flex justify-between items-center px-4 py-2 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-400 text-xs font-suit">
           <div className="flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5" />
-            <span>실시간 DB 동기화 활성화 — 실모 기록 자동 연동</span>
+            <span>DB 정상</span>
           </div>
           {syncing && <div className="flex items-center gap-1 text-[10px]"><Loader2 className="w-3 h-3 animate-spin" />동기화중...</div>}
         </div>
@@ -547,10 +547,10 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
                     key={rIdx}
                     onClick={() => setActiveRoundIndex(rIdx)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-suit transition-all flex items-center gap-1 ${activeRoundIndex === rIdx
-                        ? 'bg-indigo-500 text-white'
-                        : r.isClosed
-                          ? 'bg-neutral-900 border border-neutral-700 text-neutral-400'
-                          : 'bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-neutral-200'
+                      ? 'bg-indigo-500 text-white'
+                      : r.isClosed
+                        ? 'bg-neutral-900 border border-neutral-700 text-neutral-400'
+                        : 'bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-neutral-200'
                       }`}
                   >
                     {r.isClosed && <Lock className="w-2.5 h-2.5" />}

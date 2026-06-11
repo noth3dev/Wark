@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { ExamRecord, ExamType, ExamPhase, LiveUserStatus, User, GlobalSchedule } from '@/types/silmo';
+import { ExamRecord, ExamType, ExamPhase, LiveUserStatus, User, GlobalSchedule, ScheduleReview } from '@/types/silmo';
 import { ScheduledExam } from '@/components/silmo/weekly-calendar';
 import {
   fetchSilmoRecords,
@@ -15,12 +15,15 @@ import {
   createGlobalSchedule,
   fetchAllGlobalSchedules,
   deleteGlobalSchedule,
+  closeGlobalSchedule,
   fetchSilmoExamPool,
   createExamPool,
   voteExamPool,
   deleteExamPool,
   lockInExam,
-  uploadSilmoPdf
+  uploadSilmoPdf,
+  fetchScheduleReviews,
+  saveScheduleReview
 } from '@/lib/services/silmoService';
 import { ExamPoolItem } from '@/types/silmo';
 
@@ -39,6 +42,7 @@ interface SilmoContextType {
   allLeaderboardUsers: User[];
   isSilmodan: boolean;
   loading: boolean;
+  reviews: ScheduleReview[];
   
   // Timer phase state
   localPhase: ExamPhase;
@@ -67,6 +71,10 @@ interface SilmoContextType {
   setGlobalScheduleType: (t: ExamType) => void;
   globalScheduleDate: string;
   setGlobalScheduleDate: (t: string) => void;
+  globalScheduleQuestionFile: File | null;
+  setGlobalScheduleQuestionFile: (f: File | null) => void;
+  globalScheduleSolutionFile: File | null;
+  setGlobalScheduleSolutionFile: (f: File | null) => void;
   
   // Weekly schedules
   scheduledExams: ScheduledExam[];
@@ -87,10 +95,11 @@ interface SilmoContextType {
   handleTakeGlobalSchedule: (schedule: GlobalSchedule) => void;
   handleCreateGlobalSchedule: () => Promise<void>;
   handleDeleteGlobalSchedule: (id: string, title: string) => Promise<void>;
-  handleSaveScore: (title: string, koreanScore: number | null, mathScore: number | null) => Promise<void>;
+  handleSaveScore: (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => Promise<void>;
   handleAddSchedule: (dateStr: string, type: ExamType, title: string) => void;
   handleDeleteSchedule: (id: string) => void;
   handleCompleteSchedule: (schedule: ScheduledExam) => void;
+  handleSaveReview: (scheduleTitle: string, file: File) => Promise<void>;
 }
 
 const SilmoContext = createContext<SilmoContextType | undefined>(undefined);
@@ -122,6 +131,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
   const [globalScheduleTitle, setGlobalScheduleTitle] = useState('');
   const [globalScheduleType, setGlobalScheduleType] = useState<ExamType>('korean');
   const [globalScheduleDate, setGlobalScheduleDate] = useState<string>('');
+  const [globalScheduleQuestionFile, setGlobalScheduleQuestionFile] = useState<File | null>(null);
+  const [globalScheduleSolutionFile, setGlobalScheduleSolutionFile] = useState<File | null>(null);
+
+  const [reviews, setReviews] = useState<ScheduleReview[]>([]);
 
   const [profiles, setProfiles] = useState<{ [key: string]: string }>({});
 
@@ -156,12 +169,13 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      const [recordsData, profilesData, sessionsData, globalSchedulesData, allGlobalSchedulesData] = await Promise.all([
+      const [recordsData, profilesData, sessionsData, globalSchedulesData, allGlobalSchedulesData, reviewsData] = await Promise.all([
         fetchSilmoRecords(),
         fetchUserProfiles(),
         fetchActiveExamSessions(),
         fetchGlobalSchedules(todayStr),
-        fetchAllGlobalSchedules()
+        fetchAllGlobalSchedules(),
+        fetchScheduleReviews().catch(() => [])
       ]);
 
       const profileMap: { [key: string]: string } = {};
@@ -180,7 +194,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: (s.type as ExamType) || 'korean',
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
-        is_silvival: s.is_silvival
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setAllGlobalSchedules(formattedAllGlobalSchedules);
 
@@ -190,7 +207,11 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         title: s.title,
         type: s.type as ExamType,
         createdBy: s.created_by,
-        createdAt: s.created_at
+        createdAt: s.created_at,
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setGlobalSchedules(formattedGlobalSchedules);
 
@@ -201,6 +222,8 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: r.type as ExamType,
         koreanScore: r.korean_score,
         mathScore: r.math_score,
+        koreanWrongNumbers: r.korean_wrong_numbers,
+        mathWrongNumbers: r.math_wrong_numbers,
         totalScore: r.total_score,
         createdAt: r.created_at
       }));
@@ -208,6 +231,17 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       setRecords(formattedRecords);
       setIsDbConnected(true);
       setDbErrorMsg(null);
+
+      // 총평 목록 업데이트
+      const formattedReviews: ScheduleReview[] = (reviewsData || []).map((r: any) => ({
+        id: r.id,
+        scheduleTitle: r.schedule_title,
+        uploaderId: r.uploader_id,
+        reviewPdfUrl: r.review_pdf_url,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+      setReviews(formattedReviews);
 
       const activeSessions: LiveUserStatus[] = (sessionsData || [])
         .filter(s => s.user_id !== authUser.id)
@@ -365,8 +399,15 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
   const handleCreateGlobalSchedule = async () => {
     if (!authUser || !globalScheduleTitle.trim() || !globalScheduleDate || !isDbConnected) return;
     try {
-      await createGlobalSchedule(globalScheduleDate, globalScheduleTitle, globalScheduleType, authUser.id);
+      let questionPdfUrl: string | undefined;
+      let solutionPdfUrl: string | undefined;
+      if (globalScheduleQuestionFile) questionPdfUrl = await uploadSilmoPdf(globalScheduleQuestionFile, 'question');
+      if (globalScheduleSolutionFile) solutionPdfUrl = await uploadSilmoPdf(globalScheduleSolutionFile, 'solution');
+
+      await createGlobalSchedule(globalScheduleDate, globalScheduleTitle, globalScheduleType, authUser.id, questionPdfUrl, solutionPdfUrl);
       setGlobalScheduleTitle('');
+      setGlobalScheduleQuestionFile(null);
+      setGlobalScheduleSolutionFile(null);
       setIsGlobalScheduleModalOpen(false);
       
       const todayStr = new Date().toISOString().split('T')[0];
@@ -382,7 +423,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: s.type as ExamType,
         createdBy: s.created_by,
         createdAt: s.created_at,
-        is_silvival: s.is_silvival
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setGlobalSchedules(formattedGlobalSchedules);
 
@@ -393,7 +437,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: (s.type as ExamType) || 'korean',
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
-        is_silvival: s.is_silvival
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setAllGlobalSchedules(formattedAllGlobalSchedules);
     } catch (e) {
@@ -418,7 +465,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: s.type as ExamType,
         createdBy: s.created_by,
         createdAt: s.created_at,
-        is_silvival: s.is_silvival
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setGlobalSchedules(formattedGlobalSchedules);
 
@@ -429,7 +479,10 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         type: (s.type as ExamType) || 'korean',
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
-        is_silvival: s.is_silvival
+        is_silvival: s.is_silvival,
+        questionPdfUrl: s.question_pdf_url || null,
+        solutionPdfUrl: s.solution_pdf_url || null,
+        isClosed: s.is_closed || false,
       }));
       setAllGlobalSchedules(formattedAllGlobalSchedules);
     } catch (e) {
@@ -437,6 +490,47 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       alert('일정 삭제에 실패했습니다.');
     }
   };
+
+  // ── 자동 종료 폴링 (30초마다): 실모단 전원 제출 OR KST 23:00 이후 ──
+  useEffect(() => {
+    if (!authUser || !isDbConnected) return;
+
+    const checkAutoClose = async () => {
+      const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const kstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours();
+      const isPast23 = kstHour >= 23;
+
+      const openTodaySchedules = globalSchedules.filter(
+        s => s.date === todayKST && !s.isClosed
+      );
+      if (openTodaySchedules.length === 0) return;
+
+      const silmodanUserIds = Object.keys(profiles);
+      if (silmodanUserIds.length === 0) return;
+
+      for (const schedule of openTodaySchedules) {
+        const submitters = records
+          .filter(r => r.title === schedule.title)
+          .map(r => r.userId);
+        const allSubmitted = silmodanUserIds.every(uid => submitters.includes(uid));
+
+        if (allSubmitted || isPast23) {
+          try {
+            await closeGlobalSchedule(schedule.id);
+            setGlobalSchedules(prev =>
+              prev.map(s => s.id === schedule.id ? { ...s, isClosed: true } : s)
+            );
+          } catch (e) {
+            console.warn('Auto-close failed for schedule:', schedule.title, e);
+          }
+        }
+      }
+    };
+
+    checkAutoClose();
+    const interval = setInterval(checkAutoClose, 30000);
+    return () => clearInterval(interval);
+  }, [authUser, isDbConnected, globalSchedules, records, profiles]);
 
   const handleCreateExamPool = async (title: string, type: ExamType, questionFile?: File, solutionFile?: File) => {
     if (!authUser) return;
@@ -539,7 +633,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveToLocalFallback = useCallback((title: string, koreanScore: number | null, mathScore: number | null, totalScore: number) => {
+  const saveToLocalFallback = useCallback((title: string, koreanScore: number | null, mathScore: number | null, totalScore: number, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
     if (!authUser) return;
 
     const newRecord: ExamRecord = {
@@ -549,6 +643,8 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       type: finishedExamType!,
       koreanScore,
       mathScore,
+      koreanWrongNumbers,
+      mathWrongNumbers,
       totalScore,
       createdAt: new Date().toISOString()
     };
@@ -558,7 +654,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('silmo_user_records', JSON.stringify(updatedRecords));
   }, [authUser, finishedExamType, records]);
 
-  const handleSaveScore = async (title: string, koreanScore: number | null, mathScore: number | null) => {
+  const handleSaveScore = async (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
     if (!authUser || !finishedExamType) return;
 
     const totalScore = (koreanScore || 0) + (mathScore || 0);
@@ -571,15 +667,17 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
           finishedExamType,
           koreanScore,
           mathScore,
-          totalScore
+          totalScore,
+          koreanWrongNumbers,
+          mathWrongNumbers
         );
         await fetchDbData();
       } catch (e) {
         console.error('Failed to save score in DB. Saving to local fallback...', e);
-        saveToLocalFallback(title, koreanScore, mathScore, totalScore);
+        saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
       }
     } else {
-      saveToLocalFallback(title, koreanScore, mathScore, totalScore);
+      saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
     }
 
     setLocalPhase('finished');
@@ -621,6 +719,35 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     setPrefilledTitle(schedule.title);
     setCompletedScheduleId(schedule.id);
     setIsScoreModalOpen(true);
+  };
+
+  const handleSaveReview = async (scheduleTitle: string, file: File) => {
+    if (!authUser) return;
+    try {
+      const url = await uploadSilmoPdf(file, 'review');
+      await saveScheduleReview(scheduleTitle, authUser.id, url);
+      // 로컬 state 즉시 업데이트
+      setReviews(prev => {
+        const existing = prev.find(r => r.scheduleTitle === scheduleTitle);
+        if (existing) {
+          return prev.map(r => r.scheduleTitle === scheduleTitle
+            ? { ...r, reviewPdfUrl: url, updatedAt: new Date().toISOString() }
+            : r
+          );
+        }
+        return [...prev, {
+          id: `temp-${Date.now()}`,
+          scheduleTitle,
+          uploaderId: authUser.id,
+          reviewPdfUrl: url,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }];
+      });
+    } catch (e) {
+      console.error('Failed to save review:', e);
+      alert('총평 저장에 실패했습니다.');
+    }
   };
 
   const personalRecords = records.filter(r => r.userId === authUser?.id);
@@ -680,9 +807,14 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         setGlobalScheduleType,
         globalScheduleDate,
         setGlobalScheduleDate,
+        globalScheduleQuestionFile,
+        setGlobalScheduleQuestionFile,
+        globalScheduleSolutionFile,
+        setGlobalScheduleSolutionFile,
         
         scheduledExams,
         examPool,
+        reviews,
         
         fetchDbData,
         fetchExamPoolData,
@@ -699,7 +831,8 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         handleSaveScore,
         handleAddSchedule,
         handleDeleteSchedule,
-        handleCompleteSchedule
+        handleCompleteSchedule,
+        handleSaveReview
       }}
     >
       {children}

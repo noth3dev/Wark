@@ -79,17 +79,24 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
   // Main timer ticking effect
   useEffect(() => {
     if (isActive && !isPaused) {
+      // Calculate target end time based on the remaining seconds at the moment of start/resume
+      const currentRemaining = remainingSeconds;
+      const msRemaining = currentRemaining * 1000 / (isSpeedUp ? 60 : 1);
+      const targetEndTime = Date.now() + msRemaining;
+
       timerRef.current = setInterval(() => {
-        setRemainingSeconds(prev => {
-          const step = isSpeedUp ? 60 : 1;
-          const nextVal = prev - step;
-          if (nextVal <= 0) {
-            handlePhaseTransition();
-            return 0;
-          }
-          return nextVal;
-        });
-      }, 1000);
+        const now = Date.now();
+        const msLeft = targetEndTime - now;
+        
+        if (msLeft <= 0) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          setRemainingSeconds(0);
+          handlePhaseTransition();
+        } else {
+          // Convert back to normal seconds for state
+          setRemainingSeconds(msLeft / 1000 * (isSpeedUp ? 60 : 1));
+        }
+      }, 250); // Tick more frequently for smooth UI and accuracy
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
@@ -97,6 +104,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, isPaused, currentPhase, isSpeedUp]);
 
   const startExam = (type: ExamType, title?: string) => {
@@ -196,9 +204,10 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
 
   // Time formatter (HH:MM:SS)
   const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    const sInt = Math.max(0, Math.ceil(seconds));
+    const h = Math.floor(sInt / 3600);
+    const m = Math.floor((sInt % 3600) / 60);
+    const s = sInt % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 

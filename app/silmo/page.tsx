@@ -7,7 +7,7 @@ import { ExamTimer } from '@/components/silmo/exam-timer';
 import { Leaderboard } from '@/components/silmo/leaderboard';
 import { LiveStatus } from '@/components/silmo/live-status';
 import { HistoryTable } from '@/components/silmo/history-table';
-import { CalendarIcon, Trophy, Plus, Zap } from 'lucide-react';
+import { CalendarIcon, Trophy, Plus, Zap, FileText, Download, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SilvivalDashboardWidget } from '@/components/silmo/silvival-dashboard-widget';
 // Force rebuild import tag
@@ -40,6 +40,10 @@ export default function SilmoDashboardPage() {
 
   // 오늘 날짜 (KST 기준 YYYY-MM-DD)
   const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // 오늘 전역 실모 제목 목록
+  const todayTitles = globalSchedules
+    .filter(s => s.date === todayKST)
+    .map(s => s.title);
 
   if (!authUser) return null;
 
@@ -72,6 +76,7 @@ export default function SilmoDashboardPage() {
             const isDateReached = schedule.date <= todayKST;
             // 본인이 만든 일정이면 삭제 가능 (silvival 고정 일정 포함)
             const canDelete = schedule.createdBy === authUser.id || isSilmodan;
+            const isClosed = schedule.isClosed;
 
             return (
               <div
@@ -100,6 +105,11 @@ export default function SilmoDashboardPage() {
                     <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${isSilvival ? 'bg-indigo-500/10 text-indigo-400' : 'bg-neutral-800 text-neutral-400'}`}>
                       {schedule.type === 'korean' ? '국어' : schedule.type === 'math' ? '수학' : '국어+수학'}
                     </span>
+                    {isClosed && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-800/80 text-neutral-500 border border-neutral-700/50 flex items-center gap-0.5">
+                        <Lock className="w-2.5 h-2.5" />종료
+                      </span>
+                    )}
                     {canDelete && handleDeleteGlobalSchedule && (
                       <button
                         onClick={() => handleDeleteGlobalSchedule(schedule.id, schedule.title)}
@@ -114,28 +124,52 @@ export default function SilmoDashboardPage() {
                   <span className="text-xs text-neutral-500 font-suit">
                     {isSilvival ? '실바이벌 지정 실모' : `등록자: ${profiles[schedule.createdBy] || (schedule.createdBy && schedule.createdBy.substring(0, 6)) || '알수없음'}`}
                   </span>
-                  {isCompleted ? (
-                    <span className="px-3 py-1.5 rounded bg-neutral-800/60 text-neutral-500 border border-neutral-850/30 text-xs font-semibold select-none">
-                      완료됨
-                    </span>
-                  ) : !isDateReached ? (
-                    <span className="px-3 py-1.5 rounded bg-neutral-900 text-neutral-600 border border-neutral-800 text-xs font-semibold select-none font-suit">
-                      {schedule.date} 응시 가능
-                    </span>
-                  ) : (
-                    <button
-                      disabled={isRunning}
-                      onClick={() => handleTakeGlobalSchedule(schedule)}
-                      className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${isRunning
-                          ? 'bg-neutral-900 text-neutral-600 border-neutral-850 cursor-not-allowed'
-                          : isSilvival
-                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                        }`}
-                    >
-                      응시
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {/* PDF links */}
+                    {schedule.questionPdfUrl && (
+                      <a href={schedule.questionPdfUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-0.5 text-[10px] px-1.5 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-indigo-400 hover:border-indigo-500/30 transition-all"
+                        title="문제지 다운로드"
+                      >
+                        <FileText className="w-3 h-3" />문제 <Download className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                    {schedule.solutionPdfUrl && (
+                      <a href={schedule.solutionPdfUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-0.5 text-[10px] px-1.5 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
+                        title="해설지 다운로드"
+                      >
+                        <FileText className="w-3 h-3" />해설 <Download className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                    {/* 응시 버튼 or 상태 */}
+                    {isClosed ? (
+                      <span className="px-3 py-1.5 rounded bg-neutral-800/60 text-neutral-600 border border-neutral-800 text-xs font-semibold select-none">
+                        종료됨
+                      </span>
+                    ) : isCompleted ? (
+                      <span className="px-3 py-1.5 rounded bg-neutral-800/60 text-neutral-500 border border-neutral-850/30 text-xs font-semibold select-none">
+                        완료됨
+                      </span>
+                    ) : !isDateReached ? (
+                      <span className="px-3 py-1.5 rounded bg-neutral-900 text-neutral-600 border border-neutral-800 text-xs font-semibold select-none font-suit">
+                        {schedule.date} 응시 가능
+                      </span>
+                    ) : (
+                      <button
+                        disabled={isRunning}
+                        onClick={() => handleTakeGlobalSchedule(schedule)}
+                        className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${isRunning
+                            ? 'bg-neutral-900 text-neutral-600 border-neutral-850 cursor-not-allowed'
+                            : isSilvival
+                              ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                          }`}
+                      >
+                        응시
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -178,14 +212,20 @@ export default function SilmoDashboardPage() {
 
         {/* Leaderboard Panel */}
         <div className="lg:col-span-4">
-          <div className="matte-panel bg-neutral-950 border-neutral-800 rounded-xl p-6 h-full space-y-4">
+          <div className="matte-panel bg-neutral-950 border-neutral-800 rounded-xl p-4 h-full space-y-3">
             <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
               <Trophy className="w-4 h-4 text-neutral-400" />
               <h3 className="text-sm font-semibold text-neutral-200 font-suit">
                 경쟁 리더보드
               </h3>
             </div>
-            <Leaderboard records={allRecords} users={allLeaderboardUsers} globalTitles={globalTitles} />
+            <Leaderboard
+              records={allRecords}
+              users={allLeaderboardUsers}
+              globalTitles={globalTitles}
+              todayTitles={todayTitles}
+              currentUserId={authUser.id}
+            />
           </div>
         </div>
       </div>
