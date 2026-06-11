@@ -59,4 +59,16 @@ export interface GlobalSchedule {
   type: ExamType;
   createdBy: string;
   createdAt: string;
+  is_silvival?: boolean;
+}
+
+export interface ExamPoolItem {
+  id: string;
+  title: string;
+  type: ExamType;
+  created_by: string;
+  question_pdf_url?: string;
+  solution_pdf_url?: string;
+  created_at: string;
+  silmo_exam_votes?: { vote: number; user_id: string }[];
 }

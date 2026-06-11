@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ExamRecord, ExamType } from '@/types/silmo';
+import { ExamRecord, ExamType, GlobalSchedule } from '@/types/silmo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, CheckCircle2, Circle, Zap } from 'lucide-react';
 
 export interface ScheduledExam {
   id: string;
@@ -19,6 +19,7 @@ interface WeeklyCalendarProps {
   profiles: { [key: string]: string };
   currentUserId: string;
   globalTitles?: string[];
+  globalSchedules?: GlobalSchedule[];
   scheduledExams: ScheduledExam[];
   onAddSchedule: (date: string, type: ExamType, title: string) => void;
   onDeleteSchedule: (id: string) => void;
@@ -30,6 +31,7 @@ export function WeeklyCalendar({
   profiles,
   currentUserId,
   globalTitles = [],
+  globalSchedules = [],
   scheduledExams,
   onAddSchedule,
   onDeleteSchedule,
@@ -159,7 +161,58 @@ export function WeeklyCalendar({
 
                 {/* Day Tasks Area */}
                 <div className="flex-1 space-y-1.5 overflow-y-auto no-scrollbar min-h-0">
-                  {/* Scheduled items */}
+                  {/* Global Scheduled items */}
+                  {globalSchedules
+                    .filter(gs => gs.date === dateStr)
+                    .map(gs => {
+                      const isCompleted = dayRecords.some(r => r.title === gs.title && r.userId === currentUserId);
+                      if (isCompleted) return null; // already shown in completed records
+
+                      const isSilvival = gs.is_silvival;
+                      const mappedSchedule: ScheduledExam = {
+                        id: gs.id,
+                        date: gs.date,
+                        type: gs.type,
+                        title: gs.title,
+                        isCompleted: false
+                      };
+
+                      return (
+                        <div
+                          key={`global-${gs.id}`}
+                          className={`group flex flex-col gap-1 p-2 rounded text-[10px] font-suit font-medium border transition-colors ${
+                            isSilvival
+                              ? 'bg-indigo-950/20 border-indigo-500/35 hover:border-indigo-500/60'
+                              : 'bg-neutral-900/60 border-neutral-800/80 hover:border-neutral-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-neutral-300">
+                            <span className={`font-semibold truncate max-w-[65px] flex items-center gap-0.5 ${isSilvival ? 'text-indigo-200 font-bold' : ''}`}>
+                              {isSilvival && <Zap className="w-2.5 h-2.5 text-indigo-400 flex-shrink-0 animate-pulse" />}
+                              {gs.title}
+                            </span>
+                            <span className={`text-[8px] px-1 rounded border ${
+                              isSilvival
+                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                : 'bg-neutral-850 text-neutral-400 border-neutral-800'
+                            }`}>
+                              {getTypeLabel(gs.type)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-end gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => onCompleteSchedule(mappedSchedule)}
+                              className={`p-0.5 rounded ${isSilvival ? 'text-indigo-400 hover:bg-indigo-950/40' : 'text-emerald-400 hover:bg-emerald-950/20'}`}
+                              title="응시하기 (기록)"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {/* Personal Scheduled items */}
                   {daySchedules.map(schedule => (
                     <div 
                       key={schedule.id}
@@ -190,12 +243,17 @@ export function WeeklyCalendar({
 
                   {/* Grouped Completed records */}
                   {Object.entries(groupedRecords).map(([title, recs]) => {
-                    const isGlobal = globalTitles.includes(title);
+                    const globalSched = (globalSchedules || []).find(s => s.title === title);
+                    const isSilvival = globalSched?.is_silvival;
+                    const isGlobal = globalTitles.includes(title) || !!globalSched;
                     const hasLocal = recs.some(r => r.userId === currentUserId);
 
                     let cardClass = 'bg-neutral-900 border-neutral-850';
                     let textClass = 'text-neutral-300';
-                    if (isGlobal) {
+                    if (isSilvival) {
+                      cardClass = 'bg-indigo-950/30 border-indigo-500/50';
+                      textClass = 'text-indigo-300';
+                    } else if (isGlobal) {
                       cardClass = 'bg-indigo-500/[0.04] border-indigo-500/35';
                       textClass = 'text-indigo-400';
                     } else if (hasLocal) {
@@ -209,14 +267,19 @@ export function WeeklyCalendar({
                         className={`flex flex-col gap-1 p-1.5 rounded text-[9px] font-suit font-medium border ${cardClass}`}
                       >
                         <div className="flex justify-between items-center gap-1 border-b border-neutral-900/40 pb-0.5 mb-1">
-                          <span className={`font-semibold truncate ${textClass}`} title={title}>
+                          <span className={`font-semibold truncate flex items-center gap-0.5 ${textClass}`} title={title}>
+                            {isSilvival && <Zap className="w-2.5 h-2.5 text-indigo-400 flex-shrink-0" />}
                             {title}
                           </span>
-                          {isGlobal && (
+                          {isSilvival ? (
+                            <span className="text-[7px] px-1 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold tracking-wider flex-shrink-0 scale-90 origin-right">
+                              실바이벌
+                            </span>
+                          ) : isGlobal ? (
                             <span className="text-[7px] px-1 py-0.2 rounded bg-indigo-500/10 text-indigo-400 font-semibold tracking-wider flex-shrink-0 scale-90 origin-right">
                               전역
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <div className="space-y-0.5">
                           {recs.map(rec => {
@@ -239,7 +302,7 @@ export function WeeklyCalendar({
                     );
                   })}
 
-                  {dayRecords.length === 0 && daySchedules.length === 0 && (
+                  {dayRecords.length === 0 && daySchedules.length === 0 && globalSchedules.filter(gs => gs.date === dateStr).length === 0 && (
                     <div className="h-full flex items-center justify-center text-[9px] text-neutral-600 italic select-none">
                       기록 없음
                     </div>
