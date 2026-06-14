@@ -62,7 +62,7 @@ export function useHomework(userIdOverride?: string) {
                 .from("homeworks")
                 .select("*")
                 .eq("user_id", currentUser)
-                .order("created_at", { ascending: false });
+                .order("created_at", { ascending: true });
 
             if (error) throw error;
             
@@ -122,7 +122,7 @@ export function useHomework(userIdOverride?: string) {
                 })
                 .select().single();
             if (error) throw error;
-            setHomeworks(prev => [data, ...prev]);
+            setHomeworks(prev => [...prev, data]);
         } catch (err) { console.error(err); }
     }, [user]);
 
