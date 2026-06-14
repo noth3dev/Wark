@@ -103,7 +103,7 @@ interface TimeBlockTableProps {
     onAddHomework: (content: string, isPlusAlpha?: boolean) => void;
     onUpdateHomework: (id: string, updates: any) => void;
     onDeleteHomework: (id: string) => void;
-    onAddSubtask: (hwId: string, parentId: string | null, content: string, tagId?: string | null) => void;
+    onAddSubtask: (hwId: string, parentId: string, content: string, tagId?: string | null) => void;
     onUpdateSubtask: (hwId: string, subId: string, updates: any) => void;
     onDeleteSubtask: (hwId: string, subId: string) => void;
     onToggleSubtask: (hwId: string, subId: string) => void;
