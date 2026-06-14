@@ -9,6 +9,7 @@ import { Trophy, Calendar as CalendarIcon, Star, FileText, Download, Lock, Users
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 
+export default function RecordsPage() {
   const { user: authUser } = useAuth();
   const router = useRouter();
   const {
