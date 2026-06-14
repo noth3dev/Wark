@@ -225,10 +225,10 @@ export function TimeBlockTable({
                 <table className="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-neutral-500 font-semibold bg-white/[0.01]">
-                            <th className="p-2 w-[18%] border-r border-white/5 font-medium">Time</th>
-                            <th className="p-2 w-[18%] border-r border-white/5 font-medium">Subject</th>
+                            <th className="p-2 w-[15%] border-r border-white/5 font-medium">Time</th>
+                            <th className="p-2 w-[15%] border-r border-white/5 font-medium">Subject</th>
                             <th className="p-2 w-[22%] border-r border-white/5 font-medium">Material</th>
-                            <th className="p-2 w-[22%] border-r border-white/5 font-medium">Amount & Progress</th>
+                            <th className="p-2 w-[28%] border-r border-white/5 font-medium">Amount & Progress</th>
                             <th className="p-2 w-[20%] font-medium">비고</th>
                         </tr>
                     </thead>
@@ -412,7 +412,7 @@ export function TimeBlockTable({
                                                         onChange={(val) => {
                                                             onUpdateSubtask(row.hw.id, row.material.id, { amount_text: val });
                                                         }}
-                                                        className={cn("bg-transparent text-xs text-neutral-300 focus:outline-none focus:ring-1 focus:ring-white/10 rounded px-1.5 py-0.5 -ml-1.5 flex-1 transition-all", (row.material.status === "completed" || row.material.is_completed) && "text-blue-500/60 line-through decoration-blue-500", row.material.status === "incomplete" && "text-red-500/60 line-through decoration-red-500")}
+                                                        className={cn("bg-transparent text-xs text-neutral-300 focus:outline-none focus:ring-1 focus:ring-white/10 rounded px-1.5 py-0.5 -ml-1.5 flex-1 min-w-0 transition-all", (row.material.status === "completed" || row.material.is_completed) && "text-blue-500/60 line-through decoration-blue-500", row.material.status === "incomplete" && "text-red-500/60 line-through decoration-red-500")}
                                                         placeholder="분량 (예: p.20~30)"
                                                     />
 
