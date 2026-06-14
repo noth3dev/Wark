@@ -104,6 +104,7 @@ export function Header() {
         { href: "/flight", title: "Flight", icon: <Plane className="w-4 h-4" /> },
         { href: "/habit", title: "Habit", icon: <CheckCircle2 className="w-4 h-4" /> },
         { href: "/repeat", title: "Repeat", icon: <Activity className="w-4 h-4" /> },
+        { href: "/overdose", title: "Caffeine", icon: <Coffee className="w-4 h-4" /> },
     ];
 
     return (

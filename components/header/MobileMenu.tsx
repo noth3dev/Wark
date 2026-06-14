@@ -61,6 +61,7 @@ export function MobileMenu({ isOpen, setIsOpen, user }: MobileMenuProps) {
                                         <MobileNavLink href="/flight" icon={<Plane className="w-4 h-4" />} label="Flight" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
                                         <MobileNavLink href="/habit" icon={<CheckCircle2 className="w-4 h-4" />} label="Habit" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
                                         <MobileNavLink href="/repeat" icon={<Activity className="w-4 h-4" />} label="Repeat" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                        <MobileNavLink href="/overdose" icon={<Coffee className="w-4 h-4" />} label="Caffeine" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
                                     </motion.div>
                                 )}
                             </AnimatePresence>
