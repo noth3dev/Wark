@@ -35,7 +35,8 @@ export async function saveScoreRecord(
   mathScore: number | null,
   totalScore: number,
   koreanWrongNumbers?: string | null,
-  mathWrongNumbers?: string | null
+  mathWrongNumbers?: string | null,
+  isPostTake: boolean = false
 ) {
   const { error } = await supabase
     .from('silmo_records')
@@ -48,6 +49,7 @@ export async function saveScoreRecord(
       korean_wrong_numbers: koreanWrongNumbers,
       math_wrong_numbers: mathWrongNumbers,
       total_score: totalScore,
+      is_post_take: isPostTake,
       created_at: new Date().toISOString()
     }]);
   if (error) throw error;

@@ -7,9 +7,10 @@ import { Leaderboard } from '@/components/silmo/leaderboard';
 import { ScheduleReviewModal } from '@/components/silmo/schedule-review-modal';
 import { Trophy, Calendar as CalendarIcon, Star, FileText, Download, Lock, Users, BookOpen, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 
-export default function RecordsPage() {
   const { user: authUser } = useAuth();
+  const router = useRouter();
   const {
     allRecords,
     personalRecords,
@@ -20,6 +21,7 @@ export default function RecordsPage() {
     profiles,
     reviews,
     handleSaveReview,
+    handleTakeGlobalSchedule,
   } = useSilmo();
 
   const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -268,6 +270,11 @@ export default function RecordsPage() {
                                         <span className={`flex items-center gap-1.5 ${isFirst ? 'text-amber-400 font-bold' : isLocal ? 'text-emerald-400 font-bold' : 'text-neutral-400'}`}>
                                           {isFirst && <Star className="w-2.5 h-2.5 fill-amber-400" />}
                                           {i + 1}위. {userName}
+                                          {r.isPostTake && (
+                                            <span className="inline-flex items-center px-1 py-0.2 rounded text-[8px] font-bold bg-neutral-800 text-neutral-500 border border-neutral-700/60 shrink-0">
+                                              사후
+                                            </span>
+                                          )}
                                         </span>
                                         <span className="font-mono text-neutral-300">
                                           {r.type === 'both' ? `평균 ${Math.round(r.totalScore / 2)}점` : `${r.totalScore}점`}
@@ -286,9 +293,20 @@ export default function RecordsPage() {
                                 점수 비공개 (잠김)
                               </span>
                               <span className="text-[10px] text-neutral-500 font-suit leading-normal">
-                                응시 후 점수와 다른 사람들의 기록을 확인할 수 있습니다.
-                              </span>
-                              {(questionPdfUrl || solutionPdfUrl) && (
+                                  응시 후 점수와 다른 사람들의 기록을 확인할 수 있습니다.
+                                </span>
+                                {scheduleForTitle && (
+                                  <button
+                                    onClick={() => {
+                                      handleTakeGlobalSchedule(scheduleForTitle, true);
+                                      router.push('/silmo');
+                                    }}
+                                    className="mt-3 flex items-center justify-center gap-1 text-[11px] px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all font-suit font-semibold cursor-pointer"
+                                  >
+                                    사후 응시하기
+                                  </button>
+                                )}
+                                {(questionPdfUrl || solutionPdfUrl) && (
                                 <div className="flex gap-1.5 mt-3 w-full max-w-[180px]">
                                   {questionPdfUrl && (
                                     <a

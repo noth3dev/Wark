@@ -168,8 +168,15 @@ export function HistoryTable({ records }: HistoryTableProps) {
                     {getTypeLabel(record.type)}
                   </span>
                 </td>
-                <td className="py-3.5 px-4 text-neutral-200 font-medium max-w-[150px] truncate" title={record.title}>
-                  {record.title}
+                <td className="py-3.5 px-4 text-neutral-200 font-medium max-w-[150px]" title={record.title}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{record.title}</span>
+                    {record.isPostTake && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-neutral-800 text-neutral-500 border border-neutral-700/60 shrink-0">
+                        사후
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-3.5 px-4 text-right font-mono text-neutral-300 tabular-nums">
                   {record.koreanScore !== null ? `${record.koreanScore}점` : '-'}

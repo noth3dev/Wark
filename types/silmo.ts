@@ -20,6 +20,7 @@ export interface ExamRecord {
   koreanWrongNumbers?: string | null;
   mathWrongNumbers?: string | null;
   totalScore: number;
+  isPostTake?: boolean;
   createdAt: string;
 }
 

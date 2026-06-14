@@ -92,7 +92,7 @@ interface SilmoContextType {
   handleTickStatuses: () => Promise<void>;
   handleSessionChange: (phase: ExamPhase, remaining: number, total: number, type: ExamType) => Promise<void>;
   handleExamComplete: (type: ExamType) => void;
-  handleTakeGlobalSchedule: (schedule: GlobalSchedule) => void;
+  handleTakeGlobalSchedule: (schedule: GlobalSchedule, isPost?: boolean) => void;
   handleCreateGlobalSchedule: () => Promise<void>;
   handleDeleteGlobalSchedule: (id: string, title: string) => Promise<void>;
   handleSaveScore: (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => Promise<void>;
@@ -141,6 +141,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
   const [localPhase, setLocalPhase] = useState<ExamPhase>('finished');
   const [localRemaining, setLocalRemaining] = useState<number>(0);
   const [localTotal, setLocalTotal] = useState<number>(0);
+  const [isPostTake, setIsPostTake] = useState<boolean>(false);
 
   const lastDbUpdateRef = useRef<number>(0);
   const prevPhaseRef = useRef<ExamPhase>('finished');
@@ -225,6 +226,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         koreanWrongNumbers: r.korean_wrong_numbers,
         mathWrongNumbers: r.math_wrong_numbers,
         totalScore: r.total_score,
+        isPostTake: r.is_custom ? false : (r.is_post_take || false), // default fallback
         createdAt: r.created_at
       }));
 
@@ -375,7 +377,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     setAutoStartExamKey(undefined);
   };
 
-  const handleTakeGlobalSchedule = (schedule: GlobalSchedule) => {
+  const handleTakeGlobalSchedule = (schedule: GlobalSchedule, isPost: boolean = false) => {
     let durationMinutes = 0;
     if (schedule.type === 'korean') {
       durationMinutes = 80;
@@ -388,11 +390,14 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     const endTime = new Date(Date.now() + durationMinutes * 60 * 1000);
     const timeString = endTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
-    const confirmMessage = `이 시험은 ${timeString}에 끝납니다. 지금 응시하시겠습니까?`;
+    const confirmMessage = isPost
+      ? `[사후 참가] 이 시험은 ${timeString}에 끝납니다. 지금 응시하시겠습니까?`
+      : `이 시험은 ${timeString}에 끝납니다. 지금 응시하시겠습니까?`;
     if (!confirm(confirmMessage)) return;
 
     setPrefilledTitle(schedule.title);
     setAutoStartExamType(schedule.type);
+    setIsPostTake(isPost);
     setAutoStartExamKey(Date.now().toString());
   };
 
@@ -646,13 +651,14 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       koreanWrongNumbers,
       mathWrongNumbers,
       totalScore,
+      isPostTake,
       createdAt: new Date().toISOString()
     };
 
     const updatedRecords = [newRecord, ...records.filter(r => r.userId === authUser.id)];
     setRecords(updatedRecords);
     localStorage.setItem('silmo_user_records', JSON.stringify(updatedRecords));
-  }, [authUser, finishedExamType, records]);
+  }, [authUser, finishedExamType, records, isPostTake]);
 
   const handleSaveScore = async (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
     if (!authUser || !finishedExamType) return;
@@ -669,7 +675,8 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
           mathScore,
           totalScore,
           koreanWrongNumbers,
-          mathWrongNumbers
+          mathWrongNumbers,
+          isPostTake
         );
         await fetchDbData();
       } catch (e) {
@@ -683,6 +690,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     setLocalPhase('finished');
     setLocalRemaining(0);
     setLocalTotal(0);
+    setIsPostTake(false); // Reset after saving
 
     if (completedScheduleId) {
       const updatedSchedules = scheduledExams.filter(s => s.id !== completedScheduleId);
