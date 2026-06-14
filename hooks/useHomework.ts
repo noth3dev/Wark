@@ -14,12 +14,14 @@ export interface Subtask {
     created_at: string;
     planned_date?: string | null;
     completed_at?: string | null;
-    status: "todo" | "in_progress" | "completed";
+    status: "todo" | "in_progress" | "completed" | "incomplete";
     tag_id?: string | null;
     time_spent: number;
     is_slider?: boolean;
     total_amount?: number;
     current_amount?: number;
+    amount_text?: string;
+    material_id?: string;
 }
 
 export interface Homework {
@@ -32,12 +34,14 @@ export interface Homework {
     subtasks?: Subtask[];
     planned_date?: string | null;
     completed_at?: string | null;
-    status: "todo" | "in_progress" | "completed";
+    status: "todo" | "in_progress" | "completed" | "incomplete";
     tag_id?: string | null;
     time_spent: number;
     is_slider?: boolean;
     total_amount?: number;
     current_amount?: number;
+    amount_text?: string;
+    material_id?: string;
 }
 
 export function useHomework(userIdOverride?: string) {
@@ -160,10 +164,10 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user]);
 
-    const addSubtask = useCallback(async (homeworkId: string, parentId: string | null, content: string, tag_id?: string | null) => {
-        if (!user) return;
+    const addSubtask = useCallback(async (homeworkId: string, parentId: string, content: string, tag_id?: string | null, amount_text?: string): Promise<string | undefined> => {
+        if (!user) return undefined;
         const homework = homeworks.find(h => h.id === homeworkId);
-        if (!homework) return;
+        if (!homework) return undefined;
 
         // Inherit tag from parent/root if not provided
         let inheritedTagId = tag_id;
@@ -183,8 +187,9 @@ export function useHomework(userIdOverride?: string) {
             }
         }
 
+        const newSubId = Math.random().toString(36).substring(2, 9);
         const newSub: Subtask = { 
-            id: Math.random().toString(36).substring(2, 9), 
+            id: newSubId, 
             content, 
             status: "todo",
             is_completed: false, 
@@ -192,6 +197,7 @@ export function useHomework(userIdOverride?: string) {
             subtasks: [], 
             created_at: new Date().toISOString(),
             tag_id: inheritedTagId,
+            amount_text,
             time_spent: 0
         };
         
@@ -214,7 +220,11 @@ export function useHomework(userIdOverride?: string) {
                 subtasks: updatedSubtasks 
             });
             setHomeworks(prev => prev.map(h => h.id === homeworkId ? { ...h, is_completed: false, completed_at: null, subtasks: updatedSubtasks } : h));
-        } catch (err) { console.error(err); }
+            return newSubId;
+        } catch (err) { 
+            console.error(err); 
+            return undefined;
+        }
     }, [user, homeworks]);
 
     const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null, is_slider?: boolean, total_amount?: number, current_amount?: number }) => {
@@ -243,13 +253,23 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
-    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null, status?: "todo" | "in_progress" | "completed", is_completed?: boolean, is_slider?: boolean, total_amount?: number, current_amount?: number, completed_at?: string | null }) => {
+    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null, status?: "todo" | "in_progress" | "completed" | "incomplete", is_completed?: boolean, is_slider?: boolean, total_amount?: number, current_amount?: number, completed_at?: string | null, amount_text?: string, material_id?: string }) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === homeworkId);
         if (!homework) return;
 
         const { tasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], subtaskId, (t) => {
             const isTagChanging = updates.tag_id !== undefined && updates.tag_id !== t.tag_id;
+            
+            // Auto-set completed_at when marking as completed
+            const finalUpdates = { ...updates };
+            if (finalUpdates.status === "completed" && !finalUpdates.completed_at) {
+                finalUpdates.completed_at = new Date().toISOString();
+            } else if (finalUpdates.status === "todo" || finalUpdates.status === "incomplete") {
+                if (!('completed_at' in finalUpdates)) {
+                    finalUpdates.completed_at = null;
+                }
+            }
             
             if (isTagChanging) {
                 const propagateTag = (nodes: Subtask[]): Subtask[] => {
@@ -261,13 +281,13 @@ export function useHomework(userIdOverride?: string) {
                 };
                 return {
                     ...t,
-                    ...updates,
+                    ...finalUpdates,
                     subtasks: propagateTag(t.subtasks || [])
                 };
             }
             return {
                 ...t,
-                ...updates
+                ...finalUpdates
             };
         });
 
@@ -476,6 +496,67 @@ export function useHomework(userIdOverride?: string) {
         }
     }, [user, homeworks]);
 
+    // Atomic: add subject (if needed) + material to a target homework in one state update
+    const copyIncompleteTaskToHw = useCallback(async (targetHwId: string, data: {
+        content: string;
+        amount_text?: string;
+        subjectContent: string;
+        subjectTagId?: string | null;
+    }) => {
+        if (!user) return;
+        const targetHw = homeworks.find(h => h.id === targetHwId);
+        if (!targetHw) return;
+
+        const newContent = data.content.includes("[미완료 이월]")
+            ? data.content
+            : `${data.content} [미완료 이월]`;
+
+        // Check if a subject with matching tag already exists
+        let existingSubject = targetHw.subtasks?.find(s => s.tag_id === data.subjectTagId);
+        let updatedSubtasks: Subtask[];
+
+        const newMaterial: Subtask = {
+            id: Math.random().toString(36).substring(2, 9),
+            content: newContent,
+            status: "todo",
+            is_completed: false,
+            is_plus_alpha: false,
+            subtasks: [],
+            created_at: new Date().toISOString(),
+            tag_id: data.subjectTagId,
+            amount_text: data.amount_text,
+            time_spent: 0
+        };
+
+        if (existingSubject) {
+            // Add material under existing subject
+            updatedSubtasks = (targetHw.subtasks || []).map(s =>
+                s.id === existingSubject!.id
+                    ? { ...s, subtasks: [...(s.subtasks || []), newMaterial] }
+                    : s
+            );
+        } else {
+            // Create new subject with material nested inside
+            const newSubject: Subtask = {
+                id: Math.random().toString(36).substring(2, 9),
+                content: data.subjectContent,
+                status: "todo",
+                is_completed: false,
+                is_plus_alpha: false,
+                subtasks: [newMaterial],
+                created_at: new Date().toISOString(),
+                tag_id: data.subjectTagId,
+                time_spent: 0
+            };
+            updatedSubtasks = [...(targetHw.subtasks || []), newSubject];
+        }
+
+        try {
+            await saveHomework(targetHwId, { subtasks: updatedSubtasks });
+            setHomeworks(prev => prev.map(h => h.id === targetHwId ? { ...h, subtasks: updatedSubtasks } : h));
+        } catch (err) { console.error(err); }
+    }, [user, homeworks]);
+
     return { 
         homeworks, 
         loading, 
@@ -489,6 +570,7 @@ export function useHomework(userIdOverride?: string) {
         toggleSubtask, 
         deleteSubtask, 
         setPlannedDate, 
-        smartPlan 
+        smartPlan,
+        copyIncompleteTaskToHw
     };
 }

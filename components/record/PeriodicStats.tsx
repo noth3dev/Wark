@@ -77,7 +77,6 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                 supabase
                     .from('tag_groups')
                     .select('icon, color, name')
-                    .eq('user_id', userId)
             ]);
 
             setSessions(currentRes.data || []);
@@ -100,11 +99,10 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
     }, [userId, view, currentDate]);
 
     const saveGroupName = async (icon: string, color: string, name: string) => {
-        if (!userId) return;
         try {
             const { error } = await supabase
                 .from('tag_groups')
-                .upsert({ user_id: userId, icon, color, name }, { onConflict: 'user_id,icon,color' });
+                .upsert({ icon, color, name }, { onConflict: 'icon' });
             
             if (!error) {
                 setGroupNames(prev => ({ ...prev, [icon]: name }));

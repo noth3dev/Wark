@@ -20,6 +20,7 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
     const {
         time,
         tags,
+        dbGroups,
         activeTagId,
         activeSession,
         dailyTimes,
@@ -43,7 +44,9 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
     // Keyboard navigation for tags
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName !== 'TEXTAREA') {
+                if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+            }
             if (showAddTag || editingTag) return;
 
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -99,6 +102,7 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                         <AddTagForm
                             onAdd={addTag}
                             onClose={() => setShowAddTag(false)}
+                            dbGroups={dbGroups}
                         />
                     )}
                 </AnimatePresence>
@@ -126,6 +130,7 @@ export default function Stopwatch({ onSave }: StopwatchProps) {
                 {editingTag && (
                     <TagModal
                         tag={editingTag}
+                        dbGroups={dbGroups}
                         onClose={() => setEditingTag(null)}
                         onUpdate={updateTag}
                         onDelete={handleDeleteTag}

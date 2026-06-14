@@ -11,8 +11,7 @@ import { cn } from "../../lib/utils";
 import { motion } from "framer-motion";
 import { ExportDialog } from "../../components/ExportDialog";
 import { persistenceService } from "../../lib/services/persistenceService";
-import { TaskNode } from "./TaskNode";
-import { TaskEntry } from "./TaskEntry";
+import { TimeBlockTable } from "../../components/homework/TimeBlockTable";
 import { getFormattedWeek, getWeekInfo, formatWeekKey } from "../../lib/timeUtils";
 import { HomeworkHeader } from "../../components/homework/HomeworkHeader";
 import { StatsDonut } from "../../components/homework/StatsDonut";
@@ -37,7 +36,8 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         recordTime,
         toggleSubtask,
         deleteSubtask,
-        setPlannedDate
+        setPlannedDate,
+        copyIncompleteTaskToHw
     } = useHomework(viewedUserId);
 
     const { tags, dailyTimes, time, activeTagId, activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
@@ -143,13 +143,21 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         });
     }, [tags, dailyTimes, activeSession, now]);
 
-    const weekInfo = useMemo(() => getWeekInfo(viewDate), [viewDate]);
-    const weekKey = useMemo(() => formatWeekKey(weekInfo), [weekInfo]);
+    const dayKey = useMemo(() => {
+        const d = new Date(viewDate);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }, [viewDate]);
 
-    const filtered = useMemo(() =>
-        homeworks.filter(h => formatWeekKey(getWeekInfo(h.created_at)) === weekKey),
-        [homeworks, weekKey]
-    );
+    const filtered = useMemo(() => {
+        return homeworks.filter(h => {
+            const createdDate = new Date(h.created_at).toISOString().split('T')[0];
+            const plannedDate = h.planned_date;
+            return plannedDate ? plannedDate === dayKey : createdDate === dayKey;
+        });
+    }, [homeworks, dayKey]);
 
     const statusFiltered = useMemo(() => {
         if (statusFilter === "all") return filtered;
@@ -160,6 +168,19 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
 
     const regularTasks = useMemo(() => statusFiltered.filter(h => !h.is_plus_alpha), [statusFiltered]);
     const plusAlphaTasks = useMemo(() => statusFiltered.filter(h => h.is_plus_alpha), [statusFiltered]);
+
+    const copyTaskToEnd = useCallback(async (data: {
+        content: string;
+        amount_text?: string;
+        subjectContent: string;
+        subjectTagId?: string | null;
+    }) => {
+        const dayRegular = filtered.filter(h => !h.is_plus_alpha);
+        if (dayRegular.length === 0) return;
+        const lastHw = dayRegular[dayRegular.length - 1];
+        // Atomic single-state-update copy
+        await copyIncompleteTaskToHw(lastHw.id, data);
+    }, [filtered, copyIncompleteTaskToHw]);
 
     const progress = useMemo(() => {
         const calc = (tasks: any[]): { t: number; d: number } =>
@@ -176,9 +197,9 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         return t === 0 ? 0 : Math.round((d / t) * 100);
     }, [filtered]);
 
-    const shiftWeek = (n: number) => {
+    const shiftDay = (n: number) => {
         const d = new Date(viewDate);
-        d.setDate(d.getDate() + n * 7);
+        d.setDate(d.getDate() + n);
         setViewDate(d);
     };
 
@@ -206,11 +227,11 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-40 space-y-12 sm:space-y-16">
                 <HomeworkHeader 
-                    formattedWeek={getFormattedWeek(viewDate)}
+                    formattedWeek={viewDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
                     progress={progress}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    onShiftWeek={shiftWeek}
+                    onShiftWeek={shiftDay}
                     onToday={() => setViewDate(new Date())}
                     onExport={() => setIsExportOpen(true)}
                 />
@@ -218,90 +239,51 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                 <div className="min-h-[500px]">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsContent value="tasks" className="m-0 space-y-12 animate-in fade-in duration-700">
-                            {canEdit && (
-                                <TaskEntry
-                                    onCommit={(c, a, t) => addHomework(c, a, t)}
-                                    tags={tags}
-                                    onAddTag={(n) => addTag(n, user.id)}
-                                />
-                            )}
-
-                            <div className="flex items-center justify-between pt-8 border-t border-white/5">
-                                <h2 className="text-[10px] font-bold text-neutral-700 uppercase leading-none">Chronicle List</h2>
-                                <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/5">
-                                    {(["all", "pending", "done"] as const).map(f => (
-                                        <button key={f} onClick={() => setStatusFilter(f)} className={cn("px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-tighter transition-all", statusFilter === f ? "bg-white text-black shadow-lg" : "text-neutral-600 hover:text-neutral-400")}>{f}</button>
-                                    ))}
-                                </div>
-                            </div>
-
                             {loading ? (
                                 <div className="py-32 flex justify-center opacity-40"><Icons.Loader2 className="w-8 h-8 animate-spin" /></div>
-                            ) : statusFiltered.length === 0 ? (
-                                <div className="py-40 text-center space-y-4 opacity-20">
-                                    <div className="w-12 h-12 border border-white/20 rounded-full mx-auto flex items-center justify-center"><Icons.ChevronRight className="w-5 h-5 text-neutral-400" /></div>
-                                    <p className="text-[11px] font-bold uppercase text-neutral-400">{statusFilter === 'all' ? "No active objectives for this cycle." : `No tasks matching '${statusFilter}' status.`}</p>
-                                </div>
                             ) : (
                                 <div className="space-y-20">
-                                    {regularTasks.length > 0 && (
-                                        <div className="space-y-4">
-                                            {regularTasks.map(h => (
-                                                <TaskNode 
-                                                    key={h.id} 
-                                                    node={h} 
-                                                    depth={0} 
-                                                    canEdit={canEdit} 
-                                                    onToggle={(status: string) => toggleHomework(h.id, status)} 
-                                                    onDelete={() => deleteHomework(h.id)} 
-                                                    onAddSub={(parentId: string, content: string, tagId?: string | null) => addSubtask(h.id, parentId, content, tagId)} 
-                                                    onToggleSub={(subId: string) => toggleSubtask(h.id, subId)} 
-                                                    onDeleteSub={(subId: string) => deleteSubtask(h.id, subId)} 
-                                                    onUpdate={(updates: any) => updateHomework(h.id, updates)} 
-                                                    onUpdateSub={(subId: string, updates: any) => updateSubtask(h.id, subId, updates)} 
-                                                    rootId={h.id} 
-                                                    onSetDate={(targetId: string, date: string | null) => setPlannedDate(h.id, targetId, date)} 
-                                                    tags={tags} 
-                                                    isRunning={activeTask?.taskId === h.id}
-                                                    onRun={runTask}
-                                                    onPause={pauseTask}
-                                                    currentSessionMs={sessionMs}
-                                                    activeTaskId={activeTask?.taskId}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                    <TimeBlockTable 
+                                        homeworks={regularTasks}
+                                        tags={tags}
+                                        canEdit={canEdit}
+                                        onAddHomework={addHomework}
+                                        onUpdateHomework={updateHomework}
+                                        onDeleteHomework={deleteHomework}
+                                        onAddSubtask={addSubtask}
+                                        onUpdateSubtask={updateSubtask}
+                                        onDeleteSubtask={deleteSubtask}
+                                        onToggleSubtask={toggleSubtask}
+                                        onRunTask={runTask}
+                                        onPauseTask={pauseTask}
+                                        onCopyTaskToEnd={copyTaskToEnd}
+                                        activeTaskId={activeTask?.taskId}
+                                        currentSessionMs={sessionMs}
+                                    />
+                                    
                                     {plusAlphaTasks.length > 0 && (
                                         <div className="space-y-10 pt-10 border-t border-white/5">
                                             <div className="flex items-center gap-4">
-                                                <span className="text-[10px] text-neutral-700 font-black uppercase ">추가</span>
+                                                <span className="text-[10px] text-neutral-700 font-black uppercase ">추가 (Plus Alpha)</span>
                                                 <div className="h-px flex-1 bg-white/5" />
                                             </div>
-                                            <div className="space-y-4">
-                                                {plusAlphaTasks.map(h => (
-                                                    <TaskNode 
-                                                        key={h.id} 
-                                                        node={h} 
-                                                        depth={0} 
-                                                        canEdit={canEdit} 
-                                                        onToggle={(status: string) => toggleHomework(h.id, status)} 
-                                                        onDelete={() => deleteHomework(h.id)} 
-                                                        onAddSub={(parentId: string, content: string, tagId?: string | null) => addSubtask(h.id, parentId, content, tagId)} 
-                                                        onToggleSub={(subId: string) => toggleSubtask(h.id, subId)} 
-                                                        onDeleteSub={(subId: string) => deleteSubtask(h.id, subId)} 
-                                                        onUpdate={(updates: any) => updateHomework(h.id, updates)} 
-                                                        onUpdateSub={(subId: string, updates: any) => updateSubtask(h.id, subId, updates)} 
-                                                        rootId={h.id} 
-                                                        onSetDate={(targetId: string, date: string | null) => setPlannedDate(h.id, targetId, date)} 
-                                                        tags={tags} 
-                                                        isRunning={activeTask?.taskId === h.id}
-                                                        onRun={runTask}
-                                                        onPause={pauseTask}
-                                                        currentSessionMs={sessionMs}
-                                                        activeTaskId={activeTask?.taskId}
-                                                    />
-                                                ))}
-                                            </div>
+                                            <TimeBlockTable 
+                                                homeworks={plusAlphaTasks}
+                                                tags={tags}
+                                                canEdit={canEdit}
+                                                onAddHomework={(content) => addHomework(content, true)}
+                                                onUpdateHomework={updateHomework}
+                                                onDeleteHomework={deleteHomework}
+                                                onAddSubtask={addSubtask}
+                                                onUpdateSubtask={updateSubtask}
+                                                onDeleteSubtask={deleteSubtask}
+                                                onToggleSubtask={toggleSubtask}
+                                                onRunTask={runTask}
+                                                onPauseTask={pauseTask}
+                                                onCopyTaskToEnd={copyTaskToEnd}
+                                                activeTaskId={activeTask?.taskId}
+                                                currentSessionMs={sessionMs}
+                                            />
                                         </div>
                                     )}
                                 </div>

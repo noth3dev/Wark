@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, BarChart2, Music, Flame, ClipboardList, Coffee, Plane, CheckCircle2, Activity } from "lucide-react";
+import { Clock, BarChart2, Music, Flame, ClipboardList, Coffee, Plane, CheckCircle2, Activity, FileText, ChevronDown, Sparkles, HardDrive } from "lucide-react";
 
 interface MobileMenuProps {
     isOpen: boolean;
@@ -12,6 +12,8 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ isOpen, setIsOpen, user }: MobileMenuProps) {
+    const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+
     useEffect(() => {
         document.body.style.overflow = isOpen ? "hidden" : "unset";
         return () => { document.body.style.overflow = "unset"; };
@@ -28,14 +30,41 @@ export function MobileMenu({ isOpen, setIsOpen, user }: MobileMenuProps) {
                 >
                     <div className="flex flex-col p-4 gap-2">
                         <MobileNavLink href="/" icon={<Clock className="w-5 h-5" />} label="Timer" onClick={() => setIsOpen(false)} />
-                        <MobileNavLink href="/sprint" icon={<Flame className="w-5 h-5" />} label="Sprint" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/record" icon={<BarChart2 className="w-5 h-5" />} label="Records" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/playlist" icon={<Music className="w-5 h-5" />} label="Playlist" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href={`/homework-outer/${user?.id}`} icon={<ClipboardList className="w-5 h-5" />} label="Homework" onClick={() => setIsOpen(false)} />
                         <MobileNavLink href="/overdose" icon={<Coffee className="w-5 h-5" />} label="Overdose" onClick={() => setIsOpen(false)} />
-                        <MobileNavLink href="/flight" icon={<Plane className="w-5 h-5" />} label="Flight" onClick={() => setIsOpen(false)} />
-                        <MobileNavLink href="/habit" icon={<CheckCircle2 className="w-5 h-5" />} label="Habit" onClick={() => setIsOpen(false)} />
-                        <MobileNavLink href="/repeat" icon={<Activity className="w-5 h-5" />} label="Repeat" onClick={() => setIsOpen(false)} />
+                        <MobileNavLink href="/silmo" icon={<FileText className="w-5 h-5" />} label="Silmo" onClick={() => setIsOpen(false)} />
+
+                        {/* Collapsible Playground */}
+                        <div>
+                            <button
+                                onClick={() => setIsPlaygroundOpen(!isPlaygroundOpen)}
+                                className="flex items-center justify-between w-full px-6 py-4 text-neutral-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Sparkles className="w-5 h-5" />
+                                    <span className="text-base font-bold font-suit">Playground</span>
+                                </div>
+                                <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isPlaygroundOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                                {isPlaygroundOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="overflow-hidden pl-6 flex flex-col gap-1 mt-1 bg-white/[0.02] rounded-2xl py-2"
+                                    >
+                                        <MobileNavLink href="/sprint" icon={<Flame className="w-4 h-4" />} label="Sprint" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                        <MobileNavLink href="/drive" icon={<HardDrive className="w-4 h-4" />} label="Drive" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                        <MobileNavLink href="/flight" icon={<Plane className="w-4 h-4" />} label="Flight" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                        <MobileNavLink href="/habit" icon={<CheckCircle2 className="w-4 h-4" />} label="Habit" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                        <MobileNavLink href="/repeat" icon={<Activity className="w-4 h-4" />} label="Repeat" onClick={() => { setIsPlaygroundOpen(false); setIsOpen(false); }} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </motion.nav>
             )}

@@ -14,7 +14,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     const targetUserId = userIdOverride || user?.id;
 
     // Fragmented Hooks
-    const { tags, fetchTags, addTag: addTagBase, updateTag: updateTagBase, deleteTag: deleteTagBase } = useTags();
+    const { tags, dbGroups, fetchTags, addTag: addTagBase, updateTag: updateTagBase, deleteTag: deleteTagBase } = useTags();
     const {
         activeSession,
         loading: sessionLoading,
@@ -95,9 +95,9 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
         }
     };
 
-    const addTag = async (name: string) => {
+    const addTag = async (name: string, icon?: string, color?: string) => {
         if (!user) return null;
-        return await addTagBase(name, user.id);
+        return await addTagBase(name, user.id, icon, color);
     };
 
     const updateTag = async (id: string, name: string, color: string, icon: string) => {
@@ -138,6 +138,7 @@ export function useStopwatch(onSave?: () => void, userIdOverride?: string) {
     return {
         time,
         tags,
+        dbGroups,
         activeTagId: activeSession?.tag_id || null,
         activeSession,
         sessionLoading,

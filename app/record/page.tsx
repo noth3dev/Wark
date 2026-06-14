@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 import { Session } from "@/lib/types";
 import { useRecord } from "@/hooks/useRecord";
+import { useHomework } from "@/hooks/useHomework";
 
 // Components
 import { RecordHeader } from "@/components/record/RecordHeader";
@@ -35,6 +36,36 @@ export default function RecordPage() {
         tagGroups,
         fetchData
     } = useRecord();
+
+    const { homeworks } = useHomework();
+
+    // Extract flat list of completed subtask events for the selected date
+    const completedTaskDots = useMemo(() => {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dots: { time: number; label: string; tagId?: string | null }[] = [];
+
+        const walkSubtasks = (subtasks: any[], depth: number) => {
+            for (const s of subtasks) {
+                if (s.completed_at && (s.status === "completed" || s.is_completed)) {
+                    const completedDate = new Date(s.completed_at).toISOString().split('T')[0];
+                    if (completedDate === dateStr) {
+                        dots.push({
+                            time: new Date(s.completed_at).getTime(),
+                            label: s.content,
+                            tagId: s.tag_id,
+                        });
+                    }
+                }
+                if (s.subtasks?.length) walkSubtasks(s.subtasks, depth + 1);
+            }
+        };
+
+        for (const hw of homeworks) {
+            if (hw.subtasks?.length) walkSubtasks(hw.subtasks, 0);
+        }
+
+        return dots;
+    }, [homeworks, selectedDate]);
 
     const [editingSession, setEditingSession] = useState<Session | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -307,6 +338,7 @@ export default function RecordPage() {
                                 tags={tags}
                                 onFillGap={handleFillGap}
                                 onFillAll={handleFillAll}
+                                completedTaskDots={completedTaskDots}
                             />
                         </div>
 

@@ -3,44 +3,43 @@
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { X, Trash2, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tag } from "../../lib/types";
 
-// Keep icons for selection
-const ICONS = [
-    'Cpu', 'Moon', 'Sun', 'Book', 'Code', 'Coffee', 'Gamepad2', 
-    'Music', 'Dumbbell', 'Briefcase', 'Heart', 'Star', 'Camera',
-    'PenTool', 'GraduationCap', 'Languages', 'Atom'
-];
-
-// Modern, vibrant color palette
-const COLORS = [
-    '#22d3ee', // Cyan
-    '#818cf8', // Indigo
-    '#c084fc', // Violet
-    '#f472b6', // Pink
-    '#fb7185', // Rose
-    '#ef4444', // Red
-    '#fb923c', // Orange
-    '#fbbf24', // Amber
-    '#a3e635', // Lime
-    '#4ade80', // Green
-    '#2dd4bf', // Teal
-    '#94a3b8', // Gray
-    '#ffffff'  // White
-];
+import { TAG_VARIANTS } from "../../lib/tag-variants";
 
 interface TagModalProps {
     tag: Tag;
+    dbGroups?: any[];
     onClose: () => void;
     onUpdate: (id: string, name: string, color: string, icon: string) => Promise<boolean>;
     onDelete: (id: string) => void;
 }
 
-export function TagModal({ tag, onClose, onUpdate, onDelete }: TagModalProps) {
+export function TagModal({ tag, dbGroups = [], onClose, onUpdate, onDelete }: TagModalProps) {
+    const groupsToUse = dbGroups.length > 0 ? dbGroups : TAG_VARIANTS;
+    const hasValidGroup = groupsToUse.some(g => g.icon === tag.icon);
+    const defaultGroup = groupsToUse[0] || { icon: 'Cpu', color: '#22d3ee' };
+
     const [name, setName] = useState(tag.name);
-    const [color, setColor] = useState(tag.color || '#22d3ee');
-    const [icon, setIcon] = useState(tag.icon || 'Cpu');
+    const [color, setColor] = useState(hasValidGroup ? (tag.color || defaultGroup.color) : defaultGroup.color);
+    const [icon, setIcon] = useState(hasValidGroup ? (tag.icon || defaultGroup.icon) : defaultGroup.icon);
+
+    useEffect(() => {
+        const groups = dbGroups.length > 0 ? dbGroups : TAG_VARIANTS;
+        const valid = groups.some(g => g.icon === tag.icon);
+        if (!valid && groups.length > 0) {
+            setIcon(groups[0].icon);
+            setColor(groups[0].color);
+        } else if (valid) {
+            // Check if tag.color is different from the group's color, if so, we should probably update it to the group's color
+            const group = groups.find(g => g.icon === tag.icon);
+            if (group) {
+                setIcon(group.icon);
+                setColor(group.color);
+            }
+        }
+    }, [dbGroups, tag.icon, tag.color]);
 
     return (
         <motion.div
@@ -53,7 +52,7 @@ export function TagModal({ tag, onClose, onUpdate, onDelete }: TagModalProps) {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 space-y-8 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar"
+                className="w-full max-w-md bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 space-y-8 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar"
             >
                 <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500">Edit Tag Protocol</h3>
@@ -74,37 +73,38 @@ export function TagModal({ tag, onClose, onUpdate, onDelete }: TagModalProps) {
                         />
                     </div>
 
-                    {/* Color Selection */}
+                    {/* Group Selection */}
                     <div className="space-y-3">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Color Palette</label>
-                        <div className="flex flex-wrap gap-2.5">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c}
-                                    onClick={() => setColor(c)}
-                                    className={`w-6 h-6 rounded-full border-2 transition-all ${color === c ? 'border-white scale-125' : 'border-transparent hover:scale-110'}`}
-                                    style={{ backgroundColor: c }}
-                                >
-                                    {color === c && <Check className="w-3 h-3 text-black mx-auto" />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Icon Selection */}
-                    <div className="space-y-3">
-                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Symbol Selection</label>
-                        <div className="grid grid-cols-6 gap-2">
-                            {ICONS.map(i => {
-                                const IconComp = (Icons as any)[i];
-                                const isSelected = icon === i;
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-1">Assign Tag Group</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {groupsToUse.map(variant => {
+                                const IconComp = (Icons as any)[variant.icon] || Icons.HelpCircle;
+                                const isSelected = icon === variant.icon;
+                                const labelText = variant.label || variant.name;
                                 return (
                                     <button
-                                        key={i}
-                                        onClick={() => setIcon(i)}
-                                        className={`aspect-square flex items-center justify-center rounded-xl border transition-all ${isSelected ? 'bg-white/10 border-white/20 scale-110' : 'bg-white/5 border-transparent opacity-40 hover:opacity-100'}`}
+                                        key={variant.icon}
+                                        type="button"
+                                        onClick={() => {
+                                            setIcon(variant.icon);
+                                            setColor(variant.color);
+                                        }}
+                                        className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                                            isSelected 
+                                                ? 'bg-white/10 border-white/20 scale-[1.02]' 
+                                                : 'bg-white/5 border-transparent opacity-60 hover:opacity-100 hover:bg-white/[0.08]'
+                                        }`}
                                     >
-                                        <IconComp className="w-4 h-4" style={{ color: isSelected ? color : undefined }} />
+                                        <div 
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                            style={{ backgroundColor: `${variant.color}15`, color: variant.color }}
+                                        >
+                                            <IconComp className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-[11px] font-bold text-neutral-200 truncate">{labelText}</div>
+                                            <div className="text-[9px] text-neutral-500 truncate" style={{ color: isSelected ? variant.color : undefined }}>{variant.icon}</div>
+                                        </div>
                                     </button>
                                 );
                             })}

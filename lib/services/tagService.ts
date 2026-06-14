@@ -11,13 +11,14 @@ export const tagService = {
             .order('name');
     },
 
-    async addTag(name: string, userId: string) {
-        const defaultIcon = 'Cpu';
+    async addTag(name: string, userId: string, icon?: string, color?: string) {
+        const defaultIcon = icon || 'Cpu';
+        const defaultColor = color || getTagColor(defaultIcon);
         return await supabase.from('tags').insert([{
             name: name.trim(),
             user_id: userId,
             icon: defaultIcon,
-            color: getTagColor(defaultIcon)
+            color: defaultColor
         }]).select().single();
     },
 
@@ -32,17 +33,16 @@ export const tagService = {
         return await supabase.from('tags').delete().eq('id', id);
     },
 
-    async fetchTagGroups(userId: string) {
+    async fetchTagGroups() {
         return await supabase
             .from('tag_groups')
-            .select('*')
-            .eq('user_id', userId);
+            .select('*');
     },
 
-    async updateTagGroup(userId: string, icon: string, name: string) {
-        const color = getTagColor(icon);
+    async updateTagGroup(icon: string, name: string, color?: string) {
+        const defaultColor = color || getTagColor(icon);
         return await supabase
             .from('tag_groups')
-            .upsert({ user_id: userId, icon, color, name }, { onConflict: 'user_id,icon,color' });
+            .upsert({ icon, color: defaultColor, name }, { onConflict: 'icon' });
     }
 };
