@@ -310,7 +310,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    if (authUser && isDbConnected && Math.random() < 0.2) {
+    if (authUser && isDbConnected) {
       try {
         const sessionsData = await fetchActiveExamSessions();
         if (sessionsData) {

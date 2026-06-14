@@ -296,7 +296,7 @@ export default function RecordsPage() {
                               <span className="text-[10px] text-neutral-500 font-suit leading-normal">
                                   응시 후 점수와 다른 사람들의 기록을 확인할 수 있습니다.
                                 </span>
-                                {scheduleForTitle && (
+                                {scheduleForTitle && scheduleForTitle.date <= todayKST && (
                                   <button
                                     onClick={() => {
                                       handleTakeGlobalSchedule(scheduleForTitle, true);
