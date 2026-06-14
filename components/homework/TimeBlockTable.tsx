@@ -259,20 +259,20 @@ export function TimeBlockTable({
                                                     placeholder="e.g. 09:00 - 12:00"
                                                 />
                                                 {canEdit && (
-                                                    <div className="flex items-center gap-1.5 mt-0.5 px-1 opacity-100 md:opacity-0 md:group-hover/time:opacity-100 transition-opacity">
+                                                    <div className="flex items-center gap-1.5 mt-0.5 px-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/time:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => onAddSubtask(row.hw.id, row.hw.id, "New Subject")}
                                                             className="flex items-center gap-0.5 text-[9px] text-neutral-500 hover:text-white transition-colors"
-                                                            title="Add Subject"
+                                                            title="과목 추가"
                                                         >
-                                                            <Plus className="w-3 h-3" /> 과목
+                                                            <Plus className="w-3 h-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleInsertHomeworkBelow(row.hw)}
                                                             className="flex items-center gap-0.5 text-[9px] text-neutral-500 hover:text-white transition-colors"
-                                                            title="Insert Time Block Below"
+                                                            title="시간 블록 아래에 끼워넣기"
                                                         >
-                                                            <Icons.ListPlus className="w-3 h-3" /> 끼워넣기
+                                                            <Icons.ListPlus className="w-3 h-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => onDeleteHomework(row.hw.id)}
@@ -297,20 +297,20 @@ export function TimeBlockTable({
                                                 />
 
                                                 {canEdit && (
-                                                    <div className="flex items-center gap-1.5 mt-0.5 px-1 opacity-100 md:opacity-0 md:group-hover/sub:opacity-100 transition-opacity">
+                                                    <div className="flex items-center gap-1.5 mt-0.5 px-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/sub:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => onAddSubtask(row.hw.id, row.subject.id, "", row.subject.tag_id)}
                                                             className="flex items-center gap-0.5 text-[9px] text-neutral-500 hover:text-white transition-colors"
-                                                            title="Add Task"
+                                                            title="교재 추가"
                                                         >
-                                                            <Plus className="w-3 h-3" /> 교재
+                                                            <Plus className="w-3 h-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => onAddSubtask(row.hw.id, row.hw.id, "New Subject", null, undefined, row.subject.id)}
                                                             className="flex items-center gap-0.5 text-[9px] text-neutral-500 hover:text-white transition-colors"
-                                                            title="Insert Subject Below"
+                                                            title="과목 아래에 끼워넣기"
                                                         >
-                                                            <Icons.ListPlus className="w-3 h-3" /> 끼워넣기
+                                                            <Icons.ListPlus className="w-3 h-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => onDeleteSubtask(row.hw.id, row.subject.id)}
@@ -427,7 +427,7 @@ export function TimeBlockTable({
                                                         ) : (
                                                             <button
                                                                 onClick={() => onRunTask(row.hw.id, row.material.id, row.subject?.tag_id || row.hw.tag_id)}
-                                                                className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center hover:bg-blue-500/20 transition-all shrink-0 opacity-100 md:opacity-0 md:group-hover/row:opacity-100"
+                                                                className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center hover:bg-blue-500/20 transition-all shrink-0 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100"
                                                             >
                                                                 <Play className="w-2.5 h-2.5 ml-0.5" fill="currentColor" />
                                                             </button>
@@ -443,14 +443,14 @@ export function TimeBlockTable({
                                                             <>
                                                                 <button
                                                                     onClick={() => onAddSubtask(row.hw.id, row.subject.id, "", row.subject.tag_id, undefined, row.material.id)}
-                                                                    className="p-0.5 text-neutral-500 hover:text-white transition-colors opacity-100 md:opacity-0 md:group-hover/row:opacity-100"
+                                                                    className="p-0.5 text-neutral-500 hover:text-white transition-colors opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100"
                                                                     title="Insert Material Below"
                                                                 >
                                                                     <Plus className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => onDeleteSubtask(row.hw.id, row.material.id)}
-                                                                    className="p-0.5 text-neutral-500 hover:text-red-400 transition-colors opacity-100 md:opacity-0 md:group-hover/row:opacity-100"
+                                                                    className="p-0.5 text-neutral-500 hover:text-red-400 transition-colors opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100"
                                                                     title="Delete Material"
                                                                 >
                                                                     <X className="w-3.5 h-3.5" />
