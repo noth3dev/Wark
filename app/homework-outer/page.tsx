@@ -257,7 +257,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                         homeworks={regularTasks}
                                         tags={tags}
                                         canEdit={canEdit}
-                                        onAddHomework={(content) => addHomework(content, false, null, dayKey)}
+                                        onAddHomework={(content, isPlusAlpha, tagId, plannedDate, createdAt) => addHomework(content, isPlusAlpha ?? false, tagId, plannedDate ?? dayKey, createdAt)}
                                         onUpdateHomework={updateHomework}
                                         onDeleteHomework={deleteHomework}
                                         onAddSubtask={addSubtask}
@@ -281,7 +281,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                                 homeworks={plusAlphaTasks}
                                                 tags={tags}
                                                 canEdit={canEdit}
-                                                onAddHomework={(content) => addHomework(content, true, null, dayKey)}
+                                                onAddHomework={(content, isPlusAlpha, tagId, plannedDate, createdAt) => addHomework(content, isPlusAlpha ?? true, tagId, plannedDate ?? dayKey, createdAt)}
                                                 onUpdateHomework={updateHomework}
                                                 onDeleteHomework={deleteHomework}
                                                 onAddSubtask={addSubtask}

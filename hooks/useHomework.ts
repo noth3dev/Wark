@@ -22,6 +22,7 @@ export interface Subtask {
     current_amount?: number;
     amount_text?: string;
     material_id?: string;
+    notes?: string;
 }
 
 export interface Homework {
@@ -42,6 +43,7 @@ export interface Homework {
     current_amount?: number;
     amount_text?: string;
     material_id?: string;
+    notes?: string;
 }
 
 export function useHomework(userIdOverride?: string) {
@@ -68,11 +70,13 @@ export function useHomework(userIdOverride?: string) {
             
             const formattedData = (data || []).map(h => ({
                 ...h,
+                notes: h.notes || "",
                 is_slider: !!h.is_slider,
                 total_amount: h.total_amount || 0,
                 current_amount: h.current_amount || 0,
                 subtasks: Array.isArray(h.subtasks) ? h.subtasks.map((st: any) => ({
                     ...st,
+                    notes: st.notes || "",
                     time_spent: st.time_spent || 0,
                     status: st.status || (st.is_completed ? "completed" : "todo"),
                     is_slider: !!st.is_slider,
@@ -104,25 +108,32 @@ export function useHomework(userIdOverride?: string) {
         }
     };
 
-    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false, tag_id?: string | null, planned_date?: string | null) => {
+    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false, tag_id?: string | null, planned_date?: string | null, created_at?: string) => {
         if (!user) return;
         try {
+            const insertObj: any = { 
+                user_id: user.id, 
+                content, 
+                is_completed: false, 
+                status: "todo",
+                subtasks: [],
+                is_plus_alpha,
+                tag_id,
+                time_spent: 0,
+                planned_date: planned_date || null
+            };
+            if (created_at) {
+                insertObj.created_at = created_at;
+            }
             const { data, error } = await supabase
                 .from("homeworks")
-                .insert({ 
-                    user_id: user.id, 
-                    content, 
-                    is_completed: false, 
-                    status: "todo",
-                    subtasks: [],
-                    is_plus_alpha,
-                    tag_id,
-                    time_spent: 0,
-                    planned_date: planned_date || null
-                })
+                .insert(insertObj)
                 .select().single();
             if (error) throw error;
-            setHomeworks(prev => [...prev, data]);
+            setHomeworks(prev => {
+                const updated = [...prev, data];
+                return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            });
         } catch (err) { console.error(err); }
     }, [user]);
 
@@ -165,7 +176,7 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user]);
 
-    const addSubtask = useCallback(async (homeworkId: string, parentId: string, content: string, tag_id?: string | null, amount_text?: string): Promise<string | undefined> => {
+    const addSubtask = useCallback(async (homeworkId: string, parentId: string, content: string, tag_id?: string | null, amount_text?: string, insertAfterId?: string): Promise<string | undefined> => {
         if (!user) return undefined;
         const homework = homeworks.find(h => h.id === homeworkId);
         if (!homework) return undefined;
@@ -199,18 +210,43 @@ export function useHomework(userIdOverride?: string) {
             created_at: new Date().toISOString(),
             tag_id: inheritedTagId,
             amount_text,
-            time_spent: 0
+            time_spent: 0,
+            notes: ""
         };
         
         let updatedSubtasks: Subtask[];
         if (parentId === homeworkId) {
-            updatedSubtasks = [...(homework.subtasks || []), newSub];
+            if (insertAfterId) {
+                const idx = (homework.subtasks || []).findIndex(s => s.id === insertAfterId);
+                if (idx !== -1) {
+                    updatedSubtasks = [...(homework.subtasks || [])];
+                    updatedSubtasks.splice(idx + 1, 0, newSub);
+                } else {
+                    updatedSubtasks = [...(homework.subtasks || []), newSub];
+                }
+            } else {
+                updatedSubtasks = [...(homework.subtasks || []), newSub];
+            }
         } else {
-            const { tasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], parentId!, (t) => ({
-                is_completed: false, 
-                completed_at: null, // Adding a child uncompletes the parent
-                subtasks: [...(t.subtasks || []), newSub]
-            }));
+            const { tasks } = Utils.recursiveUpdateSubtasks(homework.subtasks || [], parentId!, (t) => {
+                let newChildren: Subtask[];
+                if (insertAfterId) {
+                    const idx = (t.subtasks || []).findIndex(s => s.id === insertAfterId);
+                    if (idx !== -1) {
+                        newChildren = [...(t.subtasks || [])];
+                        newChildren.splice(idx + 1, 0, newSub);
+                    } else {
+                        newChildren = [...(t.subtasks || []), newSub];
+                    }
+                } else {
+                    newChildren = [...(t.subtasks || []), newSub];
+                }
+                return {
+                    is_completed: false, 
+                    completed_at: null, // Adding a child uncompletes the parent
+                    subtasks: newChildren
+                };
+            });
             updatedSubtasks = tasks;
         }
 
@@ -228,7 +264,7 @@ export function useHomework(userIdOverride?: string) {
         }
     }, [user, homeworks]);
 
-    const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null, is_slider?: boolean, total_amount?: number, current_amount?: number }) => {
+    const updateHomework = useCallback(async (id: string, updates: { content?: string, tag_id?: string | null, is_slider?: boolean, total_amount?: number, current_amount?: number, notes?: string }) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === id);
         if (!homework) return;
@@ -254,7 +290,7 @@ export function useHomework(userIdOverride?: string) {
         } catch (err) { console.error(err); }
     }, [user, homeworks]);
 
-    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null, status?: "todo" | "in_progress" | "completed" | "incomplete", is_completed?: boolean, is_slider?: boolean, total_amount?: number, current_amount?: number, completed_at?: string | null, amount_text?: string, material_id?: string }) => {
+    const updateSubtask = useCallback(async (homeworkId: string, subtaskId: string, updates: { content?: string, tag_id?: string | null, status?: "todo" | "in_progress" | "completed" | "incomplete", is_completed?: boolean, is_slider?: boolean, total_amount?: number, current_amount?: number, completed_at?: string | null, amount_text?: string, material_id?: string, notes?: string }) => {
         if (!user) return;
         const homework = homeworks.find(h => h.id === homeworkId);
         if (!homework) return;
