@@ -17,6 +17,7 @@ import { HomeworkHeader } from "../../components/homework/HomeworkHeader";
 import { StatsDonut } from "../../components/homework/StatsDonut";
 import { ActivityList } from "../../components/homework/ActivityList";
 import { ExamsView } from "../../components/homework/ExamsView";
+import { useDailyComment } from "../../hooks/useDailyComment";
 
 export default function HomeworkOuterPage({ searchParams, userId: propUserId }: any) {
     const { user, loading: authLoading } = useAuth();
@@ -151,9 +152,15 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         return `${yyyy}-${mm}-${dd}`;
     }, [viewDate]);
 
+    const { comment, saveComment } = useDailyComment(viewedUserId, dayKey);
+
     const filtered = useMemo(() => {
         return homeworks.filter(h => {
-            const createdDate = new Date(h.created_at).toISOString().split('T')[0];
+            const d = new Date(h.created_at);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const createdDate = `${yyyy}-${mm}-${dd}`;
             const plannedDate = h.planned_date;
             return plannedDate ? plannedDate === dayKey : createdDate === dayKey;
         });
@@ -234,6 +241,9 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                     onShiftWeek={shiftDay}
                     onToday={() => setViewDate(new Date())}
                     onExport={() => setIsExportOpen(true)}
+                    comment={comment}
+                    onSaveComment={saveComment}
+                    canEdit={canEdit}
                 />
 
                 <div className="min-h-[500px]">
@@ -247,7 +257,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                         homeworks={regularTasks}
                                         tags={tags}
                                         canEdit={canEdit}
-                                        onAddHomework={addHomework}
+                                        onAddHomework={(content) => addHomework(content, false, null, dayKey)}
                                         onUpdateHomework={updateHomework}
                                         onDeleteHomework={deleteHomework}
                                         onAddSubtask={addSubtask}
@@ -271,7 +281,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                                                 homeworks={plusAlphaTasks}
                                                 tags={tags}
                                                 canEdit={canEdit}
-                                                onAddHomework={(content) => addHomework(content, true)}
+                                                onAddHomework={(content) => addHomework(content, true, null, dayKey)}
                                                 onUpdateHomework={updateHomework}
                                                 onDeleteHomework={deleteHomework}
                                                 onAddSubtask={addSubtask}

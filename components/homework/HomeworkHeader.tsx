@@ -13,6 +13,9 @@ interface HomeworkHeaderProps {
     onShiftWeek: (n: number) => void;
     onToday: () => void;
     onExport: () => void;
+    comment: string;
+    onSaveComment: (val: string) => void;
+    canEdit: boolean;
 }
 
 export function HomeworkHeader({
@@ -22,14 +25,50 @@ export function HomeworkHeader({
     onTabChange,
     onShiftWeek,
     onToday,
-    onExport
+    onExport,
+    comment,
+    onSaveComment,
+    canEdit
 }: HomeworkHeaderProps) {
+    const [localComment, setLocalComment] = React.useState(comment);
+
+    React.useEffect(() => {
+        setLocalComment(comment);
+    }, [comment]);
+
     return (
         <header className="space-y-8 sm:space-y-10">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-0">
-                <div className="space-y-1.5 sm:space-y-2">
+                <div className="space-y-1.5 sm:space-y-2 flex-1 max-w-xl">
                     <p className="text-[9px] sm:text-[10px] text-neutral-600 font-bold uppercase tracking-wider">Plan For</p>
                     <h1 className="text-3xl sm:text-5xl font-semibold tracking-tighter leading-none">{formattedWeek}</h1>
+                    <div className="pt-2">
+                        {canEdit ? (
+                            <input
+                                type="text"
+                                value={localComment}
+                                onChange={(e) => setLocalComment(e.target.value)}
+                                onBlur={() => {
+                                    if (localComment !== comment) {
+                                        onSaveComment(localComment);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.currentTarget.blur();
+                                    }
+                                }}
+                                placeholder="오늘의 한마디를 입력하세요..."
+                                className="bg-transparent border-b border-transparent hover:border-white/10 focus:border-white/30 text-xs sm:text-sm text-neutral-400 focus:text-white placeholder:text-neutral-700 outline-none w-full py-1 transition-all"
+                            />
+                        ) : (
+                            localComment && (
+                                <p className="text-xs sm:text-sm text-neutral-400 italic font-suit">
+                                    "{localComment}"
+                                </p>
+                            )
+                        )}
+                    </div>
                 </div>
                 <div className="flex sm:block items-end justify-between sm:text-right border-t border-white/5 sm:border-0 pt-4 sm:pt-0">
                     <p className="text-[9px] sm:text-[10px] text-neutral-600 font-bold uppercase mb-1 sm:mb-2">Completion</p>

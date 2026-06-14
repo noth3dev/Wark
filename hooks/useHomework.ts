@@ -104,7 +104,7 @@ export function useHomework(userIdOverride?: string) {
         }
     };
 
-    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false, tag_id?: string | null) => {
+    const addHomework = useCallback(async (content: string, is_plus_alpha: boolean = false, tag_id?: string | null, planned_date?: string | null) => {
         if (!user) return;
         try {
             const { data, error } = await supabase
@@ -117,7 +117,8 @@ export function useHomework(userIdOverride?: string) {
                     subtasks: [],
                     is_plus_alpha,
                     tag_id,
-                    time_spent: 0
+                    time_spent: 0,
+                    planned_date: planned_date || null
                 })
                 .select().single();
             if (error) throw error;
