@@ -41,7 +41,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
         copyIncompleteTaskToHw
     } = useHomework(viewedUserId);
 
-    const { tags, dailyTimes, time, activeTagId, activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
+    const { tags, dbGroups, dailyTimes, time, activeTagId, activeSession, sessionLoading, handleTagClick: triggerTagTimer } = useStopwatch(undefined, viewedUserId);
     const { addTag } = useTags();
 
     const [activeTask, setActiveTask] = useState<{ hwId: string, taskId: string, tagId: string | null, startTime: number } | null>(null);
@@ -321,7 +321,19 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                 </div>
             </div>
 
-            <ExportDialog isOpen={isExportOpen} onOpenChange={setIsExportOpen} homeworks={homeworks} tags={tags} dailyTimes={dailyTimes} currentTimeMs={time} activeTagId={activeTagId} userName={user?.email?.split('@')[0]} />
+            <ExportDialog 
+                isOpen={isExportOpen} 
+                onOpenChange={setIsExportOpen} 
+                homeworks={homeworks} 
+                tags={tags} 
+                dbGroups={dbGroups}
+                dailyTimes={dailyTimes} 
+                currentTimeMs={time} 
+                activeTagId={activeTagId} 
+                userName={user?.email?.split('@')[0]} 
+                comment={comment}
+                viewedUserId={viewedUserId}
+            />
         </main>
     );
 }
