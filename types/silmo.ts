@@ -1,8 +1,8 @@
-export type ExamType = 'korean' | 'math' | 'both';
+export type ExamType = 'korean' | 'math' | 'both' | 'explore';
 
 export type ExamStatus = 'active' | 'break' | 'finished';
 
-export type ExamPhase = 'korean' | 'break' | 'math' | 'finished';
+export type ExamPhase = 'korean' | 'break' | 'math' | 'explore' | 'finished';
 
 export interface User {
   id: string;
@@ -50,7 +50,7 @@ export interface LiveUserStatus {
   name: string;
   image?: string;
   status: 'active' | 'break' | 'finished';
-  currentPhase?: 'korean' | 'break' | 'math' | 'finished';
+  currentPhase?: 'korean' | 'break' | 'math' | 'explore' | 'finished';
   examType?: ExamType;
   remainingSeconds?: number;
 }

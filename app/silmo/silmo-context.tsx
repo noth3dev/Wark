@@ -402,6 +402,8 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       durationMinutes = 80;
     } else if (schedule.type === 'math') {
       durationMinutes = 100;
+    } else if (schedule.type === 'explore') {
+      durationMinutes = 30;
     } else if (schedule.type === 'both') {
       durationMinutes = 80 + 30 + 100; // 210 minutes
     }

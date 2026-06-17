@@ -47,13 +47,14 @@ export default function RoundPage() {
   // Stepper state: 1, 2, or 3
   const [activeStep, setActiveStep] = useState<number>(1);
 
-  // Distribution states
-  const [d1, setD1] = useState<number>(0);
-  const [d2, setD2] = useState<number>(0);
-  const [d3, setD3] = useState<number>(0);
-  const [d4, setD4] = useState<number>(0);
-  const [d5, setD5] = useState<number>(0);
+  // Distribution states (using string for smoother input handling)
+  const [d1, setD1] = useState<string>('');
+  const [d2, setD2] = useState<string>('');
+  const [d3, setD3] = useState<string>('');
+  const [d4, setD4] = useState<string>('');
+  const [d5, setD5] = useState<string>('');
   const [isSavingDist, setIsSavingDist] = useState(false);
+  const isEditingDist = React.useRef(false);
 
   // Fetched distributions
   const [distributions, setDistributions] = useState<any[]>([]);
@@ -96,18 +97,18 @@ export default function RoundPage() {
           const mySchool = schools[authUser?.id || ''] || '';
           if (mySchool) {
             const myDist = data?.find((d: any) => d.school === mySchool);
-            if (myDist) {
-              setD1(myDist.r1);
-              setD2(myDist.r2);
-              setD3(myDist.r3);
-              setD4(myDist.r4);
-              setD5(myDist.r5);
-            } else {
-              setD1(0);
-              setD2(0);
-              setD3(0);
-              setD4(0);
-              setD5(0);
+            if (myDist && !isEditingDist.current) {
+              setD1(myDist.r1.toString());
+              setD2(myDist.r2.toString());
+              setD3(myDist.r3.toString());
+              setD4(myDist.r4.toString());
+              setD5(myDist.r5.toString());
+            } else if (!myDist && !isEditingDist.current) {
+              setD1('');
+              setD2('');
+              setD3('');
+              setD4('');
+              setD5('');
             }
           }
         } catch (e) {
@@ -274,8 +275,8 @@ export default function RoundPage() {
   // Save distribution handler
   const handleSaveMyScore = async () => {
     if (!activeSchedule) return;
-    const kor = (activeSchedule.type === 'korean' || activeSchedule.type === 'both') ? parseInt(myKoreanInput) : null;
-    const mat = (activeSchedule.type === 'math' || activeSchedule.type === 'both') ? parseInt(myMathInput) : null;
+    const kor = (activeSchedule.type === 'korean' || activeSchedule.type === 'both' || activeSchedule.type === 'explore') ? (myKoreanInput === '' ? null : parseInt(myKoreanInput)) : null;
+    const mat = (activeSchedule.type === 'math' || activeSchedule.type === 'both') ? (myMathInput === '' ? null : parseInt(myMathInput)) : null;
 
     if ((activeSchedule.type === 'korean' || activeSchedule.type === 'both') && (kor === null || isNaN(kor) || kor < 0 || kor > 100)) {
       alert('올바른 국어 점수(0~100)를 입력해주세요.');
@@ -283,6 +284,12 @@ export default function RoundPage() {
     }
     if ((activeSchedule.type === 'math' || activeSchedule.type === 'both') && (mat === null || isNaN(mat) || mat < 0 || mat > 100)) {
       alert('올바른 수학 점수(0~100)를 입력해주세요.');
+      return;
+    }
+
+    // For explore type
+    if (activeSchedule.type === 'explore' && (kor === null || isNaN(kor) || kor < 0 || kor > 50)) {
+      alert('올바른 탐구 점수(0~50)를 입력해주세요.');
       return;
     }
 
@@ -307,7 +314,7 @@ export default function RoundPage() {
     const mySchoolStats = schoolScores[mySchool];
     if (!mySchoolStats) return;
 
-    const sum = d1 + d2 + d3 + d4 + d5;
+    const sum = (parseInt(d1)||0) + (parseInt(d2)||0) + (parseInt(d3)||0) + (parseInt(d4)||0) + (parseInt(d5)||0);
     if (sum !== mySchoolStats.total) {
       alert(`분배한 점수의 합(${sum}점)이 팀 총합 점수(${mySchoolStats.total}점)와 일치해야 합니다.`);
       return;
@@ -315,7 +322,7 @@ export default function RoundPage() {
 
     setIsSavingDist(true);
     try {
-      await saveRoundDistribution(activeSchedule.id, mySchool, d1, d2, d3, d4, d5);
+      await saveRoundDistribution(activeSchedule.id, mySchool, parseInt(d1)||0, parseInt(d2)||0, parseInt(d3)||0, parseInt(d4)||0, parseInt(d5)||0);
       // reload
       const data = await fetchRoundDistributions(activeSchedule.id);
       setDistributions(data || []);
@@ -887,11 +894,13 @@ export default function RoundPage() {
                                   <div className="space-y-1">
                                     <label className="block text-[10px] text-neutral-500 font-semibold">국어 점수 (0~100)</label>
                                     <Input
-                                      type="number"
-                                      min="0"
-                                      max="100"
+                                      type="text"
+                                      inputMode="numeric"
                                       value={myKoreanInput}
-                                      onChange={e => setMyKoreanInput(e.target.value)}
+                                      onChange={e => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                        setMyKoreanInput(val);
+                                      }}
                                       placeholder="국어 점수"
                                       className="bg-neutral-900 border-neutral-800 text-xs py-1"
                                     />
@@ -901,12 +910,30 @@ export default function RoundPage() {
                                   <div className="space-y-1">
                                     <label className="block text-[10px] text-neutral-500 font-semibold">수학 점수 (0~100)</label>
                                     <Input
-                                      type="number"
-                                      min="0"
-                                      max="100"
+                                      type="text"
+                                      inputMode="numeric"
                                       value={myMathInput}
-                                      onChange={e => setMyMathInput(e.target.value)}
+                                      onChange={e => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                        setMyMathInput(val);
+                                      }}
                                       placeholder="수학 점수"
+                                      className="bg-neutral-900 border-neutral-800 text-xs py-1"
+                                    />
+                                  </div>
+                                )}
+                                {activeSchedule.type === 'explore' && (
+                                  <div className="space-y-1">
+                                    <label className="block text-[10px] text-neutral-500 font-semibold">탐구 점수 (0~50)</label>
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={myKoreanInput}
+                                      onChange={e => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                        setMyKoreanInput(val);
+                                      }}
+                                      placeholder="탐구 점수"
                                       className="bg-neutral-900 border-neutral-800 text-xs py-1"
                                     />
                                   </div>
@@ -980,11 +1007,16 @@ export default function RoundPage() {
                                   <div key={r.num} className="bg-neutral-950 p-3 rounded-lg border border-neutral-900 flex flex-col items-center gap-2">
                                     <span className="text-[10px] font-bold text-neutral-500 uppercase">{r.num}R</span>
                                     <Input
-                                      type="number"
-                                      min="0"
+                                      type="text"
+                                      inputMode="numeric"
                                       disabled={activeSchedule.isClosed || !isLeader}
-                                      value={r.val === 0 ? '' : r.val}
-                                      onChange={e => r.setVal(Math.max(0, parseInt(e.target.value) || 0))}
+                                      value={r.val}
+                                      onFocus={() => { isEditingDist.current = true; }}
+                                      onBlur={() => { isEditingDist.current = false; }}
+                                      onChange={e => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                        r.setVal(val);
+                                      }}
                                       className="bg-neutral-900 border-neutral-800 text-center font-mono text-xs w-full p-1 h-8"
                                       placeholder="0"
                                     />
@@ -993,8 +1025,11 @@ export default function RoundPage() {
                               </div>
 
                               <div className="flex justify-between items-center pt-2">
-                                <div className="text-[11px] text-neutral-400">
-                                  현재 분배 총합: <strong className="font-mono text-neutral-200">{d1 + d2 + d3 + d4 + d5}점</strong> / {schoolScores[mySchool]?.total || 0}점
+                                <div className="text-[11px] text-neutral-400 flex flex-col gap-0.5">
+                                  <span>현재 분배 총합: <strong className="font-mono text-neutral-200">{(parseInt(d1)||0) + (parseInt(d2)||0) + (parseInt(d3)||0) + (parseInt(d4)||0) + (parseInt(d5)||0)}점</strong> / {schoolScores[mySchool]?.total || 0}점</span>
+                                  {schoolScores[mySchool]?.total - ((parseInt(d1)||0) + (parseInt(d2)||0) + (parseInt(d3)||0) + (parseInt(d4)||0) + (parseInt(d5)||0)) !== 0 && (
+                                    <span className="text-rose-400 font-semibold font-mono">남은 점수: {schoolScores[mySchool]?.total - ((parseInt(d1)||0) + (parseInt(d2)||0) + (parseInt(d3)||0) + (parseInt(d4)||0) + (parseInt(d5)||0))}점</span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {!isLeader && (
@@ -1004,7 +1039,7 @@ export default function RoundPage() {
                                   )}
                                   <Button
                                     onClick={handleSaveMyDistribution}
-                                    disabled={isSavingDist || !isLeader || (d1 + d2 + d3 + d4 + d5) !== schoolScores[mySchool]?.total}
+                                    disabled={isSavingDist || !isLeader || ((parseInt(d1)||0) + (parseInt(d2)||0) + (parseInt(d3)||0) + (parseInt(d4)||0) + (parseInt(d5)||0)) !== schoolScores[mySchool]?.total}
                                     className="h-8 text-xs bg-indigo-600 text-white hover:bg-indigo-500 font-suit"
                                   >
                                     {isSavingDist ? '저장 중...' : '분배 완료 및 저장'}

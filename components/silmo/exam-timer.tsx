@@ -15,6 +15,7 @@ interface ExamTimerProps {
 
 const KOREAN_DURATION = 80 * 60; // 80 minutes
 const MATH_DURATION = 100 * 60;  // 100 minutes
+const EXPLORE_DURATION = 30 * 60; // 30 minutes
 const BREAK_DURATION = 30 * 60;  // 30 minutes
 
 export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase, autoStartType, autoStartKey, autoStartTitle }: ExamTimerProps) {
@@ -138,6 +139,9 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     } else if (type === 'math') {
       duration = MATH_DURATION;
       startPhase = 'math';
+    } else if (type === 'explore') {
+      duration = EXPLORE_DURATION;
+      startPhase = 'explore';
     } else if (type === 'both') {
       duration = KOREAN_DURATION;
       startPhase = 'korean';
@@ -260,6 +264,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     switch (currentPhase) {
       case 'korean': return '1교시 국어 실모';
       case 'math': return selectedType === 'both' ? '2교시 수학 실모' : '수학 실모';
+      case 'explore': return '탐구 실모';
       case 'break': return '쉬는 시간';
       default: return '대기 중';
     }
@@ -269,6 +274,7 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
     switch (currentPhase) {
       case 'korean': return 'bg-neutral-100 text-neutral-900 border-neutral-200';
       case 'math': return 'bg-neutral-100 text-neutral-900 border-neutral-200';
+      case 'explore': return 'bg-neutral-100 text-neutral-900 border-neutral-200';
       case 'break': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       default: return 'bg-neutral-900 text-neutral-400 border-neutral-800';
     }
@@ -313,8 +319,8 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
         {!isActive ? (
           <div className="flex-1 flex flex-col justify-center gap-4 py-4">
             <label className="text-xs text-neutral-400 font-suit font-medium">시험 유형 선택</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['korean', 'math', 'both'] as ExamType[]).map((t) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {(['korean', 'math', 'explore', 'both'] as ExamType[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => setSelectedType(t)}
@@ -324,10 +330,10 @@ export function ExamTimer({ onExamComplete, onSessionChange, activeSessionPhase,
                     }`}
                 >
                   <span className="text-sm font-semibold">
-                    {t === 'korean' ? '국어' : t === 'math' ? '수학' : '국어 + 수학'}
+                    {t === 'korean' ? '국어' : t === 'math' ? '수학' : t === 'explore' ? '탐구' : '국어 + 수학'}
                   </span>
                   <span className="text-[10px] opacity-70">
-                    {t === 'korean' ? '80분' : t === 'math' ? '100분' : '210분 (쉬는시간 포함)'}
+                    {t === 'korean' ? '80분' : t === 'math' ? '100분' : t === 'explore' ? '30분' : '210분'}
                   </span>
                 </button>
               ))}
