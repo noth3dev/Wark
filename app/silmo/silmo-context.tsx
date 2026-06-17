@@ -864,7 +864,6 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         
         scheduledExams,
         examPool,
-        reviews,
         
         fetchDbData,
         fetchExamPoolData,

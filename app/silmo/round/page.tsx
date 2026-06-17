@@ -69,7 +69,7 @@ export default function RoundPage() {
 
   // Filter round schedules by active tab status
   const roundSchedules = allGlobalSchedules.filter(s => s.is_round_game);
-  const filteredSchedules = roundSchedules.filter(s => 
+  const filteredSchedules = roundSchedules.filter(s =>
     activeTab === 'ongoing' ? !s.isClosed : s.isClosed
   );
 
@@ -114,9 +114,9 @@ export default function RoundPage() {
           console.error(e);
         }
       };
-      
+
       loadData();
-      
+
       // Setup periodic sync (every 5 seconds) to act as a real-time updater
       const interval = setInterval(loadData, 5000);
       return () => clearInterval(interval);
@@ -136,7 +136,7 @@ export default function RoundPage() {
     if (!activeSchedule) return { participants: [], schoolsList: [], schoolScores: {}, totalSubmitted: 0, participatingSchools: [] };
 
     const recordsForExam = allRecords.filter(r => r.title === activeSchedule.title);
-    
+
     // Group participants by school
     const list = allLeaderboardUsers.map(u => {
       const uSchool = schools[u.id] || '소속 없음';
@@ -234,7 +234,7 @@ export default function RoundPage() {
   // Check if all participating schools submitted distributions
   const areAllDistributionsSaved = () => {
     if (participatingSchools.length === 0) return false;
-    return participatingSchools.every(sch => 
+    return participatingSchools.every(sch =>
       distributions.some(d => d.school === sch)
     );
   };
@@ -414,7 +414,7 @@ export default function RoundPage() {
             학교 대항전 (ROUND)
           </h2>
           <p className="text-xs text-neutral-400 font-suit">
-            학교 이름을 프로필에 등록하고 대항전을 벌이세요! 점수 총합을 5개 라운드에 분배해 승부를 겨룹니다.
+            야르
           </p>
         </div>
         <div className="flex gap-2">
@@ -443,22 +443,20 @@ export default function RoundPage() {
       <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
         <button
           onClick={() => setActiveTab('ongoing')}
-          className={`px-4 py-2 text-sm font-bold font-suit transition-colors border-b-2 flex items-center gap-1.5 ${
-            activeTab === 'ongoing'
+          className={`px-4 py-2 text-sm font-bold font-suit transition-colors border-b-2 flex items-center gap-1.5 ${activeTab === 'ongoing'
               ? 'border-indigo-500 text-indigo-400'
               : 'border-transparent text-neutral-500 hover:text-neutral-300'
-          }`}
+            }`}
         >
           <Calendar className="w-4 h-4" />
           진행 중인 대항전
         </button>
         <button
           onClick={() => setActiveTab('records')}
-          className={`px-4 py-2 text-sm font-bold font-suit transition-colors border-b-2 flex items-center gap-1.5 ${
-            activeTab === 'records'
+          className={`px-4 py-2 text-sm font-bold font-suit transition-colors border-b-2 flex items-center gap-1.5 ${activeTab === 'records'
               ? 'border-indigo-500 text-indigo-400'
               : 'border-transparent text-neutral-500 hover:text-neutral-300'
-          }`}
+            }`}
         >
           <History className="w-4 h-4" />
           대항전 기록
@@ -506,11 +504,10 @@ export default function RoundPage() {
                       key={t}
                       type="button"
                       onClick={() => setGlobalScheduleType(t)}
-                      className={`px-3 py-1.5 rounded border text-[11px] font-medium transition-all ${
-                        globalScheduleType === t
+                      className={`px-3 py-1.5 rounded border text-[11px] font-medium transition-all ${globalScheduleType === t
                           ? 'border-neutral-250 bg-neutral-100 text-neutral-950 font-bold'
                           : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700'
-                      }`}
+                        }`}
                     >
                       {t === 'korean' ? '국어' : t === 'math' ? '수학' : '국어+수학'}
                     </button>
@@ -608,25 +605,50 @@ export default function RoundPage() {
             <div className="space-y-2">
               {filteredSchedules.map(schedule => {
                 const isActive = schedule.id === selectedScheduleId;
+
+                // D-day calculation (KST 기준)
+                const getDday = () => {
+                  if (!schedule.date) return null;
+                  const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                  const today = new Date(todayKST);
+                  const target = new Date(schedule.date);
+                  const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  return diff;
+                };
+
+                const dday = !schedule.isClosed ? getDday() : null;
+
+                const ddayLabel = (() => {
+                  if (dday === null) return null;
+                  if (dday === 0) return { text: 'D-Day', cls: 'text-rose-400 bg-rose-500/10 border-rose-500/20' };
+                  if (dday > 0) return { text: `D-${dday}`, cls: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+                  return { text: `D+${Math.abs(dday)}`, cls: 'text-neutral-500 bg-neutral-800/60 border-neutral-700' };
+                })();
+
                 return (
                   <button
                     key={schedule.id}
                     onClick={() => setSelectedScheduleId(schedule.id)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${
-                      isActive
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${isActive
                         ? 'bg-indigo-950/20 border-indigo-500/40'
                         : 'bg-neutral-950/40 border-neutral-850 hover:border-neutral-800'
-                    }`}
+                      }`}
                   >
-                    <div className="flex justify-between items-start w-full">
-                      <span className="font-semibold text-sm text-neutral-100 truncate max-w-[180px]">{schedule.title}</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                        schedule.isClosed
-                          ? 'bg-neutral-800 text-neutral-400'
-                          : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/15'
-                      }`}>
-                        {schedule.isClosed ? '종료됨' : '진행중'}
-                      </span>
+                    <div className="flex justify-between items-start w-full gap-2">
+                      <span className="font-semibold text-sm text-neutral-100 truncate flex-1 min-w-0">{schedule.title}</span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {ddayLabel && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${ddayLabel.cls}`}>
+                            {ddayLabel.text}
+                          </span>
+                        )}
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${schedule.isClosed
+                            ? 'bg-neutral-800 text-neutral-400'
+                            : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/15'
+                          }`}>
+                          {schedule.isClosed ? '종료됨' : '진행중'}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-neutral-500 font-suit w-full">
                       <span>일정: {schedule.date}</span>
@@ -639,462 +661,491 @@ export default function RoundPage() {
           </div>
 
           {/* Right: Round details & Step Wizard */}
-          {activeSchedule && (
-            <div className="lg:col-span-8 space-y-6">
-              {/* Stepper Wizard Indicator */}
-              {activeTab === 'ongoing' && (
-                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-900 flex justify-between items-center text-xs font-suit">
-                  <button
-                    onClick={() => setActiveStep(1)}
-                    className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${
-                      activeStep === 1
-                        ? 'border-indigo-500 text-indigo-400'
-                        : 'border-transparent text-neutral-500 hover:text-neutral-300'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    단계 1: 점수 제출
-                  </button>
-                  <div className="h-0.5 w-8 bg-neutral-800 flex-1 mx-2" />
-                  <button
-                    onClick={() => {
-                      if (allTeammatesSubmitted) {
-                        setActiveStep(2);
-                      } else {
-                        alert('우리 학교 멤버들의 점수 제출이 먼저 완료되어야 분배 단계로 갈 수 있습니다.');
-                      }
-                    }}
-                    className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${
-                      activeStep === 2
-                        ? 'border-indigo-500 text-indigo-400'
-                        : allTeammatesSubmitted
-                          ? 'border-transparent text-neutral-400 hover:text-neutral-200'
-                          : 'border-transparent text-neutral-700 cursor-not-allowed'
-                    }`}
-                  >
-                    <Coins className="w-3.5 h-3.5" />
-                    단계 2: 점수 분배
-                  </button>
-                  <div className="h-0.5 w-8 bg-neutral-800 flex-1 mx-2" />
-                  <button
-                    onClick={() => {
-                      if (allTeammatesSubmitted) {
-                        setActiveStep(3);
-                      } else {
-                        alert('점수 제출 및 분배 저장이 모두 선행되어야 결과를 볼 수 있습니다.');
-                      }
-                    }}
-                    className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${
-                      activeStep === 3
-                        ? 'border-indigo-500 text-indigo-400'
-                        : allTeammatesSubmitted
-                          ? 'border-transparent text-neutral-400 hover:text-neutral-200'
-                          : 'border-transparent text-neutral-700 cursor-not-allowed'
-                    }`}
-                  >
-                    <Swords className="w-3.5 h-3.5" />
-                    단계 3: 대결 결과
-                  </button>
-                </div>
-              )}
+          {activeSchedule && (() => {
+            // D-day check for the active schedule
+            const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const activeDday = activeSchedule.date
+              ? Math.round((new Date(activeSchedule.date).getTime() - new Date(todayKST).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+            const isLocked = !activeSchedule.isClosed && activeDday > 0;
 
-              {/* Title Header */}
-              <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-neutral-100 text-base">{activeSchedule.title}</h3>
-                    <p className="text-[10px] text-neutral-500 mt-1 font-suit">
-                      일정: {activeSchedule.date} | 유형: {activeSchedule.type === 'korean' ? '국어' : activeSchedule.type === 'math' ? '수학' : '국어+수학'}
-                    </p>
-                  </div>
-                  {isSilmodan && !activeSchedule.isClosed && (
-                    <button
-                      onClick={handleCloseActiveRound}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors text-xs font-semibold font-suit"
-                    >
-                      대항전 최종 종료
-                    </button>
-                  )}
-                </div>
-                {/* PDF download links */}
-                {(activeSchedule.questionPdfUrl || activeSchedule.solutionPdfUrl) && (
-                  <div className="flex flex-wrap gap-2 pt-1 border-t border-neutral-900">
-                    {activeSchedule.questionPdfUrl && (
-                      <a
-                        href={activeSchedule.questionPdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 transition-colors text-[11px] font-semibold font-suit"
+            return (
+              <div className="lg:col-span-8 space-y-6">
+                {/* Title Header (always shown) */}
+                <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-neutral-100 text-base">{activeSchedule.title}</h3>
+                      <p className="text-[10px] text-neutral-500 mt-1 font-suit">
+                        일정: {activeSchedule.date} | 유형: {activeSchedule.type === 'korean' ? '국어' : activeSchedule.type === 'math' ? '수학' : '국어+수학'}
+                      </p>
+                    </div>
+                    {isSilmodan && !activeSchedule.isClosed && (
+                      <button
+                        onClick={handleCloseActiveRound}
+                        className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors text-xs font-semibold font-suit"
                       >
-                        <FileText className="w-3.5 h-3.5" />
-                        문제지 다운로드
-                      </a>
-                    )}
-                    {activeSchedule.solutionPdfUrl && (
-                      <a
-                        href={activeSchedule.solutionPdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors text-[11px] font-semibold font-suit"
-                      >
-                        <BookOpen className="w-3.5 h-3.5" />
-                        해설지 다운로드
-                      </a>
+                        대항전 최종 종료
+                      </button>
                     )}
                   </div>
-                )}
-              </div>
-
-              {/* Step Contents */}
-              <AnimatePresence mode="wait">
-                {/* Step 1: 점수 제출 현황 */}
-                {(activeStep === 1 || activeTab === 'records') && (
-                  <motion.div
-                    key="step1"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
-                  >
-                    <div className="flex justify-between items-center border-b border-neutral-900 pb-3">
-                      <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-indigo-400" />
-                        학교별 점수 제출 현황
-                      </h4>
-                      {activeTab === 'ongoing' && (
-                        <span className="text-[10px] text-neutral-400 font-suit">
-                          우리 학교 상태: {allTeammatesSubmitted ? '제출 완료' : '제출 대기중'}
-                        </span>
+                  {/* PDF download links */}
+                  {(activeSchedule.questionPdfUrl || activeSchedule.solutionPdfUrl) && (
+                    <div className="flex flex-wrap gap-2 pt-1 border-t border-neutral-900">
+                      {activeSchedule.questionPdfUrl && (
+                        <a
+                          href={activeSchedule.questionPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 transition-colors text-[11px] font-semibold font-suit"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          문제지 다운로드
+                        </a>
+                      )}
+                      {activeSchedule.solutionPdfUrl && (
+                        <a
+                          href={activeSchedule.solutionPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors text-[11px] font-semibold font-suit"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          해설지 다운로드
+                        </a>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {schoolsList.map(sch => {
-                        const stats = schoolScores[sch];
-                        const isMyTeam = sch === mySchool;
-                        const canSeeDetails = activeSchedule.isClosed || isMyTeam;
-
-                        return (
-                          <div
-                            key={sch}
-                            className={`p-4 rounded-xl border space-y-3 ${
-                              isMyTeam ? 'bg-indigo-950/10 border-indigo-500/20' : 'bg-neutral-950/60 border-neutral-900'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-xs text-neutral-200 flex items-center gap-1.5">
-                                <Shield className={`w-3.5 h-3.5 ${isMyTeam ? 'text-indigo-400' : 'text-neutral-500'}`} />
-                                {sch} {isMyTeam && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1 rounded">우리 팀</span>}
-                              </span>
-                              <span className="text-[10px] text-neutral-400 font-mono">
-                                제출 {stats.submittedCount}/{stats.count} 명
-                              </span>
-                            </div>
-
-                            <div className="bg-neutral-900/60 p-3 rounded-lg flex justify-between items-center">
-                              <span className="text-[10px] text-neutral-400">팀 점수 총합</span>
-                              <span className="font-mono text-sm font-bold text-neutral-100">
-                                {canSeeDetails ? (
-                                  <span className="text-indigo-300">{stats.total} 점</span>
-                                ) : (
-                                  <span className="text-neutral-600">비공개 (진행중)</span>
-                                )}
-                              </span>
-                            </div>
-
-                            <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                              {stats.members.map(m => (
-                                <div key={m.id} className="flex justify-between items-center text-[11px] bg-neutral-900/30 px-2.5 py-1.5 rounded border border-neutral-900">
-                                  <span className="text-neutral-400">{profiles[m.id] || m.name}</span>
-                                  <div className="flex items-center gap-1.5 font-mono">
-                                    {m.submitted ? (
-                                      <>
-                                        <span className="text-emerald-400 font-medium">제출 완료</span>
-                                        {canSeeDetails && (
-                                          <span className="text-neutral-500">({m.score}점)</span>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <span className="text-neutral-600">미제출</span>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Inline score input form for the logged-in user if they haven't submitted */}
-                    {activeTab === 'ongoing' && mySchool && schoolScores[mySchool] && !schoolScores[mySchool].members.find(m => m.id === authUser.id)?.submitted && (
-                      <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-850 space-y-4">
-                        <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
-                          <Plus className="w-4 h-4 text-emerald-400" />
-                          <h5 className="text-xs font-bold text-neutral-200 font-suit">내 점수 입력하기</h5>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          {(activeSchedule.type === 'korean' || activeSchedule.type === 'both') && (
-                            <div className="space-y-1">
-                              <label className="block text-[10px] text-neutral-500 font-semibold">국어 점수 (0~100)</label>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={myKoreanInput}
-                                onChange={e => setMyKoreanInput(e.target.value)}
-                                placeholder="국어 점수"
-                                className="bg-neutral-900 border-neutral-800 text-xs py-1"
-                              />
-                            </div>
-                          )}
-                          {(activeSchedule.type === 'math' || activeSchedule.type === 'both') && (
-                            <div className="space-y-1">
-                              <label className="block text-[10px] text-neutral-500 font-semibold">수학 점수 (0~100)</label>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={myMathInput}
-                                onChange={e => setMyMathInput(e.target.value)}
-                                placeholder="수학 점수"
-                                className="bg-neutral-900 border-neutral-800 text-xs py-1"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex justify-end pt-1">
-                          <Button
-                            onClick={handleSaveMyScore}
-                            disabled={isSavingScore}
-                            className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-suit font-bold"
-                          >
-                            {isSavingScore ? '제출 중...' : '점수 제출'}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === 'ongoing' && allTeammatesSubmitted && (
-                      <div className="flex justify-end pt-2">
-                        <Button
-                          onClick={() => setActiveStep(2)}
-                          className="text-xs bg-indigo-600 text-white hover:bg-indigo-500"
-                        >
-                          다음 단계: 점수 분배 설정하기
-                        </Button>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Step 2: 점수 분배 전략 */}
-                {activeStep === 2 && activeTab === 'ongoing' && (
+                {/* LOCKED state for future rounds */}
+                {isLocked ? (
                   <motion.div
-                    key="step2"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
+                    className="p-10 rounded-xl bg-neutral-950/60 border border-neutral-850 border-dashed flex flex-col items-center justify-center gap-4 text-center"
                   >
-                    <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-                      <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-2">
-                        <Coins className="w-4 h-4 text-amber-400" />
-                        5개 라운드 점수 분배 전략
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 font-suit">
-                        우리 팀 총합: <strong className="text-indigo-400 font-mono">{schoolScores[mySchool]?.total || 0}점</strong>
-                      </span>
+                    <div className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-neutral-500" />
                     </div>
+                    <div className="space-y-1.5">
+                      <p className="font-bold text-neutral-300 font-suit text-sm">아직 개방되지 않은 대항전입니다</p>
+                      <p className="text-xs text-neutral-500 font-suit">
+                        대항전 당일(<strong className="text-amber-400">{activeSchedule.date}</strong>)이 되어야 참여할 수 있습니다.
+                      </p>
+                    </div>
+                    <span className="text-3xl font-mono font-bold text-amber-400 tracking-tight">
+                      D-{activeDday}
+                    </span>
+                  </motion.div>
+                ) : (
+                  <>
 
-                    {!allTeammatesSubmitted ? (
-                      <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-900 text-neutral-400 text-xs font-suit flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                        <span>우리 학교 팀원 모두가 시험 점수를 입력해야 점수 분배를 할 수 있습니다. (1단계 완료 필요)</span>
+                    {/* Stepper Wizard Indicator */}
+                    {activeTab === 'ongoing' && (
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-900 flex justify-between items-center text-xs font-suit">
+                        <button
+                          onClick={() => setActiveStep(1)}
+                          className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${activeStep === 1
+                              ? 'border-indigo-500 text-indigo-400'
+                              : 'border-transparent text-neutral-500 hover:text-neutral-300'
+                            }`}
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          단계 1: 점수 제출
+                        </button>
+                        <div className="h-0.5 w-8 bg-neutral-800 flex-1 mx-2" />
+                        <button
+                          onClick={() => {
+                            if (allTeammatesSubmitted) {
+                              setActiveStep(2);
+                            } else {
+                              alert('우리 학교 멤버들의 점수 제출이 먼저 완료되어야 분배 단계로 갈 수 있습니다.');
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${activeStep === 2
+                              ? 'border-indigo-500 text-indigo-400'
+                              : allTeammatesSubmitted
+                                ? 'border-transparent text-neutral-400 hover:text-neutral-200'
+                                : 'border-transparent text-neutral-700 cursor-not-allowed'
+                            }`}
+                        >
+                          <Coins className="w-3.5 h-3.5" />
+                          단계 2: 점수 분배
+                        </button>
+                        <div className="h-0.5 w-8 bg-neutral-800 flex-1 mx-2" />
+                        <button
+                          onClick={() => {
+                            if (allTeammatesSubmitted) {
+                              setActiveStep(3);
+                            } else {
+                              alert('점수 제출 및 분배 저장이 모두 선행되어야 결과를 볼 수 있습니다.');
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 pb-1 border-b-2 font-semibold ${activeStep === 3
+                              ? 'border-indigo-500 text-indigo-400'
+                              : allTeammatesSubmitted
+                                ? 'border-transparent text-neutral-400 hover:text-neutral-200'
+                                : 'border-transparent text-neutral-700 cursor-not-allowed'
+                            }`}
+                        >
+                          <Swords className="w-3.5 h-3.5" />
+                          단계 3: 대결 결과
+                        </button>
                       </div>
-                    ) : (
-                      <>
-                        <p className="text-[11px] text-neutral-400 leading-relaxed font-suit">
-                          우리 팀의 총합 점수를 5개의 라운드에 배분하세요. 상대 학교의 분배 점수와 라운드별로 비교하여 더 높은 점수를 배분한 학교가 라운드를 이깁니다.
-                          <br />
-                          <strong>팀장(최고점자: {leaderName}님)만 최종 저장할 수 있습니다.</strong>
-                        </p>
+                    )}
 
-                        <div className="grid grid-cols-5 gap-2.5">
-                          {[
-                            { num: 1, val: d1, setVal: setD1 },
-                            { num: 2, val: d2, setVal: setD2 },
-                            { num: 3, val: d3, setVal: setD3 },
-                            { num: 4, val: d4, setVal: setD4 },
-                            { num: 5, val: d5, setVal: setD5 },
-                          ].map(r => (
-                            <div key={r.num} className="bg-neutral-950 p-3 rounded-lg border border-neutral-900 flex flex-col items-center gap-2">
-                              <span className="text-[10px] font-bold text-neutral-500 uppercase">{r.num}R</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                disabled={activeSchedule.isClosed || !isLeader}
-                                value={r.val === 0 ? '' : r.val}
-                                onChange={e => r.setVal(Math.max(0, parseInt(e.target.value) || 0))}
-                                className="bg-neutral-900 border-neutral-800 text-center font-mono text-xs w-full p-1 h-8"
-                                placeholder="0"
-                              />
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2">
-                          <div className="text-[11px] text-neutral-400">
-                            현재 분배 총합: <strong className="font-mono text-neutral-200">{d1 + d2 + d3 + d4 + d5}점</strong> / {schoolScores[mySchool]?.total || 0}점
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!isLeader && (
-                              <span className="text-[10px] text-rose-400 font-suit">
-                                팀장({leaderName}님)만 저장이 가능합니다.
+                    {/* Step Contents */}
+                    <AnimatePresence mode="wait">
+                      {/* Step 1: 점수 제출 현황 */}
+                      {(activeStep === 1 || activeTab === 'records') && (
+                        <motion.div
+                          key="step1"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
+                        >
+                          <div className="flex justify-between items-center border-b border-neutral-900 pb-3">
+                            <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-1.5">
+                              <Users className="w-4 h-4 text-indigo-400" />
+                              학교별 점수 제출 현황
+                            </h4>
+                            {activeTab === 'ongoing' && (
+                              <span className="text-[10px] text-neutral-400 font-suit">
+                                우리 학교 상태: {allTeammatesSubmitted ? '제출 완료' : '제출 대기중'}
                               </span>
                             )}
-                            <Button
-                              onClick={handleSaveMyDistribution}
-                              disabled={isSavingDist || !isLeader || (d1 + d2 + d3 + d4 + d5) !== schoolScores[mySchool]?.total}
-                              className="h-8 text-xs bg-indigo-600 text-white hover:bg-indigo-500 font-suit"
-                            >
-                              {isSavingDist ? '저장 중...' : '분배 완료 및 저장'}
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Step 3: 대결 결과 */}
-                {(activeStep === 3 || activeTab === 'records') && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
-                  >
-                    <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-                      <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-2">
-                        <Swords className="w-4 h-4 text-indigo-400" />
-                        대항전 승부 결과
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        {activeTab === 'ongoing' && allDistributionsSubmitted && battleStep === -1 && (
-                          <Button
-                            onClick={startBattleSimulation}
-                            className="h-7 px-3 text-[10px] bg-emerald-600 text-white hover:bg-emerald-500 font-suit flex items-center gap-1"
-                          >
-                            <Play className="w-3 h-3 fill-current" />
-                            대결 시작!
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {!allDistributionsSubmitted && activeTab === 'ongoing' ? (
-                      <div className="py-6 text-center text-xs text-neutral-500 font-suit flex flex-col items-center gap-2">
-                        <HelpCircle className="w-8 h-8 text-neutral-600" />
-                        <span>참여하는 모든 학교가 5개 라운드 분배 저장을 완료해야 결과를 볼 수 있습니다.</span>
-                        <span className="text-[10px] text-neutral-600">
-                          (현재 제출 완료 학교: {distributions.map(d => d.school).join(', ') || '없음'} / 전체 참여 학교: {participatingSchools.join(', ')})
-                        </span>
-                      </div>
-                    ) : (
-                      battleData && (
-                        <div className="space-y-4">
-                          {/* Schools Headers */}
-                          <div className="flex justify-between items-center px-4 py-2 bg-neutral-950 rounded-lg border border-neutral-900 text-xs font-bold text-neutral-200">
-                            <span className="text-indigo-400 flex items-center gap-1.5">
-                              <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                              {battleData.schoolA}
-                            </span>
-                            <span className="text-neutral-500 font-mono text-[10px]">VS</span>
-                            <span className="text-rose-400 flex items-center gap-1.5">
-                              <Shield className="w-3.5 h-3.5 text-rose-400" />
-                              {battleData.schoolB}
-                            </span>
                           </div>
 
-                          {/* Animated Round list */}
-                          <div className="space-y-2.5">
-                            {battleData.rounds.map((r, index) => {
-                              // If it is records tab, display everything immediately
-                              const isVisible = activeTab === 'records' || battleStep >= index;
-                              if (!isVisible) return null;
-
-                              const isWinA = r.winner === battleData.schoolA;
-                              const isWinB = r.winner === battleData.schoolB;
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {schoolsList.map(sch => {
+                              const stats = schoolScores[sch];
+                              const isMyTeam = sch === mySchool;
+                              const canSeeDetails = activeSchedule.isClosed || isMyTeam;
 
                               return (
-                                <motion.div
-                                  key={r.roundNum}
-                                  initial={activeTab === 'records' ? {} : { opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.5 }}
-                                  className={`p-3 rounded-lg border flex items-center justify-between text-xs ${
-                                    r.winner === '무승부'
-                                      ? 'bg-neutral-900/40 border-neutral-800'
-                                      : isWinA
-                                        ? 'bg-indigo-950/10 border-indigo-500/20'
-                                        : 'bg-rose-950/10 border-rose-500/20'
-                                  }`}
+                                <div
+                                  key={sch}
+                                  className={`p-4 rounded-xl border space-y-3 ${isMyTeam ? 'bg-indigo-950/10 border-indigo-500/20' : 'bg-neutral-950/60 border-neutral-900'
+                                    }`}
                                 >
-                                  {/* School A side */}
-                                  <div className="flex items-center gap-3 w-1/3">
-                                    <span className={`font-mono font-bold ${isWinA ? 'text-indigo-400 text-sm' : 'text-neutral-400'}`}>
-                                      {r.scoreA}점
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-bold text-xs text-neutral-200 flex items-center gap-1.5">
+                                      <Shield className={`w-3.5 h-3.5 ${isMyTeam ? 'text-indigo-400' : 'text-neutral-500'}`} />
+                                      {sch} {isMyTeam && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1 rounded">우리 팀</span>}
                                     </span>
-                                    {isWinA && <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-bold">WIN</span>}
-                                  </div>
-
-                                  {/* Round center badge */}
-                                  <div className="w-1/3 text-center">
-                                    <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{r.roundNum} ROUND</span>
-                                  </div>
-
-                                  {/* School B side */}
-                                  <div className="flex items-center justify-end gap-3 w-1/3">
-                                    {isWinB && <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-bold">WIN</span>}
-                                    <span className={`font-mono font-bold ${isWinB ? 'text-rose-400 text-sm' : 'text-neutral-400'}`}>
-                                      {r.scoreB}점
+                                    <span className="text-[10px] text-neutral-400 font-mono">
+                                      제출 {stats.submittedCount}/{stats.count} 명
                                     </span>
                                   </div>
-                                </motion.div>
+
+                                  <div className="bg-neutral-900/60 p-3 rounded-lg flex justify-between items-center">
+                                    <span className="text-[10px] text-neutral-400">팀 점수 총합</span>
+                                    <span className="font-mono text-sm font-bold text-neutral-100">
+                                      {canSeeDetails ? (
+                                        <span className="text-indigo-300">{stats.total} 점</span>
+                                      ) : (
+                                        <span className="text-neutral-600">비공개 (진행중)</span>
+                                      )}
+                                    </span>
+                                  </div>
+
+                                  <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                                    {stats.members.map(m => (
+                                      <div key={m.id} className="flex justify-between items-center text-[11px] bg-neutral-900/30 px-2.5 py-1.5 rounded border border-neutral-900">
+                                        <span className="text-neutral-400">{profiles[m.id] || m.name}</span>
+                                        <div className="flex items-center gap-1.5 font-mono">
+                                          {m.submitted ? (
+                                            <>
+                                              <span className="text-emerald-400 font-medium">제출 완료</span>
+                                              {canSeeDetails && (
+                                                <span className="text-neutral-500">({m.score}점)</span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="text-neutral-600">미제출</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               );
                             })}
                           </div>
 
-                          {/* Overall Winner Declaration */}
-                          {(activeTab === 'records' || battleStep === 5) && (
-                            <motion.div
-                              initial={activeTab === 'records' ? {} : { scale: 0.9, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/[0.03] text-center space-y-2"
-                            >
-                              <Trophy className="w-8 h-8 text-amber-400 mx-auto" />
-                              <h4 className="font-bold text-sm text-neutral-100 font-suit">대항전 최종 결과</h4>
-                              <p className="text-xs text-neutral-300 font-suit">
-                                {battleData.overallWinner === '무승부' ? (
-                                  <span>양 학교가 무승부를 기록했습니다!</span>
-                                ) : (
-                                  <span>
-                                    우승 학교: <strong className="text-indigo-400">{battleData.overallWinner}</strong> ({battleData.winsA}승 vs {battleData.winsB}승)
-                                  </span>
+                          {/* Inline score input form for the logged-in user if they haven't submitted */}
+                          {activeTab === 'ongoing' && mySchool && schoolScores[mySchool] && !schoolScores[mySchool].members.find(m => m.id === authUser.id)?.submitted && (
+                            <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-850 space-y-4">
+                              <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
+                                <Plus className="w-4 h-4 text-emerald-400" />
+                                <h5 className="text-xs font-bold text-neutral-200 font-suit">내 점수 입력하기</h5>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                {(activeSchedule.type === 'korean' || activeSchedule.type === 'both') && (
+                                  <div className="space-y-1">
+                                    <label className="block text-[10px] text-neutral-500 font-semibold">국어 점수 (0~100)</label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={myKoreanInput}
+                                      onChange={e => setMyKoreanInput(e.target.value)}
+                                      placeholder="국어 점수"
+                                      className="bg-neutral-900 border-neutral-800 text-xs py-1"
+                                    />
+                                  </div>
                                 )}
-                              </p>
-                            </motion.div>
+                                {(activeSchedule.type === 'math' || activeSchedule.type === 'both') && (
+                                  <div className="space-y-1">
+                                    <label className="block text-[10px] text-neutral-500 font-semibold">수학 점수 (0~100)</label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={myMathInput}
+                                      onChange={e => setMyMathInput(e.target.value)}
+                                      placeholder="수학 점수"
+                                      className="bg-neutral-900 border-neutral-800 text-xs py-1"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex justify-end pt-1">
+                                <Button
+                                  onClick={handleSaveMyScore}
+                                  disabled={isSavingScore}
+                                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-suit font-bold"
+                                >
+                                  {isSavingScore ? '제출 중...' : '점수 제출'}
+                                </Button>
+                              </div>
+                            </div>
                           )}
-                        </div>
-                      )
-                    )}
-                  </motion.div>
+
+                          {activeTab === 'ongoing' && allTeammatesSubmitted && (
+                            <div className="flex justify-end pt-2">
+                              <Button
+                                onClick={() => setActiveStep(2)}
+                                className="text-xs bg-indigo-600 text-white hover:bg-indigo-500"
+                              >
+                                다음 단계: 점수 분배 설정하기
+                              </Button>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* Step 2: 점수 분배 전략 */}
+                      {activeStep === 2 && activeTab === 'ongoing' && (
+                        <motion.div
+                          key="step2"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
+                        >
+                          <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+                            <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+                              <Coins className="w-4 h-4 text-amber-400" />
+                              5개 라운드 점수 분배 전략
+                            </h4>
+                            <span className="text-[10px] text-neutral-400 font-suit">
+                              우리 팀 총합: <strong className="text-indigo-400 font-mono">{schoolScores[mySchool]?.total || 0}점</strong>
+                            </span>
+                          </div>
+
+                          {!allTeammatesSubmitted ? (
+                            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-900 text-neutral-400 text-xs font-suit flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                              <span>우리 학교 팀원 모두가 시험 점수를 입력해야 점수 분배를 할 수 있습니다. (1단계 완료 필요)</span>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-[11px] text-neutral-400 leading-relaxed font-suit">
+                                우리 팀의 총합 점수를 5개의 라운드에 배분하세요. 상대 학교의 분배 점수와 라운드별로 비교하여 더 높은 점수를 배분한 학교가 라운드를 이깁니다.
+                                <br />
+                                <strong>팀장(최고점자: {leaderName}님)만 최종 저장할 수 있습니다.</strong>
+                              </p>
+
+                              <div className="grid grid-cols-5 gap-2.5">
+                                {[
+                                  { num: 1, val: d1, setVal: setD1 },
+                                  { num: 2, val: d2, setVal: setD2 },
+                                  { num: 3, val: d3, setVal: setD3 },
+                                  { num: 4, val: d4, setVal: setD4 },
+                                  { num: 5, val: d5, setVal: setD5 },
+                                ].map(r => (
+                                  <div key={r.num} className="bg-neutral-950 p-3 rounded-lg border border-neutral-900 flex flex-col items-center gap-2">
+                                    <span className="text-[10px] font-bold text-neutral-500 uppercase">{r.num}R</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      disabled={activeSchedule.isClosed || !isLeader}
+                                      value={r.val === 0 ? '' : r.val}
+                                      onChange={e => r.setVal(Math.max(0, parseInt(e.target.value) || 0))}
+                                      className="bg-neutral-900 border-neutral-800 text-center font-mono text-xs w-full p-1 h-8"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="flex justify-between items-center pt-2">
+                                <div className="text-[11px] text-neutral-400">
+                                  현재 분배 총합: <strong className="font-mono text-neutral-200">{d1 + d2 + d3 + d4 + d5}점</strong> / {schoolScores[mySchool]?.total || 0}점
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {!isLeader && (
+                                    <span className="text-[10px] text-rose-400 font-suit">
+                                      팀장({leaderName}님)만 저장이 가능합니다.
+                                    </span>
+                                  )}
+                                  <Button
+                                    onClick={handleSaveMyDistribution}
+                                    disabled={isSavingDist || !isLeader || (d1 + d2 + d3 + d4 + d5) !== schoolScores[mySchool]?.total}
+                                    className="h-8 text-xs bg-indigo-600 text-white hover:bg-indigo-500 font-suit"
+                                  >
+                                    {isSavingDist ? '저장 중...' : '분배 완료 및 저장'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* Step 3: 대결 결과 */}
+                      {(activeStep === 3 || activeTab === 'records') && (
+                        <motion.div
+                          key="step3"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="p-5 rounded-xl bg-neutral-900/30 border border-neutral-850 space-y-4"
+                        >
+                          <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+                            <h4 className="text-xs font-bold text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+                              <Swords className="w-4 h-4 text-indigo-400" />
+                              대항전 승부 결과
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              {activeTab === 'ongoing' && allDistributionsSubmitted && battleStep === -1 && (
+                                <Button
+                                  onClick={startBattleSimulation}
+                                  className="h-7 px-3 text-[10px] bg-emerald-600 text-white hover:bg-emerald-500 font-suit flex items-center gap-1"
+                                >
+                                  <Play className="w-3 h-3 fill-current" />
+                                  대결 시작!
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {!allDistributionsSubmitted && activeTab === 'ongoing' ? (
+                            <div className="py-6 text-center text-xs text-neutral-500 font-suit flex flex-col items-center gap-2">
+                              <HelpCircle className="w-8 h-8 text-neutral-600" />
+                              <span>참여하는 모든 학교가 5개 라운드 분배 저장을 완료해야 결과를 볼 수 있습니다.</span>
+                              <span className="text-[10px] text-neutral-600">
+                                (현재 제출 완료 학교: {distributions.map(d => d.school).join(', ') || '없음'} / 전체 참여 학교: {participatingSchools.join(', ')})
+                              </span>
+                            </div>
+                          ) : (
+                            battleData && (
+                              <div className="space-y-4">
+                                {/* Schools Headers */}
+                                <div className="flex justify-between items-center px-4 py-2 bg-neutral-950 rounded-lg border border-neutral-900 text-xs font-bold text-neutral-200">
+                                  <span className="text-indigo-400 flex items-center gap-1.5">
+                                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                                    {battleData.schoolA}
+                                  </span>
+                                  <span className="text-neutral-500 font-mono text-[10px]">VS</span>
+                                  <span className="text-rose-400 flex items-center gap-1.5">
+                                    <Shield className="w-3.5 h-3.5 text-rose-400" />
+                                    {battleData.schoolB}
+                                  </span>
+                                </div>
+
+                                {/* Animated Round list */}
+                                <div className="space-y-2.5">
+                                  {battleData.rounds.map((r, index) => {
+                                    // If it is records tab, display everything immediately
+                                    const isVisible = activeTab === 'records' || battleStep >= index;
+                                    if (!isVisible) return null;
+
+                                    const isWinA = r.winner === battleData.schoolA;
+                                    const isWinB = r.winner === battleData.schoolB;
+
+                                    return (
+                                      <motion.div
+                                        key={r.roundNum}
+                                        initial={activeTab === 'records' ? {} : { opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5 }}
+                                        className={`p-3 rounded-lg border flex items-center justify-between text-xs ${r.winner === '무승부'
+                                            ? 'bg-neutral-900/40 border-neutral-800'
+                                            : isWinA
+                                              ? 'bg-indigo-950/10 border-indigo-500/20'
+                                              : 'bg-rose-950/10 border-rose-500/20'
+                                          }`}
+                                      >
+                                        {/* School A side */}
+                                        <div className="flex items-center gap-3 w-1/3">
+                                          <span className={`font-mono font-bold ${isWinA ? 'text-indigo-400 text-sm' : 'text-neutral-400'}`}>
+                                            {r.scoreA}점
+                                          </span>
+                                          {isWinA && <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-bold">WIN</span>}
+                                        </div>
+
+                                        {/* Round center badge */}
+                                        <div className="w-1/3 text-center">
+                                          <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{r.roundNum} ROUND</span>
+                                        </div>
+
+                                        {/* School B side */}
+                                        <div className="flex items-center justify-end gap-3 w-1/3">
+                                          {isWinB && <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-bold">WIN</span>}
+                                          <span className={`font-mono font-bold ${isWinB ? 'text-rose-400 text-sm' : 'text-neutral-400'}`}>
+                                            {r.scoreB}점
+                                          </span>
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Overall Winner Declaration */}
+                                {(activeTab === 'records' || battleStep === 5) && (
+                                  <motion.div
+                                    initial={activeTab === 'records' ? {} : { scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/[0.03] text-center space-y-2"
+                                  >
+                                    <Trophy className="w-8 h-8 text-amber-400 mx-auto" />
+                                    <h4 className="font-bold text-sm text-neutral-100 font-suit">대항전 최종 결과</h4>
+                                    <p className="text-xs text-neutral-300 font-suit">
+                                      {battleData.overallWinner === '무승부' ? (
+                                        <span>양 학교가 무승부를 기록했습니다!</span>
+                                      ) : (
+                                        <span>
+                                          우승 학교: <strong className="text-indigo-400">{battleData.overallWinner}</strong> ({battleData.winsA}승 vs {battleData.winsB}승)
+                                        </span>
+                                      )}
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </div>
+                            )
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
                 )}
-              </AnimatePresence>
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
