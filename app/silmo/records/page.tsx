@@ -103,10 +103,10 @@ export default function RecordsPage() {
                 {filteredGlobalTitles.map(title => {
                   const titleRecords = allRecords.filter(r => r.title === title);
                   const hasTaken = personalRecords.some(r => r.title === title);
-                  const myRecord = personalRecords.find(r => r.title === title);
+                  const myRecord: any = personalRecords.find(r => r.title === title);
 
-                  const sortedTitleRecords = [...titleRecords].sort((a, b) => b.totalScore - a.totalScore);
-                  const topScorer = sortedTitleRecords[0];
+                  const sortedTitleRecords = [...titleRecords].sort((a: any, b: any) => b.totalScore - a.totalScore);
+                  const topScorer: any = sortedTitleRecords[0];
                   const isTopScorer = topScorer?.userId === authUser.id;
                   const review = reviews.find(r => r.scheduleTitle === title);
 
@@ -275,7 +275,7 @@ export default function RecordsPage() {
                               <div className="bg-neutral-950/50 rounded-lg border border-neutral-800 p-2">
                                 <div className="text-[10px] font-semibold text-neutral-500 mb-2 px-1">실모 랭킹보드</div>
                                 <div className="space-y-1 max-h-[140px] overflow-y-auto no-scrollbar pr-1">
-                                  {sortedTitleRecords.map((r, i) => {
+                                  {sortedTitleRecords.map((r: any, i) => {
                                     const isLocal = r.userId === authUser.id;
                                     const isFirst = i === 0;
                                     const userName = isLocal ? '나' : (profiles[r.userId] || r.userId.substring(0, 6));
