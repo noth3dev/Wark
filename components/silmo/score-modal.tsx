@@ -59,8 +59,9 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
 
   if (!examType) return null;
 
-  const showKorean = examType === 'korean' || examType === 'both';
+  const showKorean = examType === 'korean' || examType === 'both' || examType === 'explore';
   const showMath = examType === 'math' || examType === 'both';
+  const isExplore = examType === 'explore';
 
   // 수학 계산 파생 상태
   const mathWrongNumbers = Array.from(new Set(
@@ -78,10 +79,11 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
 
     if (showKorean) {
       const kNum = Number(koreanScoreVal);
+      const maxLimit = isExplore ? 50 : 100;
       if (koreanScoreVal.trim() === '') {
-        newErrors.korean = '국어 점수를 입력해주세요.';
-      } else if (isNaN(kNum) || kNum < 0 || kNum > 100) {
-        newErrors.korean = '0점부터 100점 사이의 숫자를 입력해주세요.';
+        newErrors.korean = isExplore ? '탐구 점수를 입력해주세요.' : '국어 점수를 입력해주세요.';
+      } else if (isNaN(kNum) || kNum < 0 || kNum > maxLimit) {
+        newErrors.korean = `0점부터 ${maxLimit}점 사이의 숫자를 입력해주세요.`;
       }
     }
 
@@ -126,6 +128,7 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
   const getTitle = () => {
     if (examType === 'korean') return '국어 모의고사 점수 기록';
     if (examType === 'math') return '수학 모의고사 점수 기록';
+    if (examType === 'explore') return '탐구 모의고사 점수 기록';
     return '국어 + 수학 모의고사 점수 기록';
   };
 
@@ -176,16 +179,16 @@ export function ScoreModal({ isOpen, onClose, examType, prefilledTitle, suggesti
           {showKorean && (
             <div className="p-3 rounded-lg border border-neutral-800 bg-neutral-900/50 space-y-3">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                <h4 className="font-semibold text-neutral-200">국어 입력</h4>
+                <div className={`w-1.5 h-1.5 rounded-full ${isExplore ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                <h4 className="font-semibold text-neutral-200">{isExplore ? '탐구 입력' : '국어 입력'}</h4>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] text-neutral-400 font-medium">점수 직접 입력 (필수)</label>
                 <Input
                   type="number"
                   min="0"
-                  max="100"
-                  placeholder="예: 92"
+                  max={isExplore ? "50" : "100"}
+                  placeholder={isExplore ? "예: 47" : "예: 92"}
                   value={koreanScoreVal}
                   onChange={(e) => setKoreanScoreVal(e.target.value)}
                   className="bg-neutral-950 border-neutral-800 font-mono text-sm h-9"

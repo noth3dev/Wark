@@ -13,13 +13,11 @@ export interface User {
 export interface ExamRecord {
   id: string;
   userId: string;
-  type: ExamType;
+  type: ExamType; // 전체 시험 유형 (e.g. 'both', 'korean', 'math')
   title: string; // 실모 이름
-  koreanScore?: number | null;
-  mathScore?: number | null;
-  koreanWrongNumbers?: string | null;
-  mathWrongNumbers?: string | null;
-  totalScore: number;
+  subject: string; // 'korean' | 'math' | 'explore' 등 개별 과목명
+  score: number;
+  wrongNumbers?: string | null;
   isPostTake?: boolean;
   createdAt: string;
 }

@@ -28,16 +28,16 @@ export default function RecordsPage() {
   const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const todayTitles = globalSchedules.filter(s => s.date === todayKST).map(s => s.title);
 
-  // Active round game titles
-  const activeRoundTitles = allGlobalSchedules
-    .filter(s => s.is_round_game && !s.isClosed)
+  // Round game titles
+  const roundGameTitles = allGlobalSchedules
+    .filter(s => s.is_round_game)
     .map(s => s.title);
 
-  const filteredPersonalRecords = personalRecords.filter(r => !activeRoundTitles.includes(r.title));
-  const filteredAllRecords = allRecords.filter(r => !activeRoundTitles.includes(r.title));
+  const filteredPersonalRecords = personalRecords.filter(r => !roundGameTitles.includes(r.title));
+  const filteredAllRecords = allRecords.filter(r => !roundGameTitles.includes(r.title));
   const filteredGlobalTitles = globalTitles.filter(title => {
     const schedule = allGlobalSchedules.find(s => s.title === title);
-    if (schedule?.is_round_game && !schedule.isClosed) return false;
+    if (schedule?.is_round_game) return false;
     return true;
   });
 

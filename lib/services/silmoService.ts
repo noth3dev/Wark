@@ -7,7 +7,18 @@ export async function fetchSilmoRecords() {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  // Convert underscore DB format to camelCase client interface
+  return data.map((r: any) => ({
+    id: r.id,
+    userId: r.user_id,
+    title: r.title,
+    type: r.type,
+    subject: r.subject,
+    score: r.score,
+    wrongNumbers: r.wrong_numbers,
+    isPostTake: r.is_post_take,
+    createdAt: r.created_at
+  }));
 }
 
 export async function fetchUserProfiles() {
@@ -76,27 +87,23 @@ export async function saveScoreRecord(
   userId: string,
   title: string,
   type: ExamType,
-  koreanScore: number | null,
-  mathScore: number | null,
-  totalScore: number,
-  koreanWrongNumbers?: string | null,
-  mathWrongNumbers?: string | null,
+  subject: string,
+  score: number,
+  wrongNumbers?: string | null,
   isPostTake: boolean = false
 ) {
   const { error } = await supabase
     .from('silmo_records')
-    .insert([{
+    .upsert({
       user_id: userId,
       title,
       type,
-      korean_score: koreanScore,
-      math_score: mathScore,
-      korean_wrong_numbers: koreanWrongNumbers,
-      math_wrong_numbers: mathWrongNumbers,
-      total_score: totalScore,
+      subject,
+      score,
+      wrong_numbers: wrongNumbers,
       is_post_take: isPostTake,
       created_at: new Date().toISOString()
-    }]);
+    }, { onConflict: 'user_id,title,subject,is_post_take' });
   if (error) throw error;
 }
 
@@ -163,11 +170,90 @@ export async function createGlobalSchedule(
 }
 
 export async function closeGlobalSchedule(id: string) {
-  const { error } = await supabase
+  // 1. Get all scores from silmo_round_scores
+  const { data: roundScores, error: fetchErr } = await supabase
+    .from('silmo_round_scores')
+    .select('*')
+    .eq('schedule_id', id);
+  
+  if (fetchErr) throw fetchErr;
+
+  // 2. Get schedule details (title, type)
+  const { data: schedule, error: schedErr } = await supabase
+    .from('silmo_global_schedules')
+    .select('title, type')
+    .eq('id', id)
+    .single();
+    
+  if (schedErr) throw schedErr;
+
+  // 3. Convert subject-based round scores into silmo_records (subject-based rows)
+  if (roundScores && roundScores.length > 0) {
+    const recordsToInsert = roundScores.map(rs => ({
+      user_id: rs.user_id,
+      title: schedule.title,
+      type: schedule.type,
+      subject: rs.subject,
+      score: rs.score,
+      wrong_numbers: rs.wrong_numbers,
+      is_post_take: rs.is_post_take,
+      created_at: rs.created_at
+    }));
+
+    const { error: insertErr } = await supabase
+      .from('silmo_records')
+      .upsert(recordsToInsert, { onConflict: 'user_id,title,subject,is_post_take' });
+      
+    if (insertErr) throw insertErr;
+  }
+
+  // 4. Update the schedule to closed
+  const { error: updateErr } = await supabase
     .from('silmo_global_schedules')
     .update({ is_closed: true })
     .eq('id', id);
+    
+  if (updateErr) throw updateErr;
+
+  // 5. Delete from silmo_round_scores
+  await supabase
+    .from('silmo_round_scores')
+    .delete()
+    .eq('schedule_id', id);
+}
+
+export async function saveRoundScore(
+  scheduleId: string,
+  userId: string,
+  subject: string,
+  score: number,
+  wrongNumbers: string | null,
+  isPostTake: boolean = false
+) {
+  const { error } = await supabase
+    .from('silmo_round_scores')
+    .upsert({
+      schedule_id: scheduleId,
+      user_id: userId,
+      subject,
+      score,
+      wrong_numbers: wrongNumbers,
+      is_post_take: isPostTake,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'schedule_id,user_id,subject' });
   if (error) throw error;
+}
+
+export async function fetchRoundScores(scheduleId: string) {
+  const { data, error } = await supabase
+    .from('silmo_round_scores')
+    .select('*')
+    .eq('schedule_id', scheduleId);
+  if (error) {
+    console.warn("Failed to fetch round scores:", error);
+    return [];
+  }
+  return data;
 }
 
 export async function fetchAllGlobalSchedules() {

@@ -228,25 +228,78 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         .filter(s => s.is_round_game && !s.isClosed)
         .map(s => s.title);
 
-      const formattedRecords: ExamRecord[] = (recordsData || []).map(r => {
+      // Group subject-based records into combined records for UI component compatibility
+      const recordsGroupMap: { [key: string]: {
+        id: string;
+        user_id: string;
+        title: string;
+        type: ExamType;
+        korean_score?: number | null;
+        math_score?: number | null;
+        explore_score?: number | null;
+        korean_wrong_numbers?: string | null;
+        math_wrong_numbers?: string | null;
+        explore_wrong_numbers?: string | null;
+        is_post_take: boolean;
+        created_at: string;
+      }} = {};
+
+      for (const r of (recordsData || [])) {
+        // recordsData elements are already formatted as camelCase ExamRecord from fetchSilmoRecords()
+        const key = `${r.userId}_${r.title}_${r.isPostTake ? 'post' : 'normal'}`;
+        if (!recordsGroupMap[key]) {
+          recordsGroupMap[key] = {
+            id: r.id,
+            user_id: r.userId,
+            title: r.title,
+            type: r.type,
+            is_post_take: r.isPostTake || false,
+            created_at: r.createdAt
+          };
+        }
+
+        const group = recordsGroupMap[key];
+        if (r.subject === 'korean') {
+          group.korean_score = r.score;
+          group.korean_wrong_numbers = r.wrongNumbers;
+        } else if (r.subject === 'math') {
+          group.math_score = r.score;
+          group.math_wrong_numbers = r.wrongNumbers;
+        } else if (r.subject === 'explore') {
+          group.explore_score = r.score;
+          group.explore_wrong_numbers = r.wrongNumbers;
+        }
+      }
+
+      const formattedRecords: ExamRecord[] = Object.values(recordsGroupMap).map(r => {
         // Mask scores of active round titles for other users, except teammates in the same school
         const userSchool = schoolMap[r.user_id] || '';
         const mySchool = schoolMap[authUser.id] || '';
         const isTeammate = userSchool !== '' && userSchool === mySchool;
         const isMasked = activeRoundTitles.includes(r.title) && r.user_id !== authUser.id && !isTeammate;
+
+        const korVal = r.korean_score ?? null;
+        const matVal = r.math_score ?? null;
+        const expVal = r.explore_score ?? null;
+
+        // Formulate a temporary compatible record layout
         return {
           id: r.id,
           userId: r.user_id,
           title: r.title || '실전 모의고사',
           type: r.type as ExamType,
-          koreanScore: isMasked ? null : r.korean_score,
-          mathScore: isMasked ? null : r.math_score,
+          subject: r.type === 'both' ? 'both' : (korVal !== null ? 'korean' : matVal !== null ? 'math' : 'explore'),
+          score: isMasked ? 0 : ((korVal || 0) + (matVal || 0) + (expVal || 0)),
+          koreanScore: isMasked ? null : korVal,
+          mathScore: isMasked ? null : matVal,
+          exploreScore: isMasked ? null : expVal,
           koreanWrongNumbers: isMasked ? null : r.korean_wrong_numbers,
           mathWrongNumbers: isMasked ? null : r.math_wrong_numbers,
-          totalScore: isMasked ? 0 : r.total_score,
-          isPostTake: r.is_custom ? false : (r.is_post_take || false), // default fallback
+          exploreWrongNumbers: isMasked ? null : r.explore_wrong_numbers,
+          totalScore: isMasked ? 0 : ((korVal || 0) + (matVal || 0) + (expVal || 0)),
+          isPostTake: r.is_post_take,
           createdAt: r.created_at
-        };
+        } as any; // Cast as any temporarily to allow the compatible fields to flow through context to components
       });
 
       setRecords(formattedRecords);
@@ -450,6 +503,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by,
         createdAt: s.created_at,
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
@@ -464,6 +518,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
@@ -492,6 +547,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by,
         createdAt: s.created_at,
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
@@ -506,6 +562,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
@@ -659,24 +716,43 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveToLocalFallback = useCallback((title: string, koreanScore: number | null, mathScore: number | null, totalScore: number, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
+  const saveToLocalFallback = useCallback((title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
     if (!authUser) return;
 
-    const newRecord: ExamRecord = {
-      id: `rec-${Date.now()}`,
-      userId: authUser.id,
-      title,
-      type: finishedExamType!,
-      koreanScore,
-      mathScore,
-      koreanWrongNumbers,
-      mathWrongNumbers,
-      totalScore,
-      isPostTake,
-      createdAt: new Date().toISOString()
-    };
+    const localRecords: ExamRecord[] = [];
+    const typeToUse = finishedExamType!;
+    const nowStr = new Date().toISOString();
 
-    const updatedRecords = [newRecord, ...records.filter(r => r.userId === authUser.id)];
+    if (koreanScore !== null) {
+      localRecords.push({
+        id: `rec-kor-${Date.now()}`,
+        userId: authUser.id,
+        title,
+        type: typeToUse,
+        subject: typeToUse === 'explore' ? 'explore' : 'korean',
+        score: koreanScore,
+        wrongNumbers: koreanWrongNumbers,
+        isPostTake,
+        createdAt: nowStr
+      });
+    }
+
+    if (mathScore !== null) {
+      localRecords.push({
+        id: `rec-mat-${Date.now()}`,
+        userId: authUser.id,
+        title,
+        type: typeToUse,
+        subject: 'math',
+        score: mathScore,
+        wrongNumbers: mathWrongNumbers,
+        isPostTake,
+        createdAt: nowStr
+      });
+    }
+
+    const filtered = records.filter(r => !(r.userId === authUser.id && r.title === title && r.isPostTake === isPostTake));
+    const updatedRecords = [...localRecords, ...filtered];
     setRecords(updatedRecords);
     localStorage.setItem('silmo_user_records', JSON.stringify(updatedRecords));
   }, [authUser, finishedExamType, records, isPostTake]);
@@ -692,21 +768,31 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     const typeToUse = overrideType || finishedExamType;
     if (!authUser || !typeToUse) return;
 
-    const totalScore = (koreanScore || 0) + (mathScore || 0);
-
     if (isDbConnected) {
       try {
-        await saveScoreRecord(
-          authUser.id,
-          title,
-          typeToUse,
-          koreanScore,
-          mathScore,
-          totalScore,
-          koreanWrongNumbers,
-          mathWrongNumbers,
-          isPostTake
-        );
+        if (koreanScore !== null) {
+          const sub = typeToUse === 'explore' ? 'explore' : 'korean';
+          await saveScoreRecord(
+            authUser.id,
+            title,
+            typeToUse,
+            sub,
+            koreanScore,
+            koreanWrongNumbers,
+            isPostTake
+          );
+        }
+        if (mathScore !== null) {
+          await saveScoreRecord(
+            authUser.id,
+            title,
+            typeToUse,
+            'math',
+            mathScore,
+            mathWrongNumbers,
+            isPostTake
+          );
+        }
         await fetchDbData();
       } catch (e) {
         console.error('Failed to save score in DB. Saving to local fallback...', e);
@@ -714,7 +800,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         const originalType = finishedExamType;
         try {
           setFinishedExamType(typeToUse);
-          saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+          saveToLocalFallback(title, koreanScore, mathScore, koreanWrongNumbers, mathWrongNumbers);
         } finally {
           setFinishedExamType(originalType);
         }
@@ -723,7 +809,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       const originalType = finishedExamType;
       try {
         setFinishedExamType(typeToUse);
-        saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+        saveToLocalFallback(title, koreanScore, mathScore, koreanWrongNumbers, mathWrongNumbers);
       } finally {
         setFinishedExamType(originalType);
       }

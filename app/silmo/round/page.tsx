@@ -7,7 +7,7 @@ import { Swords, Plus, Shield, Trophy, CheckCircle2, AlertCircle, Play, Users, C
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchRoundDistributions, saveRoundDistribution, closeGlobalSchedule } from '@/lib/services/silmoService';
+import { fetchRoundDistributions, saveRoundDistribution, closeGlobalSchedule, fetchRoundScores, saveRoundScore } from '@/lib/services/silmoService';
 
 export default function RoundPage() {
   const { user: authUser } = useAuth();
@@ -67,6 +67,7 @@ export default function RoundPage() {
   const [myKoreanInput, setMyKoreanInput] = useState<string>('');
   const [myMathInput, setMyMathInput] = useState<string>('');
   const [isSavingScore, setIsSavingScore] = useState(false);
+  const [roundScores, setRoundScores] = useState<any[]>([]);
 
   // Filter round schedules by active tab status
   const roundSchedules = allGlobalSchedules.filter(s => s.is_round_game);
@@ -89,14 +90,18 @@ export default function RoundPage() {
   // Load distributions when selected schedule changes
   useEffect(() => {
     if (activeSchedule) {
-      // Fetch distributions
+      // Fetch distributions and round scores
       const loadData = async () => {
         try {
-          const data = await fetchRoundDistributions(activeSchedule.id);
-          setDistributions(data || []);
+          const [distData, scoresData] = await Promise.all([
+            fetchRoundDistributions(activeSchedule.id),
+            fetchRoundScores(activeSchedule.id)
+          ]);
+          setDistributions(distData || []);
+          setRoundScores(scoresData || []);
           const mySchool = schools[authUser?.id || ''] || '';
           if (mySchool) {
-            const myDist = data?.find((d: any) => d.school === mySchool);
+            const myDist = distData?.find((d: any) => d.school === mySchool);
             if (myDist && !isEditingDist.current) {
               setD1(myDist.r1.toString());
               setD2(myDist.r2.toString());
@@ -123,6 +128,7 @@ export default function RoundPage() {
       return () => clearInterval(interval);
     } else {
       setDistributions([]);
+      setRoundScores([]);
     }
     setBattleStep(-1);
     setIsSimulating(false);
@@ -136,13 +142,39 @@ export default function RoundPage() {
   const getParticipantStatus = () => {
     if (!activeSchedule) return { participants: [], schoolsList: [], schoolScores: {}, totalSubmitted: 0, participatingSchools: [] };
 
-    const recordsForExam = allRecords.filter(r => r.title === activeSchedule.title);
+    const recordsForExam = activeSchedule.isClosed
+      ? allRecords.filter(r => r.title === activeSchedule.title)
+      : Object.entries(
+          roundScores.reduce((acc: { [userId: string]: { totalScore: number; subCount: number; koreanScore?: number; mathScore?: number } }, cur) => {
+            if (!acc[cur.user_id]) {
+              acc[cur.user_id] = { totalScore: 0, subCount: 0 };
+            }
+            if (cur.subject === 'korean' || cur.subject === 'explore') {
+              acc[cur.user_id].koreanScore = cur.score;
+            } else if (cur.subject === 'math') {
+              acc[cur.user_id].mathScore = cur.score;
+            }
+            acc[cur.user_id].totalScore += cur.score;
+            acc[cur.user_id].subCount += 1;
+            return acc;
+          }, {})
+        ).map(([userId, val]: any) => {
+          const needsBoth = activeSchedule.type === 'both';
+          const submitted = needsBoth ? val.subCount >= 2 : val.subCount >= 1;
+          return {
+            userId,
+            submitted,
+            totalScore: val.totalScore,
+            koreanScore: val.koreanScore,
+            mathScore: val.mathScore
+          };
+        });
 
     // Group participants by school
     const list = allLeaderboardUsers.map(u => {
       const uSchool = schools[u.id] || '소속 없음';
-      const record = recordsForExam.find(r => r.userId === u.id);
-      const submitted = !!record;
+      const record: any = recordsForExam.find(r => r.userId === u.id);
+      const submitted = activeSchedule.isClosed ? !!record : !!record?.submitted;
       const score = record ? (record.totalScore || 0) : 0;
 
       return {
@@ -295,11 +327,19 @@ export default function RoundPage() {
 
     setIsSavingScore(true);
     try {
-      await handleSaveScore(activeSchedule.title, kor, mat, null, null, activeSchedule.type);
+      if (kor !== null) {
+        const sub = activeSchedule.type === 'explore' ? 'explore' : 'korean';
+        await saveRoundScore(activeSchedule.id, authUser.id, sub, kor, null, false);
+      }
+      if (mat !== null) {
+        await saveRoundScore(activeSchedule.id, authUser.id, 'math', mat, null, false);
+      }
       setMyKoreanInput('');
       setMyMathInput('');
       alert('점수가 성공적으로 제출되었습니다!');
-      await fetchDbData();
+      // Reload round scores
+      const scoresData = await fetchRoundScores(activeSchedule.id);
+      setRoundScores(scoresData || []);
     } catch (e) {
       console.error(e);
       alert('점수 제출에 실패했습니다.');
@@ -883,7 +923,20 @@ export default function RoundPage() {
                           </div>
 
                           {/* Inline score input form for the logged-in user if they haven't submitted */}
-                          {activeTab === 'ongoing' && mySchool && schoolScores[mySchool] && !schoolScores[mySchool].members.find(m => m.id === authUser.id)?.submitted && (
+                          {(() => {
+                            const myScoresForSchedule = roundScores.filter(s => s.user_id === authUser.id);
+                            const needsKorean = activeSchedule.type === 'korean' || activeSchedule.type === 'both';
+                            const needsMath = activeSchedule.type === 'math' || activeSchedule.type === 'both';
+                            const needsExplore = activeSchedule.type === 'explore';
+                            const hasKorean = myScoresForSchedule.some(s => s.subject === 'korean');
+                            const hasMath = myScoresForSchedule.some(s => s.subject === 'math');
+                            const hasExplore = myScoresForSchedule.some(s => s.subject === 'explore');
+                            const alreadySubmitted =
+                              (!needsKorean || hasKorean) &&
+                              (!needsMath || hasMath) &&
+                              (!needsExplore || hasExplore);
+                            return !alreadySubmitted;
+                          })() && activeTab === 'ongoing' && mySchool && (
                             <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-850 space-y-4">
                               <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
                                 <Plus className="w-4 h-4 text-emerald-400" />
