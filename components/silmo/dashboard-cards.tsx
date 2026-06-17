@@ -12,7 +12,7 @@ export function DashboardCards({ records }: DashboardCardsProps) {
   const totalExams = records.length;
 
   // Helper to normalize any record to a 100-point scale
-  const getNormalizedScore = (rec: ExamRecord) => {
+  const getNormalizedScore = (rec: any) => {
     if (rec.type === 'both') {
       const kor = rec.koreanScore || 0;
       const math = rec.mathScore || 0;
@@ -39,7 +39,7 @@ export function DashboardCards({ records }: DashboardCardsProps) {
     ? [...records].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
     : null;
 
-  const getRecentLabel = (rec: ExamRecord | null) => {
+  const getRecentLabel = (rec: any) => {
     if (!rec) return '기록 없음';
     const typeLabel = rec.type === 'korean' ? '국어' : rec.type === 'math' ? '수학' : '국+수';
     const scoreVal = rec.type === 'both'
