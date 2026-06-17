@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/lib/auth-context';
 import Auth from '@/components/Auth';
 import { SilmoProvider, useSilmo } from './silmo-context';
-import { AlertCircle, Loader2, Database, BarChart2, Clock, Calendar as CalendarIcon, Activity, Trophy, Zap, Settings } from 'lucide-react';
+import { AlertCircle, Loader2, Database, BarChart2, Clock, Calendar as CalendarIcon, Activity, Trophy, Zap, Settings, Swords } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ScoreModal } from '@/components/silmo/score-modal';
@@ -164,6 +164,10 @@ function SilmoLayoutContent({ children }: { children: React.ReactNode }) {
           <Link href="/silmo/records" className={`text-xs px-4 py-2 font-suit flex items-center gap-1.5 rounded-md transition-colors ${pathname === '/silmo/records' ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
             <Trophy className="w-3.5 h-3.5" />
             기록
+          </Link>
+          <Link href="/silmo/round" className={`text-xs px-4 py-2 font-suit flex items-center gap-1.5 rounded-md transition-colors ${pathname === '/silmo/round' ? 'bg-neutral-800 text-indigo-400' : 'text-indigo-400/70 hover:bg-neutral-800/50 hover:text-indigo-400'}`}>
+            <Swords className="w-3.5 h-3.5 text-indigo-400" />
+            ROUND (대항전)
           </Link>
           <Link href="/silmo/silvival" className={`text-xs px-4 py-2 font-suit flex items-center gap-1.5 rounded-md transition-colors ${pathname === '/silmo/silvival' ? 'bg-neutral-800 text-indigo-400' : 'text-indigo-400/70 hover:bg-neutral-800/50 hover:text-indigo-400'}`}>
             <Zap className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />

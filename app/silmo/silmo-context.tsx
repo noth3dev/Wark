@@ -38,6 +38,7 @@ interface SilmoContextType {
   allGlobalSchedules: GlobalSchedule[];
   globalTitles: string[];
   profiles: { [key: string]: string };
+  schools: { [key: string]: string };
   currentSilmoUser: User;
   allLeaderboardUsers: User[];
   isSilmodan: boolean;
@@ -93,9 +94,9 @@ interface SilmoContextType {
   handleSessionChange: (phase: ExamPhase, remaining: number, total: number, type: ExamType) => Promise<void>;
   handleExamComplete: (type: ExamType) => void;
   handleTakeGlobalSchedule: (schedule: GlobalSchedule, isPost?: boolean) => void;
-  handleCreateGlobalSchedule: () => Promise<void>;
+  handleCreateGlobalSchedule: (isRoundGame?: boolean) => Promise<void>;
   handleDeleteGlobalSchedule: (id: string, title: string) => Promise<void>;
-  handleSaveScore: (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => Promise<void>;
+  handleSaveScore: (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null, overrideType?: ExamType) => Promise<void>;
   handleAddSchedule: (dateStr: string, type: ExamType, title: string) => void;
   handleDeleteSchedule: (id: string) => void;
   handleCompleteSchedule: (schedule: ScheduledExam) => void;
@@ -137,6 +138,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
   const [reviews, setReviews] = useState<ScheduleReview[]>([]);
 
   const [profiles, setProfiles] = useState<{ [key: string]: string }>({});
+  const [schools, setSchools] = useState<{ [key: string]: string }>({});
 
   const [localPhase, setLocalPhase] = useState<ExamPhase>('finished');
   const [localRemaining, setLocalRemaining] = useState<number>(0);
@@ -180,10 +182,13 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       const profileMap: { [key: string]: string } = {};
+      const schoolMap: { [key: string]: string } = {};
       profilesData?.forEach(p => {
         profileMap[p.id] = p.display_name;
+        schoolMap[p.id] = (p as any).school || '';
       });
       setProfiles(profileMap);
+      setSchools(schoolMap);
 
       const uniqueGlobalTitles = Array.from(new Set((allGlobalSchedulesData || []).map(s => s.title)));
       setGlobalTitles(uniqueGlobalTitles);
@@ -196,6 +201,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by || '',
         createdAt: s.created_at || '',
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
@@ -210,25 +216,38 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         createdBy: s.created_by,
         createdAt: s.created_at,
         is_silvival: s.is_silvival,
+        is_round_game: s.is_round_game,
         questionPdfUrl: s.question_pdf_url || null,
         solutionPdfUrl: s.solution_pdf_url || null,
         isClosed: s.is_closed || false,
       }));
       setGlobalSchedules(formattedGlobalSchedules);
 
-      const formattedRecords: ExamRecord[] = (recordsData || []).map(r => ({
-        id: r.id,
-        userId: r.user_id,
-        title: r.title || '실전 모의고사',
-        type: r.type as ExamType,
-        koreanScore: r.korean_score,
-        mathScore: r.math_score,
-        koreanWrongNumbers: r.korean_wrong_numbers,
-        mathWrongNumbers: r.math_wrong_numbers,
-        totalScore: r.total_score,
-        isPostTake: r.is_custom ? false : (r.is_post_take || false), // default fallback
-        createdAt: r.created_at
-      }));
+      // Find unclosed round game titles
+      const activeRoundTitles = formattedAllGlobalSchedules
+        .filter(s => s.is_round_game && !s.isClosed)
+        .map(s => s.title);
+
+      const formattedRecords: ExamRecord[] = (recordsData || []).map(r => {
+        // Mask scores of active round titles for other users, except teammates in the same school
+        const userSchool = schoolMap[r.user_id] || '';
+        const mySchool = schoolMap[authUser.id] || '';
+        const isTeammate = userSchool !== '' && userSchool === mySchool;
+        const isMasked = activeRoundTitles.includes(r.title) && r.user_id !== authUser.id && !isTeammate;
+        return {
+          id: r.id,
+          userId: r.user_id,
+          title: r.title || '실전 모의고사',
+          type: r.type as ExamType,
+          koreanScore: isMasked ? null : r.korean_score,
+          mathScore: isMasked ? null : r.math_score,
+          koreanWrongNumbers: isMasked ? null : r.korean_wrong_numbers,
+          mathWrongNumbers: isMasked ? null : r.math_wrong_numbers,
+          totalScore: isMasked ? 0 : r.total_score,
+          isPostTake: r.is_custom ? false : (r.is_post_take || false), // default fallback
+          createdAt: r.created_at
+        };
+      });
 
       setRecords(formattedRecords);
       setIsDbConnected(true);
@@ -401,7 +420,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     setAutoStartExamKey(Date.now().toString());
   };
 
-  const handleCreateGlobalSchedule = async () => {
+  const handleCreateGlobalSchedule = async (isRoundGame: boolean = false) => {
     if (!authUser || !globalScheduleTitle.trim() || !globalScheduleDate || !isDbConnected) return;
     try {
       let questionPdfUrl: string | undefined;
@@ -409,7 +428,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
       if (globalScheduleQuestionFile) questionPdfUrl = await uploadSilmoPdf(globalScheduleQuestionFile, 'question');
       if (globalScheduleSolutionFile) solutionPdfUrl = await uploadSilmoPdf(globalScheduleSolutionFile, 'solution');
 
-      await createGlobalSchedule(globalScheduleDate, globalScheduleTitle, globalScheduleType, authUser.id, questionPdfUrl, solutionPdfUrl);
+      await createGlobalSchedule(globalScheduleDate, globalScheduleTitle, globalScheduleType, authUser.id, questionPdfUrl, solutionPdfUrl, isRoundGame);
       setGlobalScheduleTitle('');
       setGlobalScheduleQuestionFile(null);
       setGlobalScheduleSolutionFile(null);
@@ -660,8 +679,16 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('silmo_user_records', JSON.stringify(updatedRecords));
   }, [authUser, finishedExamType, records, isPostTake]);
 
-  const handleSaveScore = async (title: string, koreanScore: number | null, mathScore: number | null, koreanWrongNumbers?: string | null, mathWrongNumbers?: string | null) => {
-    if (!authUser || !finishedExamType) return;
+  const handleSaveScore = async (
+    title: string,
+    koreanScore: number | null,
+    mathScore: number | null,
+    koreanWrongNumbers?: string | null,
+    mathWrongNumbers?: string | null,
+    overrideType?: ExamType
+  ) => {
+    const typeToUse = overrideType || finishedExamType;
+    if (!authUser || !typeToUse) return;
 
     const totalScore = (koreanScore || 0) + (mathScore || 0);
 
@@ -670,7 +697,7 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         await saveScoreRecord(
           authUser.id,
           title,
-          finishedExamType,
+          typeToUse,
           koreanScore,
           mathScore,
           totalScore,
@@ -681,10 +708,23 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         await fetchDbData();
       } catch (e) {
         console.error('Failed to save score in DB. Saving to local fallback...', e);
-        saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+        // Fallback save using typeToUse if possible
+        const originalType = finishedExamType;
+        try {
+          setFinishedExamType(typeToUse);
+          saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+        } finally {
+          setFinishedExamType(originalType);
+        }
       }
     } else {
-      saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+      const originalType = finishedExamType;
+      try {
+        setFinishedExamType(typeToUse);
+        saveToLocalFallback(title, koreanScore, mathScore, totalScore, koreanWrongNumbers, mathWrongNumbers);
+      } finally {
+        setFinishedExamType(originalType);
+      }
     }
 
     setLocalPhase('finished');
@@ -786,10 +826,12 @@ export function SilmoProvider({ children }: { children: React.ReactNode }) {
         allGlobalSchedules,
         globalTitles,
         profiles,
+        schools,
         currentSilmoUser,
         allLeaderboardUsers,
         isSilmodan,
         loading: authLoading,
+        reviews,
         
         localPhase,
         localRemaining,

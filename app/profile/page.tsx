@@ -7,8 +7,9 @@ import { User, Check, Loader2, Shield, Mail, BadgeCheck, AlertCircle } from "luc
 import { motion } from "framer-motion";
 
 export default function ProfilePage() {
-    const { user, profileName, fontPreference, refreshProfile, loading: authLoading } = useAuth();
+    const { user, profileName, school, fontPreference, refreshProfile, loading: authLoading } = useAuth();
     const [newName, setNewName] = useState("");
+    const [newSchool, setNewSchool] = useState("");
     const [newFontPreference, setNewFontPreference] = useState("default");
     const [isUpdating, setIsUpdating] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -17,10 +18,13 @@ export default function ProfilePage() {
         if (profileName) {
             setNewName(profileName);
         }
+        if (school) {
+            setNewSchool(school);
+        }
         if (fontPreference) {
             setNewFontPreference(fontPreference);
         }
-    }, [profileName, fontPreference]);
+    }, [profileName, school, fontPreference]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +39,7 @@ export default function ProfilePage() {
                 .upsert({
                     id: user.id,
                     display_name: newName.trim(),
+                    school: newSchool.trim(),
                     font_preference: newFontPreference,
                     updated_at: new Date().toISOString()
                 });
@@ -112,6 +117,11 @@ export default function ProfilePage() {
 
                             <div className="space-y-1">
                                 <h3 className="text-sm font-bold tracking-tight">{profileName}</h3>
+                                {school && (
+                                    <div className="text-xs text-indigo-400 font-semibold font-suit">
+                                        🏫 {school}
+                                    </div>
+                                )}
                                 <div className="flex items-center space-x-2 text-[11px] text-neutral-500">
                                     <Mail className="w-3 h-3" />
                                     <span>{user.email}</span>
@@ -145,6 +155,17 @@ export default function ProfilePage() {
                                     className="w-full bg-transparent border-b border-white/10 py-4 text-2xl font-light focus:outline-none focus:border-white transition-colors placeholder-white/5"
                                 />
                                 <p className="text-[10px] text-neutral-600 px-1">This name will be visible across the platform in sessions and reports.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 px-1">School (학교 대항전용)</label>
+                                <input
+                                    value={newSchool}
+                                    onChange={(e) => setNewSchool(e.target.value)}
+                                    placeholder="예: 서울고등학교, 과학고..."
+                                    className="w-full bg-transparent border-b border-white/10 py-4 text-2xl font-light focus:outline-none focus:border-white transition-colors placeholder-white/5"
+                                />
+                                <p className="text-[10px] text-neutral-600 px-1">학교 대항전에 참가하기 위해 본인의 학교 이름을 입력해주세요.</p>
                             </div>
 
                             <div className="space-y-4">

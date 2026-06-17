@@ -63,6 +63,7 @@ export interface GlobalSchedule {
   createdBy: string;
   createdAt: string;
   is_silvival?: boolean;
+  is_round_game?: boolean;
   questionPdfUrl?: string | null;
   solutionPdfUrl?: string | null;
   isClosed?: boolean;

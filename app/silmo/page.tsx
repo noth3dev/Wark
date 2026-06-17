@@ -7,7 +7,7 @@ import { ExamTimer } from '@/components/silmo/exam-timer';
 import { Leaderboard } from '@/components/silmo/leaderboard';
 import { LiveStatus } from '@/components/silmo/live-status';
 import { HistoryTable } from '@/components/silmo/history-table';
-import { CalendarIcon, Trophy, Plus, Zap, FileText, Download, Lock } from 'lucide-react';
+import { CalendarIcon, Trophy, Plus, Zap, FileText, Download, Lock, Swords } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SilvivalDashboardWidget } from '@/components/silmo/silvival-dashboard-widget';
 // Force rebuild import tag
@@ -35,7 +35,8 @@ export default function SilmoDashboardPage() {
     liveStatuses,
     handleTickStatuses,
     currentSilmoUser,
-    localRemaining
+    localRemaining,
+    allGlobalSchedules,
   } = useSilmo();
 
   // 오늘 날짜 (KST 기준 YYYY-MM-DD)
@@ -44,6 +45,19 @@ export default function SilmoDashboardPage() {
   const todayTitles = globalSchedules
     .filter(s => s.date === todayKST)
     .map(s => s.title);
+
+  // Active round game titles
+  const activeRoundTitles = allGlobalSchedules
+    .filter(s => s.is_round_game && !s.isClosed)
+    .map(s => s.title);
+
+  const filteredPersonalRecords = personalRecords.filter(r => !activeRoundTitles.includes(r.title));
+  const filteredAllRecords = allRecords.filter(r => !activeRoundTitles.includes(r.title));
+  const filteredGlobalTitles = globalTitles.filter(title => {
+    const schedule = allGlobalSchedules.find(s => s.title === title);
+    if (schedule?.is_round_game && !schedule.isClosed) return false;
+    return true;
+  });
 
   if (!authUser) return null;
 
@@ -72,6 +86,7 @@ export default function SilmoDashboardPage() {
             const isCompleted = personalRecords.some(r => r.title === schedule.title);
             const isRunning = localPhase !== 'finished';
             const isSilvival = schedule.is_silvival;
+            const isRound = schedule.is_round_game;
             // 해당 날짜가 오늘이거나 지난 경우에만 응시 가능
             const isDateReached = schedule.date <= todayKST;
             // 본인이 만든 일정이면 삭제 가능 (silvival 고정 일정 포함)
@@ -82,27 +97,34 @@ export default function SilmoDashboardPage() {
               <div
                 key={schedule.id}
                 className={`p-4 rounded-xl flex flex-col gap-3 hover:border-opacity-80 transition-colors border ${
-                  isSilvival
-                    ? 'bg-indigo-950/20 border-indigo-500/30 hover:border-indigo-500/50'
-                    : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
+                  isRound
+                    ? 'bg-indigo-950/30 border-indigo-500 border-2 shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-400'
+                    : isSilvival
+                      ? 'bg-indigo-950/20 border-indigo-500/30 hover:border-indigo-500/50'
+                      : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
                 }`}
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {isSilvival && (
+                      {isRound && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold flex items-center gap-0.5 flex-shrink-0">
+                          <Swords className="w-2.5 h-2.5" />대항전
+                        </span>
+                      )}
+                      {isSilvival && !isRound && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold flex items-center gap-0.5 flex-shrink-0">
                           <Zap className="w-2.5 h-2.5" />SILVIVAL
                         </span>
                       )}
-                      <span className={`font-semibold text-sm truncate ${isSilvival ? 'text-indigo-100' : 'text-neutral-100'}`}>
+                      <span className={`font-semibold text-sm truncate ${isRound || isSilvival ? 'text-indigo-100' : 'text-neutral-100'}`}>
                         {schedule.title}
                       </span>
                     </div>
                     <span className="text-[10px] text-neutral-500 font-medium font-suit">{schedule.date}</span>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${isSilvival ? 'bg-indigo-500/10 text-indigo-400' : 'bg-neutral-800 text-neutral-400'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${isRound || isSilvival ? 'bg-indigo-500/10 text-indigo-400' : 'bg-neutral-800 text-neutral-400'}`}>
                       {schedule.type === 'korean' ? '국어' : schedule.type === 'math' ? '수학' : '국어+수학'}
                     </span>
                     {isClosed && (
@@ -122,7 +144,7 @@ export default function SilmoDashboardPage() {
                 </div>
                 <div className="flex justify-between items-end mt-2">
                   <span className="text-xs text-neutral-500 font-suit">
-                    {isSilvival ? '실바이벌 지정 실모' : `등록자: ${profiles[schedule.createdBy] || (schedule.createdBy && schedule.createdBy.substring(0, 6)) || '알수없음'}`}
+                    {isRound ? '학교 대항전 실모' : isSilvival ? '실바이벌 지정 실모' : `등록자: ${profiles[schedule.createdBy] || (schedule.createdBy && schedule.createdBy.substring(0, 6)) || '알수없음'}`}
                   </span>
                   <div className="flex items-center gap-1.5">
                     {/* PDF links */}
@@ -151,6 +173,13 @@ export default function SilmoDashboardPage() {
                       <span className="px-3 py-1.5 rounded bg-neutral-800/60 text-neutral-500 border border-neutral-850/30 text-xs font-semibold select-none">
                         완료됨
                       </span>
+                    ) : isRound ? (
+                      <a
+                        href="/silmo/round"
+                        className="px-3 py-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-semibold transition-all"
+                      >
+                        이동
+                      </a>
                     ) : !isDateReached ? (
                       <span className="px-3 py-1.5 rounded bg-neutral-900 text-neutral-600 border border-neutral-800 text-xs font-semibold select-none font-suit">
                         {schedule.date} 응시 가능
@@ -183,7 +212,7 @@ export default function SilmoDashboardPage() {
       </div>
 
       {/* Top aggregate stats cards */}
-      <DashboardCards records={personalRecords} />
+      <DashboardCards records={filteredPersonalRecords} />
 
       {/* 3-Column main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -220,9 +249,9 @@ export default function SilmoDashboardPage() {
               </h3>
             </div>
             <Leaderboard
-              records={allRecords}
+              records={filteredAllRecords}
               users={allLeaderboardUsers}
-              globalTitles={globalTitles}
+              globalTitles={filteredGlobalTitles}
               todayTitles={todayTitles}
               currentUserId={authUser.id}
             />
@@ -238,7 +267,7 @@ export default function SilmoDashboardPage() {
             내 모의고사 히스토리
           </h3>
         </div>
-        <HistoryTable records={personalRecords} />
+        <HistoryTable records={filteredPersonalRecords} />
       </div>
 
       {/* SILVIVAL League Summary */}

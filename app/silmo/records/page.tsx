@@ -28,6 +28,19 @@ export default function RecordsPage() {
   const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const todayTitles = globalSchedules.filter(s => s.date === todayKST).map(s => s.title);
 
+  // Active round game titles
+  const activeRoundTitles = allGlobalSchedules
+    .filter(s => s.is_round_game && !s.isClosed)
+    .map(s => s.title);
+
+  const filteredPersonalRecords = personalRecords.filter(r => !activeRoundTitles.includes(r.title));
+  const filteredAllRecords = allRecords.filter(r => !activeRoundTitles.includes(r.title));
+  const filteredGlobalTitles = globalTitles.filter(title => {
+    const schedule = allGlobalSchedules.find(s => s.title === title);
+    if (schedule?.is_round_game && !schedule.isClosed) return false;
+    return true;
+  });
+
   const [reviewModalTitle, setReviewModalTitle] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'my' | 'global'>('my');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
@@ -73,7 +86,7 @@ export default function RecordsPage() {
                   내 모의고사 히스토리
                 </h3>
               </div>
-              <HistoryTable records={personalRecords} />
+              <HistoryTable records={filteredPersonalRecords} />
             </div>
           )}
 
@@ -87,7 +100,7 @@ export default function RecordsPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                {globalTitles.map(title => {
+                {filteredGlobalTitles.map(title => {
                   const titleRecords = allRecords.filter(r => r.title === title);
                   const hasTaken = personalRecords.some(r => r.title === title);
                   const myRecord = personalRecords.find(r => r.title === title);
@@ -363,9 +376,9 @@ export default function RecordsPage() {
             </h3>
           </div>
           <Leaderboard
-            records={allRecords}
+            records={filteredAllRecords}
             users={allLeaderboardUsers}
-            globalTitles={globalTitles}
+            globalTitles={filteredGlobalTitles}
             todayTitles={todayTitles}
             currentUserId={authUser.id}
           />

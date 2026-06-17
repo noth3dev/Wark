@@ -10,6 +10,7 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string) => Promise<void>;
     profileName: string;
+    school: string;
     fontPreference: string;
     loading: boolean;
     refreshProfile: () => Promise<void>;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileName, setProfileName] = useState("");
+    const [school, setSchool] = useState("");
     const [fontPreference, setFontPreference] = useState("default");
     const [isSilmodan, setIsSilmodan] = useState(false);
 
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 fetchProfile(currentUser.id);
             } else {
                 setProfileName("");
+                setSchool("");
                 setFontPreference("default");
                 setIsSilmodan(false);
                 setLoading(false);
@@ -66,11 +69,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fetchProfile = async (userId: string) => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('display_name, font_preference, is_silmodan')
-                .eq('id', userId)
-                .single();
+            let data: any = null;
+            let error: any = null;
+
+            try {
+                const res = await supabase
+                    .from('profiles')
+                    .select('display_name, font_preference, is_silmodan, school')
+                    .eq('id', userId)
+                    .single();
+                data = res.data;
+                error = res.error;
+            } catch (e) {
+                // school column might not exist yet
+                const res = await supabase
+                    .from('profiles')
+                    .select('display_name, font_preference, is_silmodan')
+                    .eq('id', userId)
+                    .single();
+                data = res.data ? { ...res.data, school: '' } : null;
+                error = res.error;
+            }
 
             if (error && error.code === 'PGRST116') {
                 // Profile doesn't exist, create one
@@ -83,11 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 if (!createError && newProfile) {
                     setProfileName(newProfile.display_name);
+                    setSchool(newProfile.school || "");
                     setFontPreference(newProfile.font_preference || "default");
                     setIsSilmodan(newProfile.is_silmodan === 1);
                 }
             } else if (!error && data) {
                 setProfileName(data.display_name);
+                setSchool(data.school || "");
                 setFontPreference(data.font_preference || "default");
                 setIsSilmodan(data.is_silmodan === 1);
             }
@@ -119,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, fontPreference, loading, refreshProfile, isSilmodan }}>
+        <AuthContext.Provider value={{ user, signOut, signIn, signUp, profileName, school, fontPreference, loading, refreshProfile, isSilmodan }}>
             {children}
         </AuthContext.Provider>
     );

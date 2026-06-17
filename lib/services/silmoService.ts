@@ -11,12 +11,57 @@ export async function fetchSilmoRecords() {
 }
 
 export async function fetchUserProfiles() {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, school')
+      .eq('is_silmodan', 1);
+    if (!error && data) return data;
+  } catch (e) {
+    console.warn("Failed to fetch profiles with school, falling back...", e);
+  }
   const { data, error } = await supabase
     .from('profiles')
     .select('id, display_name')
     .eq('is_silmodan', 1);
   if (error) throw error;
+  return data.map(p => ({ ...p, school: '' }));
+}
+
+export async function fetchRoundDistributions(scheduleId: string) {
+  const { data, error } = await supabase
+    .from('silmo_round_distributions')
+    .select('*')
+    .eq('schedule_id', scheduleId);
+  if (error) {
+    console.warn("Failed to fetch round distributions:", error);
+    return [];
+  }
   return data;
+}
+
+export async function saveRoundDistribution(
+  scheduleId: string,
+  school: string,
+  r1: number,
+  r2: number,
+  r3: number,
+  r4: number,
+  r5: number
+) {
+  const { error } = await supabase
+    .from('silmo_round_distributions')
+    .upsert({
+      schedule_id: scheduleId,
+      school,
+      r1,
+      r2,
+      r3,
+      r4,
+      r5,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'schedule_id,school' });
+  if (error) throw error;
 }
 
 export async function fetchActiveExamSessions() {
@@ -99,7 +144,8 @@ export async function createGlobalSchedule(
   type: ExamType,
   createdBy: string,
   questionPdfUrl?: string,
-  solutionPdfUrl?: string
+  solutionPdfUrl?: string,
+  isRoundGame: boolean = false
 ) {
   const { error } = await supabase
     .from('silmo_global_schedules')
@@ -110,6 +156,7 @@ export async function createGlobalSchedule(
       created_by: createdBy,
       question_pdf_url: questionPdfUrl || null,
       solution_pdf_url: solutionPdfUrl || null,
+      is_round_game: isRoundGame,
       created_at: new Date().toISOString()
     }]);
   if (error) throw error;
@@ -126,7 +173,7 @@ export async function closeGlobalSchedule(id: string) {
 export async function fetchAllGlobalSchedules() {
   const { data, error } = await supabase
     .from('silmo_global_schedules')
-    .select('id, date, title, type, created_by, is_silvival, created_at, question_pdf_url, solution_pdf_url, is_closed');
+    .select('id, date, title, type, created_by, is_silvival, created_at, question_pdf_url, solution_pdf_url, is_closed, is_round_game');
   if (error) throw error;
   return data;
 }
