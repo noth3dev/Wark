@@ -52,7 +52,7 @@ export function HistoryTable({ records }: HistoryTableProps) {
   };
 
   // Sort logic
-  const sortedRecords = [...records].sort((a, b) => {
+  const sortedRecords = [...records].sort((a: any, b: any) => {
     let aVal: any = 0;
     let bVal: any = 0;
 
@@ -152,7 +152,7 @@ export function HistoryTable({ records }: HistoryTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-900 text-xs font-suit font-medium text-neutral-300">
-            {sortedRecords.map((record) => (
+            {sortedRecords.map((record: any) => (
               <tr key={record.id} className="hover:bg-neutral-900/30 transition-colors duration-150">
                 <td className="py-3.5 px-4 text-neutral-400 font-mono tabular-nums">
                   {formatDate(record.createdAt)}

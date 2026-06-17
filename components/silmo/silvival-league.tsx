@@ -186,9 +186,10 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
     const matching = allRecords.filter(r => r.title === title);
     matching.forEach(r => {
       if (players.includes(r.userId)) {
-        const score = r.type === 'korean' ? (r.koreanScore ?? r.totalScore)
-          : r.type === 'math' ? (r.mathScore ?? r.totalScore)
-            : r.totalScore;
+        const rec = r as any;
+        const score = r.type === 'korean' ? (rec.koreanScore ?? rec.totalScore)
+          : r.type === 'math' ? (rec.mathScore ?? rec.totalScore)
+            : rec.totalScore;
         if (result[r.userId] === null) {
           result[r.userId] = score;
         }

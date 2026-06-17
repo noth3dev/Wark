@@ -292,7 +292,7 @@ export function WeeklyCalendar({
                                   {userName} ({getTypeLabel(rec.type)})
                                 </span>
                                 <span className={isLocal ? 'font-mono text-emerald-300' : 'font-mono text-neutral-300'}>
-                                  {rec.type === 'both' ? `평균 ${rec.totalScore / 2}점` : `${rec.totalScore}점`}
+                                  {(rec as any).type === 'both' ? `평균 ${(rec as any).totalScore / 2}점` : `${(rec as any).totalScore}점`}
                                 </span>
                               </div>
                             );

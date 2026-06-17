@@ -65,7 +65,7 @@ export function SilvivalDashboardWidget({ users, profiles, allRecords, currentUs
   const getScore = (title: string): { [id: string]: number | null } => {
     const result: { [id: string]: number | null } = {};
     players.forEach(id => { result[id] = null; });
-    allRecords.filter(r => r.title === title).forEach(r => {
+    allRecords.filter(r => r.title === title).forEach((r: any) => {
       if (players.includes(r.userId) && result[r.userId] === null) {
         result[r.userId] = r.type === 'korean' ? (r.koreanScore ?? r.totalScore)
           : r.type === 'math' ? (r.mathScore ?? r.totalScore) : r.totalScore;

@@ -25,7 +25,7 @@ export function Leaderboard({
 }: LeaderboardProps) {
   const [mode, setMode] = useState<LeaderboardMode>('overall');
 
-  const getNormalizedScore = (rec: ExamRecord) => {
+  const getNormalizedScore = (rec: any) => {
     if (rec.type === 'both') return ((rec.koreanScore || 0) + (rec.mathScore || 0)) / 2;
     if (rec.type === 'korean') return rec.koreanScore || 0;
     return rec.mathScore || 0;
