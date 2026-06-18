@@ -3,11 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { useSilmo } from '../silmo-context';
 import { useAuth } from '@/lib/auth-context';
-import { Swords, Plus, Shield, Trophy, CheckCircle2, AlertCircle, Play, Users, Coins, HelpCircle, Lock, Calendar, History, FileText, BookOpen, X } from 'lucide-react';
+import { Swords, Plus, Shield, Trophy, CheckCircle2, AlertCircle, Play, Users, Coins, HelpCircle, Lock, Calendar, History, FileText, BookOpen, X, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchRoundDistributions, saveRoundDistribution, closeGlobalSchedule, fetchRoundScores, saveRoundScore } from '@/lib/services/silmoService';
+
+// 수학 점수 차감 로직 (수능 배점표 기준)
+const getMathQuestionScore = (num: number): number => {
+  if (num >= 1 && num <= 2) return 2;
+  if (num >= 3 && num <= 8) return 3;
+  if (num >= 9 && num <= 15) return 4;
+  if (num >= 16 && num <= 19) return 3;
+  if (num >= 20 && num <= 22) return 4;
+  if (num === 23) return 2;
+  if (num >= 24 && num <= 27) return 3;
+  if (num === 28) return 4;
+  if (num >= 29 && num <= 30) return 4;
+  return 0;
+};
 
 export default function RoundPage() {
   const { user: authUser } = useAuth();
@@ -65,7 +79,7 @@ export default function RoundPage() {
 
   // Score submission inline states
   const [myKoreanInput, setMyKoreanInput] = useState<string>('');
-  const [myMathInput, setMyMathInput] = useState<string>('');
+  const [myMathWrongInput, setMyMathWrongInput] = useState<string>(''); // 수학: 틀린 문항 번호
   const [isSavingScore, setIsSavingScore] = useState(false);
   const [roundScores, setRoundScores] = useState<any[]>([]);
 
@@ -304,18 +318,20 @@ export default function RoundPage() {
     }
   };
 
-  // Save distribution handler
+  // 수학 틀린 문항 파싱 & 점수 계산
+  const mathWrongNumbers = Array.from(new Set(
+    myMathWrongInput.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 30)
+  ));
+  const mathDeduction = mathWrongNumbers.reduce((sum, n) => sum + getMathQuestionScore(n), 0);
+  const mathCalculatedScore = Math.max(0, 100 - mathDeduction);
+
+  // Save score handler
   const handleSaveMyScore = async () => {
     if (!activeSchedule) return;
     const kor = (activeSchedule.type === 'korean' || activeSchedule.type === 'both' || activeSchedule.type === 'explore') ? (myKoreanInput === '' ? null : parseInt(myKoreanInput)) : null;
-    const mat = (activeSchedule.type === 'math' || activeSchedule.type === 'both') ? (myMathInput === '' ? null : parseInt(myMathInput)) : null;
 
     if ((activeSchedule.type === 'korean' || activeSchedule.type === 'both') && (kor === null || isNaN(kor) || kor < 0 || kor > 100)) {
       alert('올바른 국어 점수(0~100)를 입력해주세요.');
-      return;
-    }
-    if ((activeSchedule.type === 'math' || activeSchedule.type === 'both') && (mat === null || isNaN(mat) || mat < 0 || mat > 100)) {
-      alert('올바른 수학 점수(0~100)를 입력해주세요.');
       return;
     }
 
@@ -325,6 +341,28 @@ export default function RoundPage() {
       return;
     }
 
+    // 수학 오답 번호 유효성 검사
+    if (activeSchedule.type === 'math' || activeSchedule.type === 'both') {
+      const invalidNums = myMathWrongInput.split(',').map(n => n.trim()).filter(n => {
+        if (n === '') return false;
+        const num = parseInt(n, 10);
+        return isNaN(num) || num < 1 || num > 30;
+      });
+      if (invalidNums.length > 0) {
+        alert(`유효하지 않은 수학 문항 번호: ${invalidNums.join(', ')} (1~30 범위)`);
+        return;
+      }
+      const rawNums = myMathWrongInput.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+      const uniqueNums = new Set(rawNums);
+      if (rawNums.length !== uniqueNums.size) {
+        alert('수학 틀린 문항 번호에 중복이 있습니다.');
+        return;
+      }
+    }
+
+    const mat = (activeSchedule.type === 'math' || activeSchedule.type === 'both') ? mathCalculatedScore : null;
+    const mathWrongStr = myMathWrongInput.trim() === '' ? null : mathWrongNumbers.sort((a, b) => a - b).join(', ');
+
     setIsSavingScore(true);
     try {
       if (kor !== null) {
@@ -332,10 +370,10 @@ export default function RoundPage() {
         await saveRoundScore(activeSchedule.id, authUser.id, sub, kor, null, false);
       }
       if (mat !== null) {
-        await saveRoundScore(activeSchedule.id, authUser.id, 'math', mat, null, false);
+        await saveRoundScore(activeSchedule.id, authUser.id, 'math', mat, mathWrongStr, false);
       }
       setMyKoreanInput('');
-      setMyMathInput('');
+      setMyMathWrongInput('');
       alert('점수가 성공적으로 제출되었습니다!');
       // Reload round scores
       const scoresData = await fetchRoundScores(activeSchedule.id);
@@ -961,18 +999,21 @@ export default function RoundPage() {
                                 )}
                                 {(activeSchedule.type === 'math' || activeSchedule.type === 'both') && (
                                   <div className="space-y-1">
-                                    <label className="block text-[10px] text-neutral-500 font-semibold">수학 점수 (0~100)</label>
+                                    <div className="flex items-center justify-between">
+                                      <label className="block text-[10px] text-neutral-500 font-semibold">수학 틀린 문항 번호 (쉼표 구분)</label>
+                                      <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-300">
+                                        <Calculator className="w-3 h-3 text-neutral-500" />
+                                        <span className="font-mono font-bold text-xs">{mathCalculatedScore}점</span>
+                                      </div>
+                                    </div>
                                     <Input
                                       type="text"
-                                      inputMode="numeric"
-                                      value={myMathInput}
-                                      onChange={e => {
-                                        const val = e.target.value.replace(/[^0-9]/g, '');
-                                        setMyMathInput(val);
-                                      }}
-                                      placeholder="수학 점수"
-                                      className="bg-neutral-900 border-neutral-800 text-xs py-1"
+                                      value={myMathWrongInput}
+                                      onChange={e => setMyMathWrongInput(e.target.value)}
+                                      placeholder="예: 15, 22, 28 (만점이면 빈칸)"
+                                      className="bg-neutral-900 border-neutral-800 text-xs py-1 font-mono"
                                     />
+                                    <p className="text-[9px] text-neutral-600">※ 오답 번호 입력 시 배점표 기준으로 자동 차감됩니다. 만점이면 비워두세요.</p>
                                   </div>
                                 )}
                                 {activeSchedule.type === 'explore' && (
