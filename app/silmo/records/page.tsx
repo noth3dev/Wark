@@ -5,9 +5,30 @@ import { useSilmo } from '../silmo-context';
 import { HistoryTable } from '@/components/silmo/history-table';
 import { Leaderboard } from '@/components/silmo/leaderboard';
 import { ScheduleReviewModal } from '@/components/silmo/schedule-review-modal';
-import { Trophy, Calendar as CalendarIcon, Star, FileText, Download, Lock, Users, BookOpen, ChevronDown } from 'lucide-react';
+import { Trophy, Calendar as CalendarIcon, Star, FileText, Download, Lock, Users, BookOpen, ChevronDown, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
+
+// 오답 문제 번호 빈도 계산 헬퍼
+function calcTop3WrongProblems(records: any[], subject: 'korean' | 'math' | 'explore'): { num: string; count: number; pct: number }[] {
+  const freqMap: Record<string, number> = {};
+  let participantCount = 0;
+  const fieldMap = { korean: 'koreanWrongNumbers', math: 'mathWrongNumbers', explore: 'exploreWrongNumbers' } as const;
+  const field = fieldMap[subject];
+  records.forEach(r => {
+    const raw: string | null = r[field];
+    if (!raw) return;
+    participantCount++;
+    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(n => {
+      freqMap[n] = (freqMap[n] || 0) + 1;
+    });
+  });
+  if (participantCount === 0) return [];
+  return Object.entries(freqMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([num, count]) => ({ num, count, pct: Math.round((count / participantCount) * 100) }));
+}
 
 export default function RecordsPage() {
   const { user: authUser } = useAuth();
@@ -44,6 +65,8 @@ export default function RecordsPage() {
   const [reviewModalTitle, setReviewModalTitle] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'my' | 'global'>('my');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
+  // 각 시험별 랭킹 탭 상태: 'total' | 'korean' | 'math' | 'explore'
+  const [rankingTabs, setRankingTabs] = useState<Record<string, string>>({});
 
   if (!authUser) return null;
 
@@ -91,12 +114,27 @@ export default function RecordsPage() {
           )}
 
           {activeTab === 'global' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
                 <Trophy className="w-4 h-4 text-indigo-400" />
                 <h3 className="text-sm font-semibold text-neutral-200 font-suit">
                   전역 모의고사 점수 및 총평
                 </h3>
+              </div>
+
+              {/* 경쟁 리더보드 인라인 */}
+              <div className="matte-panel bg-neutral-950 border border-neutral-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-3.5 h-3.5 text-neutral-400" />
+                  <span className="text-xs font-semibold text-neutral-200 font-suit">경쟁 리더보드</span>
+                </div>
+                <Leaderboard
+                  records={filteredAllRecords}
+                  users={allLeaderboardUsers}
+                  globalTitles={filteredGlobalTitles}
+                  todayTitles={todayTitles}
+                  currentUserId={authUser.id}
+                />
               </div>
 
               <div className="flex flex-col gap-2">
@@ -170,7 +208,7 @@ export default function RecordsPage() {
                       {isExpanded && (
                         <div className="px-4 pb-4 pt-1 border-t border-neutral-800/50">
                           {hasTaken && myRecord ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                               
                               {/* 좌측: 내 상세 점수 & 총평 */}
                               <div className="flex flex-col gap-3">
@@ -271,33 +309,130 @@ export default function RecordsPage() {
                                 </div>
                               </div>
 
-                              {/* 우측: 모든 사용자 점수 랭킹 */}
-                              <div className="bg-neutral-950/50 rounded-lg border border-neutral-800 p-2">
-                                <div className="text-[10px] font-semibold text-neutral-500 mb-2 px-1">실모 랭킹보드</div>
-                                <div className="space-y-1 max-h-[140px] overflow-y-auto no-scrollbar pr-1">
-                                  {sortedTitleRecords.map((r: any, i) => {
-                                    const isLocal = r.userId === authUser.id;
-                                    const isFirst = i === 0;
-                                    const userName = isLocal ? '나' : (profiles[r.userId] || r.userId.substring(0, 6));
-                                    return (
-                                      <div key={r.id} className="flex items-center justify-between text-[11px] font-suit font-medium px-2 py-1.5 rounded bg-neutral-900/50">
-                                        <span className={`flex items-center gap-1.5 ${isFirst ? 'text-amber-400 font-bold' : isLocal ? 'text-emerald-400 font-bold' : 'text-neutral-400'}`}>
-                                          {isFirst && <Star className="w-2.5 h-2.5 fill-amber-400" />}
-                                          {i + 1}위. {userName}
-                                          {r.isPostTake && (
-                                            <span className="inline-flex items-center px-1 py-0.2 rounded text-[8px] font-bold bg-neutral-800 text-neutral-500 border border-neutral-700/60 shrink-0">
-                                              사후
+                              {/* 중앙: 랭킹보드 (전체/과목별 탭) */}
+                              {(() => {
+                                const scheduleType = scheduleForTitle?.type || myRecord.type;
+                                const rankTab = rankingTabs[title] || 'total';
+                                const setRankTab = (t: string) => setRankingTabs(prev => ({ ...prev, [title]: t }));
+                                const hasKorean = scheduleType === 'korean' || scheduleType === 'both';
+                                const hasMath = scheduleType === 'math' || scheduleType === 'both';
+                                const hasExplore = scheduleType === 'explore';
+                                const tabs = [
+                                  { key: 'total', label: '전체' },
+                                  ...(hasKorean ? [{ key: 'korean', label: '국어' }] : []),
+                                  ...(hasMath ? [{ key: 'math', label: '수학' }] : []),
+                                  ...(hasExplore ? [{ key: 'explore', label: '탐구' }] : []),
+                                ];
+                                const getRankScore = (r: any) => {
+                                  if (rankTab === 'korean') return r.koreanScore ?? null;
+                                  if (rankTab === 'math') return r.mathScore ?? null;
+                                  if (rankTab === 'explore') return r.exploreScore ?? null;
+                                  return r.totalScore;
+                                };
+                                const filteredForTab = titleRecords
+                                  .filter((r: any) => rankTab === 'total' || getRankScore(r) !== null)
+                                  .sort((a: any, b: any) => (getRankScore(b) ?? -1) - (getRankScore(a) ?? -1));
+                                return (
+                                  <div className="bg-neutral-950/50 rounded-lg border border-neutral-800 p-2 flex flex-col gap-2">
+                                    {/* 탭 헤더 */}
+                                    <div className="flex items-center gap-1">
+                                      {tabs.map(t => (
+                                        <button
+                                          key={t.key}
+                                          onClick={() => setRankTab(t.key)}
+                                          className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${
+                                            rankTab === t.key
+                                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                                              : 'text-neutral-500 hover:text-neutral-300'
+                                          }`}
+                                        >
+                                          {t.label}
+                                        </button>
+                                      ))}
+                                      <span className="ml-auto text-[9px] text-neutral-600">랭킹보드</span>
+                                    </div>
+                                    {/* 랭킹 목록 */}
+                                    <div className="space-y-1 max-h-[150px] overflow-y-auto no-scrollbar pr-1">
+                                      {filteredForTab.map((r: any, i) => {
+                                        const isLocal = r.userId === authUser.id;
+                                        const isFirst = i === 0;
+                                        const userName = isLocal ? '나' : (profiles[r.userId] || r.userId.substring(0, 6));
+                                        const displayScore = getRankScore(r);
+                                        const scoreLabel = rankTab === 'total' && r.type === 'both'
+                                          ? `avg ${Math.round((displayScore ?? 0) / 2)}`
+                                          : displayScore !== null ? `${displayScore}점` : '-';
+                                        return (
+                                          <div key={r.id} className="flex items-center justify-between text-[11px] font-suit font-medium px-2 py-1.5 rounded bg-neutral-900/50">
+                                            <span className={`flex items-center gap-1.5 ${isFirst ? 'text-amber-400 font-bold' : isLocal ? 'text-emerald-400 font-bold' : 'text-neutral-400'}`}>
+                                              {isFirst && <Star className="w-2.5 h-2.5 fill-amber-400" />}
+                                              {i + 1}. {userName}
+                                              {r.isPostTake && (
+                                                <span className="inline-flex items-center px-1 rounded text-[8px] font-bold bg-neutral-800 text-neutral-500 border border-neutral-700/60 shrink-0">
+                                                  사후
+                                                </span>
+                                              )}
                                             </span>
-                                          )}
-                                        </span>
-                                        <span className="font-mono text-neutral-300">
-                                          {r.type === 'both' ? `평균 ${Math.round(r.totalScore / 2)}점` : `${r.totalScore}점`}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                            <span className="font-mono text-neutral-300 text-[11px]">{scoreLabel}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* 우측: 오답 Top 3 섹션 */}
+                              {(() => {
+                                const scheduleType = scheduleForTitle?.type || myRecord.type;
+                                const hasKorean = scheduleType === 'korean' || scheduleType === 'both';
+                                const hasMath = scheduleType === 'math' || scheduleType === 'both';
+                                const hasExplore = scheduleType === 'explore';
+                                const korTop3 = hasKorean ? calcTop3WrongProblems(titleRecords, 'korean') : [];
+                                const matTop3 = hasMath ? calcTop3WrongProblems(titleRecords, 'math') : [];
+                                const expTop3 = hasExplore ? calcTop3WrongProblems(titleRecords, 'explore') : [];
+                                const anyData = korTop3.length > 0 || matTop3.length > 0 || expTop3.length > 0;
+                                if (!anyData) return null;
+                                const rankColors = ['text-rose-400', 'text-orange-400', 'text-amber-400'];
+                                const rankBg = ['bg-rose-500/10 border-rose-500/20', 'bg-orange-500/10 border-orange-500/20', 'bg-amber-500/10 border-amber-500/20'];
+                                const renderTop3 = (items: { num: string; count: number; pct: number }[], label: string, color: string, barColor: string) => (
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-[9px] font-bold uppercase tracking-wider mb-1.5 ${color}`}>{label} 오답 Top 3</div>
+                                    <div className="flex flex-col gap-1">
+                                      {items.map((item, idx) => (
+                                        <div key={item.num} className={`flex items-center justify-between px-2 py-1.5 rounded border ${rankBg[idx]}`}>
+                                          <div className="flex items-center gap-1.5">
+                                            <span className={`text-[9px] font-black w-3 text-center ${rankColors[idx]}`}>{idx + 1}</span>
+                                            <span className="text-[12px] font-bold font-mono text-neutral-200">{item.num}번</span>
+                                            <span className="text-[9px] text-neutral-500 font-suit">{item.count}명</span>
+                                          </div>
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="w-12 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                                              <div
+                                                className={`h-full rounded-full transition-all ${barColor}`}
+                                                style={{ width: `${item.pct}%` }}
+                                              />
+                                            </div>
+                                            <span className={`text-[10px] font-bold font-mono ${rankColors[idx]}`}>{item.pct}%</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                                return (
+                                  <div className="bg-neutral-950/60 border border-neutral-800/60 rounded-lg p-3 space-y-3">
+                                    <div className="flex items-center gap-1.5">
+                                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                                      <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-wider">공통 오답 Top 3</span>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                      {korTop3.length > 0 && renderTop3(korTop3, '국어', 'text-blue-400', 'bg-blue-500')}
+                                      {matTop3.length > 0 && renderTop3(matTop3, '수학', 'text-rose-400', 'bg-rose-500')}
+                                      {expTop3.length > 0 && renderTop3(expTop3, '탐구', 'text-purple-400', 'bg-purple-500')}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                             </div>
                           ) : (
@@ -367,22 +502,24 @@ export default function RecordsPage() {
 
         </div>
 
-        {/* 우측 리더보드 패널 */}
-        <div className="lg:col-span-4 matte-panel bg-neutral-950 border-neutral-800 rounded-xl p-5 space-y-4 h-fit sticky top-6">
-          <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
-            <Trophy className="w-4 h-4 text-neutral-400" />
-            <h3 className="text-sm font-semibold text-neutral-200 font-suit">
-              경쟁 리더보드
-            </h3>
+        {/* 우측 리더보드 패널 - 내 모의고사 탭에서만 표시 */}
+        {activeTab === 'my' && (
+          <div className="lg:col-span-4 matte-panel bg-neutral-950 border-neutral-800 rounded-xl p-5 space-y-4 h-fit sticky top-6">
+            <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
+              <Trophy className="w-4 h-4 text-neutral-400" />
+              <h3 className="text-sm font-semibold text-neutral-200 font-suit">
+                경쟁 리더보드
+              </h3>
+            </div>
+            <Leaderboard
+              records={filteredAllRecords}
+              users={allLeaderboardUsers}
+              globalTitles={filteredGlobalTitles}
+              todayTitles={todayTitles}
+              currentUserId={authUser.id}
+            />
           </div>
-          <Leaderboard
-            records={filteredAllRecords}
-            users={allLeaderboardUsers}
-            globalTitles={filteredGlobalTitles}
-            todayTitles={todayTitles}
-            currentUserId={authUser.id}
-          />
-        </div>
+        )}
 
       </div>
 
