@@ -48,5 +48,27 @@ export const caffeineService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    // 목표 카페인 농도 불러오기
+    async getTarget(userId: string): Promise<number> {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('caffeine_target')
+            .eq('id', userId)
+            .single();
+
+        if (error || !data) return 80; // 기본값 80mg
+        return data.caffeine_target ?? 80;
+    },
+
+    // 목표 카페인 농도 저장
+    async setTarget(userId: string, target: number) {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ caffeine_target: target })
+            .eq('id', userId);
+
+        if (error) throw error;
     }
 };

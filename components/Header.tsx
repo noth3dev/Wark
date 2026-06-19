@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { format } from "date-fns"
 import { Clock, BarChart2, Music, CheckCircle2, Menu, X, Flame, StickyNote, ClipboardList, HardDrive, Coffee, Plane, Activity, FileText, ChevronDown, Sparkles } from "lucide-react"
 
 import { useAuth } from "../lib/auth-context"
@@ -19,6 +20,7 @@ import { MobileMenu } from "./header/MobileMenu"
 import { MusicPlayer } from "./header/MusicPlayer"
 import { ActiveSessionIndicator } from "./header/ActiveSessionIndicator"
 import { MemoPanel } from "./header/MemoPanel"
+import { caffeineService } from "../lib/services/caffeineService"
 
 export function Header() {
     const { user } = useAuth()
@@ -63,12 +65,79 @@ export function Header() {
         return () => document.removeEventListener('click', handleOutsideClick);
     }, [isPlaygroundOpen]);
 
+    const [isCaffeineOpen, setIsCaffeineOpen] = useState(false)
+    const [targetLevel, setTargetLevel] = useState<number>(80)
+
+    // Close caffeine dropdown on outside click
+    useEffect(() => {
+        if (!isCaffeineOpen) return;
+        const handleOutsideClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.caffeine-dropdown-container')) {
+                setIsCaffeineOpen(false);
+            }
+        };
+        document.addEventListener('click', handleOutsideClick);
+        return () => document.removeEventListener('click', handleOutsideClick);
+    }, [isCaffeineOpen]);
+
     // Solved Problems State
     const { totalCount, increment, decrement, count } = useSolvedProblems(status.tagId)
     const { dailyTimes, fetchDailyTotals } = useDailyTotals()
     const [isSolvedProblemsOpen, setIsSolvedProblemsOpen] = useState(false)
     const [isMemoOpen, setIsMemoOpen] = useState(false)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+    // Caffeine State & Live Calculation
+    const [caffeineLevel, setCaffeineLevel] = useState<number>(0)
+
+    useEffect(() => {
+        if (!user) return
+        let active = true
+        let interval: any
+
+        const updateCaffeine = async () => {
+            try {
+                const [intakes, target] = await Promise.all([
+                    caffeineService.getIntakes(user.id),
+                    caffeineService.getTarget(user.id)
+                ])
+                if (!active) return
+                setTargetLevel(target)
+                const calculateCaffeine = () => {
+                    const now = new Date()
+                    let total = 0
+                    intakes.forEach(intake => {
+                        const timeDiff = (now.getTime() - new Date(intake.intake_at).getTime()) / (1000 * 60 * 60)
+                        if (timeDiff >= 0) {
+                            total += intake.amount * Math.pow(0.5, timeDiff / 5) // half-life 5 hours
+                        }
+                    })
+                    setCaffeineLevel(total)
+                }
+                calculateCaffeine()
+                clearInterval(interval)
+                interval = setInterval(calculateCaffeine, 500)
+            } catch (e) {
+                console.error(e)
+            }
+        }
+
+        updateCaffeine()
+        // Refresh the source data from database every 15 seconds
+        const dataInterval = setInterval(updateCaffeine, 15000)
+
+        // Listen for customized event if we want instant update
+        const handleIntakeAdded = () => updateCaffeine()
+        window.addEventListener("caffeine-update", handleIntakeAdded)
+
+        return () => {
+            active = false
+            clearInterval(dataInterval)
+            clearInterval(interval)
+            window.removeEventListener("caffeine-update", handleIntakeAdded)
+        }
+    }, [user])
 
     // Sync daily study totals for average calculation
     useEffect(() => {
@@ -202,6 +271,76 @@ export function Header() {
                                 <CheckCircle2 className={`w-3.5 h-3.5 ${isSolvedProblemsOpen ? 'text-primary' : 'text-neutral-500'}`} />
                                 <span className="text-[11px] font-medium font-mono tabular-nums">{totalCount}</span>
                             </motion.button>
+
+                            {/* Caffeine Indicator */}
+                            <div className="relative caffeine-dropdown-container">
+                                <motion.button
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={() => setIsCaffeineOpen(!isCaffeineOpen)}
+                                    className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all duration-200 cursor-pointer ${
+                                        isCaffeineOpen
+                                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                                            : 'bg-white/5 border-white/5 text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08] hover:border-white/10'
+                                    }`}
+                                >
+                                    <Coffee className={`w-3.5 h-3.5 ${isCaffeineOpen ? 'text-amber-400' : 'text-neutral-500'}`} />
+                                    <span className="text-[11px] font-medium font-mono tabular-nums">{caffeineLevel.toFixed(1)} mg</span>
+                                </motion.button>
+
+                                <AnimatePresence>
+                                    {isCaffeineOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                                            transition={{ duration: 0.15, ease: "easeOut" }}
+                                            className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-neutral-950/95 backdrop-blur-xl p-3.5 shadow-2xl z-[100]"
+                                        >
+                                            <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider font-suit mb-2">
+                                                카페인 실시간 상태
+                                            </div>
+                                            <div className="h-[1px] bg-white/5 my-2" />
+                                            <div className="space-y-2 text-[11px]">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-neutral-500 font-suit">현재 농도</span>
+                                                    <span className="font-mono text-neutral-200 font-bold">{caffeineLevel.toFixed(1)} mg</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-neutral-500 font-suit">목표 기준치</span>
+                                                    <span className="font-mono text-neutral-400">{targetLevel} mg</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-neutral-500 font-suit">다음 권장 섭취</span>
+                                                    <span className="font-mono text-amber-400 font-bold">
+                                                        {caffeineLevel <= targetLevel ? (
+                                                            "즉시 가능"
+                                                        ) : (
+                                                            `${format(new Date(Date.now() + 5 * Math.log2(caffeineLevel / targetLevel) * 3600 * 1000), "HH:mm")} (${(5 * Math.log2(caffeineLevel / targetLevel)).toFixed(1)}h 후)`
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-neutral-500 font-suit">완전 소진 시간</span>
+                                                    <span className="font-mono text-neutral-400">
+                                                        {caffeineLevel > 0.5 
+                                                            ? `${(5 * Math.log2(caffeineLevel / 0.5)).toFixed(1)}시간 후` 
+                                                            : "소진됨"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="h-[1px] bg-white/5 my-3" />
+                                            <Link
+                                                href="/overdose"
+                                                onClick={() => setIsCaffeineOpen(false)}
+                                                className="block text-center w-full py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-neutral-300 hover:text-white hover:border-neutral-700 transition-colors font-suit"
+                                            >
+                                                자세히 보기 & 등록하기
+                                            </Link>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
 
                             {/* Memo Button */}
                             <motion.button

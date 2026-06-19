@@ -333,6 +333,7 @@ export default function HomeworkOuterPage({ searchParams, userId: propUserId }: 
                 userName={user?.email?.split('@')[0]} 
                 comment={comment}
                 viewedUserId={viewedUserId}
+                selectedDate={dayKey}
             />
         </main>
     );

@@ -29,6 +29,7 @@ interface ExportDialogProps {
     onOpenChange?: (open: boolean) => void;
     comment: string;
     viewedUserId?: string;
+    selectedDate?: string; // YYYY-MM-DD, 보고 있는 날짜 (없으면 오늘)
 }
 
 export function ExportDialog({ 
@@ -42,7 +43,8 @@ export function ExportDialog({
     isOpen,
     onOpenChange,
     comment: propComment,
-    viewedUserId
+    viewedUserId,
+    selectedDate
 }: ExportDialogProps) {
     const [mode, setMode] = useState<"daily" | "weekly">("daily");
     const [comment, setComment] = useState("");
@@ -56,6 +58,9 @@ export function ExportDialog({
     const [loadingWeekly, setLoadingWeekly] = useState(false);
 
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    // 보고 있는 날짜 (selectedDate가 없으면 오늘)
+    const displayDateStr = selectedDate || todayStr;
+    const isToday = displayDateStr === todayStr;
     
     // Sync external comment with local state when dialog opens
     useEffect(() => {
@@ -99,10 +104,11 @@ export function ExportDialog({
 
         const fetchTodaySessions = async () => {
             if (!viewedUserId) return;
-            const startOfDay = new Date();
+            // 선택된 날짜의 시작/끝
+            const startOfDay = new Date(displayDateStr);
             startOfDay.setHours(0, 0, 0, 0);
 
-            const endOfDay = new Date();
+            const endOfDay = new Date(displayDateStr);
             endOfDay.setHours(23, 59, 59, 999);
 
             try {
@@ -153,9 +159,9 @@ export function ExportDialog({
 
         fetchTodaySessions();
         fetchWeeklyData();
-    }, [isOpen, startOfWeek, endOfWeek, viewedUserId]);
+    }, [isOpen, startOfWeek, endOfWeek, viewedUserId, displayDateStr]);
 
-    // Gather Daily Data
+    // Gather Daily Data — 선택된 날짜 기준
     const completedToday = useMemo(() => {
         const allTasks: any[] = [];
         const gather = (rootId: string, rootContent: string, path: string[], nodes: Subtask[]) => {
@@ -181,9 +187,9 @@ export function ExportDialog({
         });
         
         const filtered = allTasks.filter(item => {
-            const doneToday = item.is_completed && item.completed_at && item.completed_at.startsWith(todayStr);
+            const doneOnDate = item.is_completed && item.completed_at && item.completed_at.startsWith(displayDateStr);
             const sliderProgress = item.is_slider && item.current_amount > 0;
-            return doneToday || sliderProgress;
+            return doneOnDate || sliderProgress;
         });
         
         const seen = new Set();
@@ -192,48 +198,73 @@ export function ExportDialog({
             seen.add(item.id);
             return true;
         });
-    }, [homeworks, todayStr]);
+    }, [homeworks, displayDateStr]);
 
-    // Group-based daily focus times
+    // Group-based daily focus times — 선택 날짜 기준
+    // 오늘이 아닌 날은 DB 세션에서만 집계 (live timer 제외)
     const timeByGroupToday = useMemo(() => {
-        const groupMap: Record<string, { name: string; color: string; icon: string; duration: number }> = {};
-        
-        tags.forEach(tag => {
-            const groupIcon = tag.icon || '';
-            const group = dbGroups.find((g: any) => g.icon === groupIcon);
-            const groupName = group?.name || tag.name || '기타';
-            const groupColor = group?.color || tag.color || '#888888';
-            
-            const baseTime = dailyTimes[tag.id] || 0;
-            const totalMs = activeTagId === tag.id ? currentTimeMs : baseTime;
-            
-            if (totalMs > 0) {
-                const key = groupIcon || tag.name;
-                if (!groupMap[key]) {
-                    groupMap[key] = {
-                        name: groupName,
-                        color: groupColor,
-                        icon: groupIcon || 'Cpu',
-                        duration: 0
-                    };
-                }
-                groupMap[key].duration += totalMs;
-            }
-        });
-        
-        return Object.values(groupMap).sort((a, b) => b.duration - a.duration);
-    }, [tags, dbGroups, dailyTimes, currentTimeMs, activeTagId]);
-
-    const timeByTagToday = useMemo(() => {
-        return tags
-            .map(tag => {
+        if (isToday) {
+            // 오늘: 기존 방식 (dailyTimes + live)
+            const groupMap: Record<string, { name: string; color: string; icon: string; duration: number }> = {};
+            tags.forEach(tag => {
+                const groupIcon = tag.icon || '';
+                const group = dbGroups.find((g: any) => g.icon === groupIcon);
+                const groupName = group?.name || tag.name || '기타';
+                const groupColor = group?.color || tag.color || '#888888';
                 const baseTime = dailyTimes[tag.id] || 0;
                 const totalMs = activeTagId === tag.id ? currentTimeMs : baseTime;
-                return { name: tag.name, color: tag.color, icon: tag.icon, duration: totalMs };
-            })
-            .filter(t => t.duration > 0)
-            .sort((a, b) => b.duration - a.duration);
-    }, [tags, dailyTimes, currentTimeMs, activeTagId]);
+                if (totalMs > 0) {
+                    const key = groupIcon || tag.name;
+                    if (!groupMap[key]) {
+                        groupMap[key] = { name: groupName, color: groupColor, icon: groupIcon || 'Cpu', duration: 0 };
+                    }
+                    groupMap[key].duration += totalMs;
+                }
+            });
+            return Object.values(groupMap).sort((a, b) => b.duration - a.duration);
+        } else {
+            // 과거 날짜: DB 세션에서만 집계
+            const groupMap: Record<string, { name: string; color: string; icon: string; duration: number }> = {};
+            todaySessions.forEach(s => {
+                const tag = tags.find(t => t.id === s.tag_id);
+                if (tag) {
+                    const groupIcon = tag.icon || '';
+                    const group = dbGroups.find((g: any) => g.icon === groupIcon);
+                    const groupName = group?.name || tag.name || '기타';
+                    const groupColor = group?.color || tag.color || '#888888';
+                    const key = groupIcon || tag.name;
+                    if (!groupMap[key]) {
+                        groupMap[key] = { name: groupName, color: groupColor, icon: groupIcon || 'Cpu', duration: 0 };
+                    }
+                    groupMap[key].duration += s.duration;
+                }
+            });
+            return Object.values(groupMap).sort((a, b) => b.duration - a.duration);
+        }
+    }, [isToday, tags, dbGroups, dailyTimes, currentTimeMs, activeTagId, todaySessions]);
+
+    const timeByTagToday = useMemo(() => {
+        if (isToday) {
+            return tags
+                .map(tag => {
+                    const baseTime = dailyTimes[tag.id] || 0;
+                    const totalMs = activeTagId === tag.id ? currentTimeMs : baseTime;
+                    return { name: tag.name, color: tag.color, icon: tag.icon, duration: totalMs };
+                })
+                .filter(t => t.duration > 0)
+                .sort((a, b) => b.duration - a.duration);
+        } else {
+            const map: Record<string, { name: string; color: string; icon?: string; duration: number }> = {};
+            todaySessions.forEach(s => {
+                const tag = tags.find(t => t.id === s.tag_id);
+                if (tag) {
+                    if (!map[s.tag_id]) map[s.tag_id] = { name: tag.name, color: tag.color, icon: tag.icon, duration: 0 };
+                    map[s.tag_id].duration += s.duration;
+                }
+            });
+            return Object.values(map).sort((a, b) => b.duration - a.duration);
+        }
+    }, [isToday, tags, dailyTimes, currentTimeMs, activeTagId, todaySessions]);
 
     // Gather Weekly Data
     const completedWeekly = useMemo(() => {
@@ -287,8 +318,8 @@ export function ExportDialog({
                 })
                 .reduce((acc, s) => acc + s.duration, 0);
 
-            // Add live session if it fits today's slot
-            if (day.dateStr === todayStr && activeTagId) {
+            // Add live session if it fits today's slot AND we are viewing today
+            if (day.dateStr === todayStr && activeTagId && isToday) {
                 duration += currentTimeMs;
             }
 
@@ -383,10 +414,11 @@ export function ExportDialog({
         return Object.values(map).sort((a, b) => b.duration - a.duration);
     }, [weeklySessions, tags, activeTagId, currentTimeMs]);
 
-    // Calculate hourly distribution (timeline) for today
+    // Calculate hourly distribution (timeline) for the selected date
     const hourData = useMemo(() => {
-        const startMs = new Date().setHours(0, 0, 0, 0);
-        const activeStartTime = activeTagId ? Date.now() - currentTimeMs : null;
+        const startMs = new Date(displayDateStr).setHours(0, 0, 0, 0);
+        // live timer 는 오늘 볼 때만 반영
+        const activeStartTime = (isToday && activeTagId) ? Date.now() - currentTimeMs : null;
 
         const distribution = Array.from({ length: 24 }, (_, i) => {
             const hStart = startMs + i * 3600000;
@@ -452,7 +484,7 @@ export function ExportDialog({
         });
 
         return distribution;
-    }, [todaySessions, activeTagId, currentTimeMs]);
+    }, [todaySessions, activeTagId, currentTimeMs, isToday, displayDateStr]);
 
     // Task completion dots for timeline
     const completedTaskDots = useMemo(() => {
@@ -586,7 +618,7 @@ export function ExportDialog({
                 });
 
                 const link = document.createElement('a');
-                link.download = `card-news-${mode}-${todayStr}-${String(i + 1).padStart(2, '0')}.png`;
+                link.download = `card-news-${mode}-${displayDateStr}-${String(i + 1).padStart(2, '0')}.png`;
                 link.href = dataUrl;
                 link.click();
             }
@@ -606,7 +638,12 @@ export function ExportDialog({
                 <DialogHeader className="p-6 pb-2">
                     <DialogTitle className="text-xl font-bold flex items-center gap-2 text-neutral-100">
                         <Share2 className="w-5 h-5 text-neutral-200" />
-                        카드뉴스 내보내기 (Card News Export)
+                        카드뉴스 내보내기
+                        {!isToday && (
+                            <span className="text-sm font-normal text-rose-400 ml-1">
+                                ({displayDateStr})
+                            </span>
+                        )}
                     </DialogTitle>
                     <DialogDescription className="text-neutral-400 text-xs">
                         오늘 하루 또는 이번 주의 성과를 인스타, 블로그 등에 올리기 좋은 카드뉴스 형태로 내보냅니다.
@@ -712,7 +749,7 @@ export function ExportDialog({
                                         <ExportCard
                                             type={mode}
                                             cardType={cards[activeIndex].cardType}
-                                            date={todayStr}
+                                            date={displayDateStr}
                                             cardIndex={activeIndex + 1}
                                             totalCards={cards.length}
                                             userName={userName}
@@ -808,7 +845,7 @@ export function ExportDialog({
                             key={idx}
                             type={mode}
                             cardType={card.cardType}
-                            date={todayStr}
+                            date={displayDateStr}
                             cardIndex={idx + 1}
                             totalCards={cards.length}
                             userName={userName}
