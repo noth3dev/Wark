@@ -412,6 +412,28 @@ export async function saveScheduleReview(
   if (error) throw error;
 }
 
+// ─── Silvival round meta (extensible bag) ────────────────────────────────────
+// DB 컬럼을 추가하지 않아도 되도록, 런타임 확장 데이터는 meta JSONB 안에 저장합니다.
+// 새 필드가 필요하면 이 타입에만 추가하면 됩니다.
+export interface SilvivalRoundMeta {
+  absent_players1?: string[];  // exam1 미참여 user_id 목록
+  absent_players2?: string[];  // exam2 미참여 user_id 목록
+  // ↓ 여기에 새 필드를 자유롭게 추가
+  [key: string]: unknown;
+}
+
+// 고정 컬럼 필드 타입 (DB 스키마에 실제 컬럼이 있는 것들)
+export interface SilvivalRoundFields {
+  exam1_title?: string;
+  exam2_title?: string;
+  scores1?: Record<string, number>;
+  scores2?: Record<string, number>;
+  double_or_nothing?: string;
+  is_closed?: boolean;
+  double_choice_locked?: boolean;
+  winner_id?: string | null;
+}
+
 export async function fetchSilvivalRounds(seasonIndex: number = 0) {
   const { data, error } = await supabase
     .from('silvival_rounds')
@@ -422,26 +444,46 @@ export async function fetchSilvivalRounds(seasonIndex: number = 0) {
   return data;
 }
 
+/**
+ * 라운드 고정 컬럼을 업데이트합니다.
+ * meta 확장 필드는 updateSilvivalRoundMeta()를 사용하세요.
+ */
 export async function updateSilvivalRound(
   seasonIndex: number,
   roundIndex: number,
-  fields: {
-    exam1_title?: string;
-    exam2_title?: string;
-    scores1?: Record<string, number>;
-    scores2?: Record<string, number>;
-    double_or_nothing?: string;
-    is_closed?: boolean;
-    double_choice_locked?: boolean;
-    winner_id?: string | null;
-  }
+  fields: SilvivalRoundFields
 ) {
   const { error } = await supabase
     .from('silvival_rounds')
-    .update({
-      ...fields,
-      updated_at: new Date().toISOString()
-    })
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('season_index', seasonIndex)
+    .eq('round_index', roundIndex);
+  if (error) throw error;
+}
+
+/**
+ * meta JSONB를 부분 업데이트합니다 (기존 키는 유지, 새 키만 덮어씀).
+ * 예: updateSilvivalRoundMeta(0, 0, { absent_players1: ['uuid-a'] })
+ */
+export async function updateSilvivalRoundMeta(
+  seasonIndex: number,
+  roundIndex: number,
+  patch: SilvivalRoundMeta
+) {
+  // 현재 meta를 읽어서 병합 후 저장 (Supabase는 JSONB 병합 연산자를 직접 지원하지 않음)
+  const { data, error: fetchErr } = await supabase
+    .from('silvival_rounds')
+    .select('meta')
+    .eq('season_index', seasonIndex)
+    .eq('round_index', roundIndex)
+    .single();
+  if (fetchErr) throw fetchErr;
+
+  const merged = { ...(data?.meta ?? {}), ...patch };
+
+  const { error } = await supabase
+    .from('silvival_rounds')
+    .update({ meta: merged, updated_at: new Date().toISOString() })
     .eq('season_index', seasonIndex)
     .eq('round_index', roundIndex);
   if (error) throw error;
@@ -459,7 +501,6 @@ export async function fetchLatestSilvivalSeasonIndex(): Promise<number> {
 }
 
 export async function createSilvivalSeason(seasonIndex: number) {
-  // Insert 4 rounds for the new season
   const rounds = [0, 1, 2, 3].map(roundIndex => ({
     season_index: seasonIndex,
     round_index: roundIndex,
@@ -467,7 +508,8 @@ export async function createSilvivalSeason(seasonIndex: number) {
     exam2_title: `시즌${seasonIndex + 1} ${roundIndex + 1}R 모의고사 B`,
     scores1: {},
     scores2: {},
-    double_or_nothing: 'claim'
+    double_or_nothing: 'claim',
+    meta: {},
   }));
 
   const { error } = await supabase

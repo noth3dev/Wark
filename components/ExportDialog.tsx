@@ -292,9 +292,15 @@ export function ExportDialog({
         });
         
         const filtered = allTasks.filter(item => {
-            if (!item.is_completed || !item.completed_at) return false;
-            const completedDate = new Date(item.completed_at);
-            return completedDate >= startOfWeek && completedDate <= endOfWeek;
+            // Include completed tasks that were finished this week
+            const doneThisWeek = item.is_completed && item.completed_at &&
+                (() => {
+                    const completedDate = new Date(item.completed_at);
+                    return completedDate >= startOfWeek && completedDate <= endOfWeek;
+                })();
+            // Also include slider tasks with any progress (amount progress)
+            const sliderProgress = item.is_slider && item.current_amount > 0;
+            return doneThisWeek || sliderProgress;
         });
 
         const seen = new Set();
@@ -497,18 +503,21 @@ export function ExportDialog({
             }));
     }, [completedToday]);
 
-    // Dynamic Pages Split Helper (at most 4 tasks per card)
-    const chunkArray = (arr: any[], size: number) => {
-        const result = [];
-        for (let i = 0; i < arr.length; i += size) {
-            result.push(arr.slice(i, i + size));
-        }
-        return result;
-    };
-
+    // Group tasks by book (rootContent) — one card per book
     const taskChunks = useMemo(() => {
         const list = mode === "daily" ? completedToday : completedWeekly;
-        return chunkArray(list, 4);
+        if (list.length === 0) return [];
+
+        // Build ordered map: rootContent -> tasks[]
+        const grouped: Map<string, any[]> = new Map();
+        list.forEach(task => {
+            const root = task.rootContent || "기타";
+            if (!grouped.has(root)) grouped.set(root, []);
+            grouped.get(root)!.push(task);
+        });
+
+        // Return as array of chunks (each chunk = tasks for one book)
+        return Array.from(grouped.values());
     }, [completedToday, completedWeekly, mode]);
 
     // Build Cards Definition Array

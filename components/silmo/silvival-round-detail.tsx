@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Trophy, Coins, Settings, Lock, LockOpen, CheckCircle2, Clock } from 'lucide-react';
+import { Trophy, Coins, Settings, Lock, LockOpen, CheckCircle2, Clock, UserX } from 'lucide-react';
 
 interface RoundData {
   exam1Title: string;
@@ -10,6 +10,11 @@ interface RoundData {
   isClosed: boolean;
   doubleChoiceLocked?: boolean;
   winnerId?: string | null;
+  meta: {
+    absent_players1?: string[];
+    absent_players2?: string[];
+    [key: string]: unknown;
+  };
 }
 
 interface RoundDetailProps {
@@ -33,6 +38,8 @@ interface RoundDetailProps {
   rounds: RoundData[];
   setRounds: (r: RoundData[]) => void;
   isRoundCloseUnlocked: () => boolean;
+  /** 미참여 토글: examSlot 1=exam1, 2=exam2 */
+  onToggleAbsent: (rIdx: number, examSlot: 1 | 2, userId: string) => Promise<void>;
 }
 
 export function SilvivalRoundDetail({
@@ -55,18 +62,13 @@ export function SilvivalRoundDetail({
   saveRoundField,
   rounds,
   setRounds,
-  isRoundCloseUnlocked
+  isRoundCloseUnlocked,
+  onToggleAbsent,
 }: RoundDetailProps) {
   const canForceClose = isRoundCloseUnlocked();
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'korean': return '국어';
-      case 'math': return '수학';
-      case 'both': return '국+수';
-      default: return type;
-    }
-  };
+  const absent1: string[] = (activeRound.meta.absent_players1 as string[]) || [];
+  const absent2: string[] = (activeRound.meta.absent_players2 as string[]) || [];
 
   return (
     <div className="p-5 rounded-xl bg-neutral-900/40 border border-neutral-800/80 space-y-5">
@@ -120,8 +122,8 @@ export function SilvivalRoundDetail({
               disabled={!canForceClose}
               title={!canForceClose ? "해당 라운드의 실모 일정이 완료되어야 종료할 수 있습니다." : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold font-suit transition-colors ${
-                canForceClose 
-                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' 
+                canForceClose
+                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
                   : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'
               }`}
             >
@@ -196,29 +198,43 @@ export function SilvivalRoundDetail({
       {/* Auto score display — two exam columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(['exam1Title', 'exam2Title'] as const).map((key, ei) => {
-          const title = activeRound[key];
+          const examSlot = (ei + 1) as 1 | 2;
           const scoresRaw = activeResult ? (ei === 0 ? activeResult.scores1 : activeResult.scores2) : {};
           const zMap = activeResult ? (ei === 0 ? activeResult.z1 : activeResult.z2) : {};
           const participated = activeResult ? (ei === 0 ? activeResult.participated1 : activeResult.participated2) : [];
+          const absentList = ei === 0 ? absent1 : absent2;
 
           return (
             <div key={ei} className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-neutral-500 uppercase">모의고사 {ei + 1}</span>
-                <span className="text-[10px] text-neutral-600">{participated.length}/{players.length}명 제출</span>
+                <span className="text-[10px] text-neutral-600">{participated.length}/{players.length - absentList.length}명 제출</span>
               </div>
               <div className="space-y-1.5">
                 {players.map(id => {
+                  const isAbsent = absentList.includes(id);
                   const score = scoresRaw[id];
                   const z = zMap[id];
-                  const submitted = score !== null && score !== undefined;
+                  const submitted = score !== null && score !== undefined && !isAbsent;
+
                   return (
-                    <div key={id} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${submitted ? 'bg-neutral-950/60 border-neutral-800' : 'bg-neutral-950/30 border-neutral-900 opacity-50'}`}>
+                    <div
+                      key={id}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-colors ${
+                        isAbsent
+                          ? 'bg-neutral-950/20 border-neutral-900/50 opacity-40'
+                          : submitted
+                            ? 'bg-neutral-950/60 border-neutral-800'
+                            : 'bg-neutral-950/30 border-neutral-900 opacity-50'
+                      }`}
+                    >
                       <span className={`text-xs font-medium truncate max-w-[110px] ${id === currentUserId ? 'text-emerald-400' : 'text-neutral-300'}`}>
                         {profiles[id] || id.substring(0, 6)}
                       </span>
                       <div className="flex items-center gap-2 text-xs font-mono">
-                        {submitted ? (
+                        {isAbsent ? (
+                          <span className="text-[10px] text-amber-600/70 font-suit">미참여</span>
+                        ) : submitted ? (
                           <>
                             <span className="text-neutral-200">{score}점</span>
                             {z !== undefined && (
@@ -229,6 +245,22 @@ export function SilvivalRoundDetail({
                           </>
                         ) : (
                           <span className="text-neutral-600 text-[10px]">미입력</span>
+                        )}
+
+                        {/* 미참여 토글 버튼 (라운드 진행 중에만) */}
+                        {!activeRound.isClosed && (
+                          <button
+                            onClick={() => onToggleAbsent(activeRoundIndex, examSlot, id)}
+                            title={isAbsent ? '참여로 전환' : '미참여 처리'}
+                            className={`ml-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold font-suit transition-colors ${
+                              isAbsent
+                                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                : 'bg-neutral-800 text-neutral-500 hover:text-amber-400 hover:bg-amber-500/10'
+                            }`}
+                          >
+                            <UserX className="w-2.5 h-2.5" />
+                            {isAbsent ? '참여' : '미참여'}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -249,26 +281,32 @@ export function SilvivalRoundDetail({
           </h5>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {players.map(id => {
+              const isAbsentBoth = absent1.includes(id) && absent2.includes(id);
               const base = activeResult.baseRoundScores[id] ?? 0;
               const bonus = activeResult.bonuses[id] ?? 0;
               const final = activeResult.finalRoundScores[id] ?? 0;
               const change = activeResult.ratingChanges[id] ?? 0;
               const isWinner = activeResult.winnerId === id;
               return (
-                <div key={id} className={`p-3 rounded-xl border space-y-1.5 ${isWinner ? 'bg-indigo-500/[0.03] border-indigo-500/25' : 'bg-neutral-950/50 border-neutral-850'}`}>
+                <div key={id} className={`p-3 rounded-xl border space-y-1.5 ${isAbsentBoth ? 'opacity-40 bg-neutral-950/30 border-neutral-900' : isWinner ? 'bg-indigo-500/[0.03] border-indigo-500/25' : 'bg-neutral-950/50 border-neutral-850'}`}>
                   <div className="flex justify-between items-start">
                     <span className="text-[11px] font-semibold text-neutral-200 truncate max-w-[80px]">{profiles[id] || id.substring(0, 6)}</span>
-                    {isWinner && <span className="text-[9px] text-indigo-400 font-bold flex items-center gap-0.5"><Trophy className="w-2.5 h-2.5" />우승</span>}
+                    {isAbsentBoth
+                      ? <span className="text-[9px] text-amber-600 font-bold">미참여</span>
+                      : isWinner && <span className="text-[9px] text-indigo-400 font-bold flex items-center gap-0.5"><Trophy className="w-2.5 h-2.5" />우승</span>
+                    }
                   </div>
-                  <div className="text-[10px] text-neutral-400 space-y-0.5 font-suit">
-                    <div className="flex justify-between"><span>Z합:</span><span className="font-mono">{base.toFixed(2)}</span></div>
-                    {bonus > 0 && <div className="flex justify-between text-indigo-400"><span>더블:</span><span className="font-mono">+{bonus.toFixed(1)}</span></div>}
-                    <div className="flex justify-between text-neutral-300 border-t border-neutral-900 pt-0.5"><span>합산:</span><span className="font-mono font-bold">{final.toFixed(2)}</span></div>
-                    <div className={`flex justify-between ${change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      <span>레이팅:</span>
-                      <span className="font-mono">{change >= 0 ? '+' : ''}{change.toFixed(0)} pt</span>
+                  {!isAbsentBoth && (
+                    <div className="text-[10px] text-neutral-400 space-y-0.5 font-suit">
+                      <div className="flex justify-between"><span>Z합:</span><span className="font-mono">{base.toFixed(2)}</span></div>
+                      {bonus > 0 && <div className="flex justify-between text-indigo-400"><span>더블:</span><span className="font-mono">+{bonus.toFixed(1)}</span></div>}
+                      <div className="flex justify-between text-neutral-300 border-t border-neutral-900 pt-0.5"><span>합산:</span><span className="font-mono font-bold">{final.toFixed(2)}</span></div>
+                      <div className={`flex justify-between ${change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <span>레이팅:</span>
+                        <span className="font-mono">{change >= 0 ? '+' : ''}{change.toFixed(0)} pt</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}

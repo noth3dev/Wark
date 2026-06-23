@@ -6,6 +6,7 @@ import { User, ExamRecord, GlobalSchedule } from '@/types/silmo';
 import {
   fetchSilvivalRounds,
   updateSilvivalRound,
+  updateSilvivalRoundMeta,
   createSilvivalSeason
 } from '@/lib/services/silmoService';
 import { SilvivalRulesPanel } from './silvival-rules-panel';
@@ -28,6 +29,12 @@ interface RoundData {
   isClosed: boolean;
   doubleChoiceLocked?: boolean;
   winnerId?: string | null;
+  // meta bag — extends without new DB columns
+  meta: {
+    absent_players1?: string[];
+    absent_players2?: string[];
+    [key: string]: unknown;
+  };
 }
 
 // Helper: Check if "Round Close" is unlockable (Exam 2 schedule date is reached/passed)
@@ -72,10 +79,10 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
 
   const [currentSeasonIndex, setCurrentSeasonIndex] = useState<number>(0);
   const [rounds, setRounds] = useState<RoundData[]>([
-    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null },
-    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null },
-    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null },
-    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null },
+    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null, meta: {} },
+    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null, meta: {} },
+    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null, meta: {} },
+    { exam1Title: '', exam2Title: '', doubleOrNothing: 'claim', isClosed: false, doubleChoiceLocked: false, winnerId: null, meta: {} },
   ]);
 
   const [activeRoundIndex, setActiveRoundIndex] = useState<number>(0);
@@ -99,6 +106,7 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
         isClosed: false,
         doubleChoiceLocked: false,
         winnerId: null,
+        meta: {},
       }));
 
       if (roundsData && roundsData.length > 0) {
@@ -112,6 +120,7 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
               isClosed: r.is_closed || false,
               doubleChoiceLocked: r.double_choice_locked || false,
               winnerId: r.winner_id || null,
+              meta: r.meta || {},
             };
           }
         });
@@ -179,13 +188,14 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
   }, [rounds, allGlobalSchedules]);
 
   // Auto-collect scores from silmo_records for a given exam title
-  const getScoresForTitle = useCallback((title: string): { [userId: string]: number | null } => {
+  // absent: user_id list excluded from scoring
+  const getScoresForTitle = useCallback((title: string, absent: string[] = []): { [userId: string]: number | null } => {
     const result: { [userId: string]: number | null } = {};
-    players.forEach(id => { result[id] = null; });
+    players.forEach(id => { result[id] = absent.includes(id) ? undefined as any : null; });
 
     const matching = allRecords.filter(r => r.title === title);
     matching.forEach(r => {
-      if (players.includes(r.userId)) {
+      if (players.includes(r.userId) && !absent.includes(r.userId)) {
         const rec = r as any;
         const score = r.type === 'korean' ? (rec.koreanScore ?? rec.totalScore)
           : r.type === 'math' ? (rec.mathScore ?? rec.totalScore)
@@ -197,6 +207,33 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
     });
     return result;
   }, [allRecords, players]);
+
+  /** meta 패치 저장 후 로컈 스테이트도 업데이트 */
+  const handleUpdateMeta = useCallback(async (
+    rIdx: number,
+    patch: Record<string, unknown>
+  ) => {
+    const updated = [...rounds];
+    updated[rIdx] = { ...updated[rIdx], meta: { ...updated[rIdx].meta, ...patch } };
+    setRounds(updated);
+    if (!dbError) {
+      await updateSilvivalRoundMeta(currentSeasonIndex, rIdx, patch);
+    }
+  }, [rounds, dbError, currentSeasonIndex]);
+
+  /** 라운드의 특정 시험에서 유저의 미참여 상태를 토글 */
+  const handleToggleAbsent = useCallback(async (
+    rIdx: number,
+    examSlot: 1 | 2,
+    userId: string
+  ) => {
+    const key = examSlot === 1 ? 'absent_players1' : 'absent_players2';
+    const current: string[] = (rounds[rIdx].meta[key] as string[]) || [];
+    const next = current.includes(userId)
+      ? current.filter(id => id !== userId)
+      : [...current, userId];
+    await handleUpdateMeta(rIdx, { [key]: next });
+  }, [rounds, handleUpdateMeta]);
 
   const saveRoundField = async (
     rIdx: number,
@@ -303,18 +340,22 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
   players.forEach(id => { playerWins[id] = 0; });
 
   const roundResults = rounds.map((round, rIdx) => {
-    const scores1Raw = { ...getScoresForTitle(round.exam1Title) };
-    const scores2Raw = { ...getScoresForTitle(round.exam2Title) };
+    const absent1: string[] = (round.meta.absent_players1 as string[]) || [];
+    const absent2: string[] = (round.meta.absent_players2 as string[]) || [];
+
+    const scores1Raw = { ...getScoresForTitle(round.exam1Title, absent1) };
+    const scores2Raw = { ...getScoresForTitle(round.exam2Title, absent2) };
 
     if (round.isClosed) {
       players.forEach(id => {
+        // absent 유저(undefined)는 제외, 미입력(null)만 0점으로 처리
         if (scores1Raw[id] === null) scores1Raw[id] = 0;
         if (scores2Raw[id] === null) scores2Raw[id] = 0;
       });
     }
 
-    const participated1 = Object.entries(scores1Raw).filter(([, v]) => v !== null) as [string, number][];
-    const participated2 = Object.entries(scores2Raw).filter(([, v]) => v !== null) as [string, number][];
+    const participated1 = Object.entries(scores1Raw).filter(([, v]) => v !== null && v !== undefined) as [string, number][];
+    const participated2 = Object.entries(scores2Raw).filter(([, v]) => v !== null && v !== undefined) as [string, number][];
 
     const hasEnoughData = participated1.length >= 2 || participated2.length >= 2;
     const readyToCalc = round.isClosed || hasEnoughData;
@@ -405,6 +446,8 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
       scores2: scores2Raw,
       participated1: participated1.map(([id]) => id),
       participated2: participated2.map(([id]) => id),
+      absent1: (round.meta.absent_players1 as string[]) || [],
+      absent2: (round.meta.absent_players2 as string[]) || [],
       z1, z2,
       baseRoundScores,
       finalRoundScores,
@@ -584,6 +627,7 @@ export function SilvivalLeague({ users, profiles, currentUserId, allRecords, all
             rounds={rounds}
             setRounds={setRounds}
             isRoundCloseUnlocked={() => checkRoundCloseUnlocked(activeRound, allGlobalSchedules)}
+            onToggleAbsent={handleToggleAbsent}
           />
 
           {/* Season Flow Progression Summary */}

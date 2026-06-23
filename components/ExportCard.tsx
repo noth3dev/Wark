@@ -107,35 +107,240 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                 );
             }
 
+            // Calculate game achievements based on today's performance
+            const getAchievements = () => {
+                const list = [];
+                const hours = totalMs / (3600 * 1000);
+                
+                // 1. 공부 시간 기반 뱃지
+                if (hours >= 6) {
+                    list.push({
+                        name: "👑 공부의 신",
+                        desc: "6시간 이상 초인적 몰입",
+                        rarity: "LEGENDARY",
+                        rarityLabel: "LEGENDARY",
+                        bgGradient: "from-purple-950/80 via-fuchsia-900/60 to-pink-950/80",
+                        borderColor: "border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]",
+                        textColor: "text-purple-100",
+                        badgeBg: "bg-purple-500/20 text-purple-300 border-purple-400/30"
+                    });
+                } else if (hours >= 4) {
+                    list.push({
+                        name: "🔥 집중 스퍼트",
+                        desc: "4시간 이상 몰입 달성",
+                        rarity: "PLATINUM",
+                        rarityLabel: "PLATINUM",
+                        bgGradient: "from-slate-900/80 via-cyan-950/60 to-blue-950/80",
+                        borderColor: "border-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]",
+                        textColor: "text-cyan-100",
+                        badgeBg: "bg-cyan-500/20 text-cyan-300 border-cyan-400/30"
+                    });
+                } else if (hours >= 2) {
+                    list.push({
+                        name: "⚡ 파워 스터디",
+                        desc: "2시간 이상 공부 달성",
+                        rarity: "GOLD",
+                        rarityLabel: "GOLD",
+                        bgGradient: "from-amber-950/80 via-yellow-950/60 to-amber-900/70",
+                        borderColor: "border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
+                        textColor: "text-amber-100",
+                        badgeBg: "bg-amber-500/20 text-amber-300 border-amber-400/30"
+                    });
+                } else if (hours >= 0.5) {
+                    list.push({
+                        name: "🌱 새싹 러너",
+                        desc: "30분 이상 학습 시동",
+                        rarity: "SILVER",
+                        rarityLabel: "SILVER",
+                        bgGradient: "from-slate-800/90 to-zinc-700/80",
+                        borderColor: "border-slate-400/40",
+                        textColor: "text-slate-100",
+                        badgeBg: "bg-slate-500/20 text-slate-300 border-slate-400/30"
+                    });
+                } else if (hours > 0) {
+                    list.push({
+                        name: "🏃 페이싱 스타트",
+                        desc: "오늘의 학습 개시",
+                        rarity: "BRONZE",
+                        rarityLabel: "BRONZE",
+                        bgGradient: "from-stone-900/90 to-amber-950/80",
+                        borderColor: "border-amber-800/40",
+                        textColor: "text-amber-200/90",
+                        badgeBg: "bg-amber-850/20 text-amber-400 border-amber-900/30"
+                    });
+                }
+
+                // 2. 완료 과제 기반 뱃지
+                if (completedTasks.length >= 8) {
+                    list.push({
+                        name: "🎯 갓생 마스터",
+                        desc: "과제 8개 이상 폭풍 완료",
+                        rarity: "LEGENDARY",
+                        rarityLabel: "LEGENDARY",
+                        bgGradient: "from-purple-950/80 via-fuchsia-900/60 to-pink-950/80",
+                        borderColor: "border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]",
+                        textColor: "text-purple-100",
+                        badgeBg: "bg-purple-500/20 text-purple-300 border-purple-400/30"
+                    });
+                } else if (completedTasks.length >= 5) {
+                    list.push({
+                        name: "✨ 미션 올클리어",
+                        desc: "과제 5개 이상 완료",
+                        rarity: "PLATINUM",
+                        rarityLabel: "PLATINUM",
+                        bgGradient: "from-slate-900/80 via-cyan-950/60 to-blue-950/80",
+                        borderColor: "border-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]",
+                        textColor: "text-cyan-100",
+                        badgeBg: "bg-cyan-500/20 text-cyan-300 border-cyan-400/30"
+                    });
+                } else if (completedTasks.length >= 3) {
+                    list.push({
+                        name: "📋 계획적 공부",
+                        desc: "과제 3개 이상 완수",
+                        rarity: "GOLD",
+                        rarityLabel: "GOLD",
+                        bgGradient: "from-amber-950/80 via-yellow-950/60 to-amber-900/70",
+                        borderColor: "border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
+                        textColor: "text-amber-100",
+                        badgeBg: "bg-amber-500/20 text-amber-300 border-amber-400/30"
+                    });
+                } else if (completedTasks.length >= 1) {
+                    list.push({
+                        name: "✅ 첫 단추",
+                        desc: "과제 1개 이상 완료",
+                        rarity: "SILVER",
+                        rarityLabel: "SILVER",
+                        bgGradient: "from-slate-800/90 to-zinc-700/80",
+                        borderColor: "border-slate-400/40",
+                        textColor: "text-slate-100",
+                        badgeBg: "bg-slate-500/20 text-slate-300 border-slate-400/30"
+                    });
+                }
+
+                // 3. 시간대별/특수 조건 뱃지
+                const isEarlyBird = completedTaskDots && completedTaskDots.some((dot: any) => {
+                    const h = new Date(dot.time).getHours();
+                    return h >= 5 && h < 9;
+                });
+                if (isEarlyBird) {
+                    list.push({
+                        name: "🌅 아침형 인간",
+                        desc: "오전 9시 이전 학습",
+                        rarity: "SILVER",
+                        rarityLabel: "SILVER",
+                        bgGradient: "from-slate-800/90 to-zinc-700/80",
+                        borderColor: "border-slate-400/40",
+                        textColor: "text-slate-100",
+                        badgeBg: "bg-slate-500/20 text-slate-300 border-slate-400/30"
+                    });
+                }
+
+                const isNightOwl = completedTaskDots && completedTaskDots.some((dot: any) => {
+                    const h = new Date(dot.time).getHours();
+                    return h >= 22 || h < 2;
+                });
+                if (isNightOwl) {
+                    list.push({
+                        name: "🌃 올빼미 공부꾼",
+                        desc: "야간 집중 학습 진행",
+                        rarity: "SILVER",
+                        rarityLabel: "SILVER",
+                        bgGradient: "from-slate-800/90 to-zinc-700/80",
+                        borderColor: "border-slate-400/40",
+                        textColor: "text-slate-100",
+                        badgeBg: "bg-slate-500/20 text-slate-300 border-slate-400/30"
+                    });
+                }
+
+                const hasAlpha = completedTasks.some(t => t.is_plus_alpha);
+                if (hasAlpha) {
+                    list.push({
+                        name: "💎 한계 돌파",
+                        desc: "플러스 알파 과제 해결",
+                        rarity: "GOLD",
+                        rarityLabel: "GOLD",
+                        bgGradient: "from-amber-950/80 via-yellow-950/60 to-amber-900/70",
+                        borderColor: "border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
+                        textColor: "text-amber-100",
+                        badgeBg: "bg-amber-500/20 text-amber-300 border-amber-400/30"
+                    });
+                }
+
+                if (list.length === 0) {
+                    list.push({
+                        name: "👟 러닝 메이트",
+                        desc: "새로운 집중 기록 대기 중",
+                        rarity: "BRONZE",
+                        rarityLabel: "BRONZE",
+                        bgGradient: "from-stone-900/90 to-amber-950/80",
+                        borderColor: "border-amber-800/40",
+                        textColor: "text-amber-200/90",
+                        badgeBg: "bg-amber-850/20 text-amber-400 border-amber-900/30"
+                    });
+                }
+
+                return list;
+            };
+
             // Daily Cover
             return (
-                <div className="w-full h-full bg-gradient-to-br from-[#2b2b2b] to-[#121212] text-white p-12 flex flex-col justify-between select-none relative overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-[#1E293B] to-[#0F172A] text-white p-8 flex flex-col justify-between select-none relative overflow-hidden font-suit">
                     <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-white/5 blur-2xl" />
                     <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-blue-500/5 blur-3xl" />
                     
-                    <div className="space-y-4 relative z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-semibold tracking-wider text-blue-200">
+                    <div className="space-y-3 relative z-10">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-[10px] font-bold tracking-wider text-blue-200">
                             📝 DAILY ARCHIVE
                         </div>
-                        <h1 className="text-5xl font-extrabold leading-none tracking-tighter mt-8">
+                        <h1 className="text-4xl font-extrabold leading-none tracking-tight mt-4">
                             {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </h1>
-                        <p className="text-lg text-neutral-400 font-light">
+                        <p className="text-xs text-neutral-400 font-light mt-1">
                             {formattedDate}
                         </p>
                     </div>
 
-                    <div className="space-y-2 relative z-10">
-                        <div className="text-[20px] font-bold text-white leading-relaxed">
-                            <span className="bg-yellow-400/20 text-yellow-300 px-2 py-0.5 rounded-md mr-1 font-semibold">하루하루 쌓이는</span>
-                            기록의 힘
+                    {/* Stats stamps/badges in cover card */}
+                    <div className="grid grid-cols-2 gap-4 relative z-10 mt-3">
+                        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                            <span className="text-[10px] text-neutral-500 block font-semibold">총 공부 시간</span>
+                            <span className="text-xl font-black text-white font-mono">{formatDuration(totalMs)}</span>
                         </div>
-                        <p className="text-sm text-neutral-400 font-light">
-                            오늘 하루 동안 내가 이뤄낸 의미 있는 성과들
-                        </p>
+                        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                            <span className="text-[10px] text-neutral-500 block font-semibold">완료한 과제</span>
+                            <span className="text-xl font-black text-blue-300 font-mono">{completedTasks.length}개</span>
+                        </div>
                     </div>
 
-                    <div className="flex justify-end items-center relative z-10 pt-4 border-t border-white/10">
+                    {/* 도전 과제 뱃지 구역 */}
+                    <div className="space-y-2 relative z-10 my-3">
+                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest block font-mono">🏆 획득 도전 과제</span>
+                        <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
+                            {getAchievements().map((ach, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className={`px-3 py-1.5 rounded-xl border bg-gradient-to-br ${ach.bgGradient} ${ach.borderColor} flex items-center justify-between shadow-md gap-3 w-full`}
+                                >
+                                    <div className="flex flex-col text-left">
+                                        <span className={`text-xs font-black tracking-tight leading-none ${ach.textColor}`}>{ach.name}</span>
+                                        <span className="text-[8px] text-white/50 font-medium leading-none mt-1">{ach.desc}</span>
+                                    </div>
+                                    <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${ach.badgeBg}`}>
+                                        {ach.rarityLabel}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-1 relative z-10 pt-2 border-t border-white/5">
+                        <div className="text-xs font-bold text-neutral-200">
+                            <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-md mr-1.5 font-semibold text-[10px]">하루하루 쌓이는</span>
+                            기록의 힘
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end items-center relative z-10 pt-2 border-t border-white/10">
                         <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest font-mono">
                             CARD {cardIndex}/{totalCards}
                         </span>
@@ -145,7 +350,7 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
         };
 
         // Ticket layout wrapper for content slides
-        const renderContentWrapper = (title: string, subtitle: string, children: React.ReactNode) => {
+        const renderContentWrapper = (title: string, subtitle: string, children: React.ReactNode, extraHeader?: React.ReactNode) => {
             return (
                 <div className="w-full h-full bg-[#f4f4f5] text-[#18181b] p-10 flex flex-col justify-between select-none relative font-suit">
                     {/* Rounded Ticket Card inside */}
@@ -157,9 +362,12 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
                                     <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400 block font-mono">REPORT DETAIL</span>
                                     <h2 className="text-xl font-bold text-neutral-800 tracking-tight">{title}</h2>
                                 </div>
-                                <span className="text-xs font-bold text-neutral-400 font-mono bg-neutral-100 px-2.5 py-1 rounded-full">
-                                    {subtitle}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {extraHeader}
+                                    <span className="text-xs font-bold text-neutral-400 font-mono bg-neutral-100 px-2.5 py-1 rounded-full">
+                                        {subtitle}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Main Scrollable Content */}
@@ -535,7 +743,7 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
         // Render 오늘의 한마디 (Quote) Card
         const renderQuote = () => {
             return (
-                <div className="w-full h-full bg-gradient-to-br from-[#1E293B] to-[#0F172A] text-white p-12 flex flex-col justify-between select-none relative overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-[#1E293B] to-[#0F172A] text-white p-12 flex flex-col justify-between select-none relative overflow-hidden font-suit">
                     <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-white/5 blur-2xl" />
                     <div className="absolute -left-16 -bottom-16 w-80 h-80 rounded-full bg-blue-500/5 blur-3xl" />
                     
@@ -608,7 +816,7 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
             return renderContentWrapper(
                 "주간 집중 카테고리",
                 "WEEKLY TAGS",
-                <div className="space-y-4 h-full flex flex-col justify-center">
+                <div className="space-y-4 h-full flex flex-col justify-center font-suit">
                     <div className="text-center space-y-1 mb-2">
                         <span className="text-[11px] font-bold text-neutral-400 tracking-wider">가장 많이 학습한 카테고리</span>
                         {timeByGroup.length > 0 ? (
@@ -646,57 +854,111 @@ export const ExportCard = React.forwardRef<HTMLDivElement, ExportCardProps>(
             );
         };
 
-        // Render Tasks Slide
+        // Render Tasks Slide — one card per book (rootContent)
         const renderTasks = () => {
+            // All tasks on this card belong to the same book
+            const bookName = completedTasks.length > 0 ? (completedTasks[0].rootContent || "기타") : null;
+
+            // Aggregate slider progress across all tasks on this card
+            const sliderTasks = completedTasks.filter(t => t.is_slider && t.total_amount > 0);
+            const totalCurrent = sliderTasks.reduce((s, t) => s + (t.current_amount || 0), 0);
+            const totalMax = sliderTasks.reduce((s, t) => s + (t.total_amount || 0), 0);
+            const groupPercent = totalMax > 0 ? Math.round((totalCurrent / totalMax) * 100) : null;
+
             return renderContentWrapper(
-                type === "weekly" ? "이번 주 완료한 주요 과제" : "오늘 완료한 과제",
+                bookName ? `📚 ${bookName}` : (type === "weekly" ? "이번 주 완료한 주요 과제" : "오늘 완료한 과제"),
                 "COMPLETED TASKS",
-                <div className="space-y-4 h-full flex flex-col justify-center">
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
+                <div className="h-full flex flex-col py-1 font-suit">
+                    {/* Book-level aggregate progress bar */}
+                    {groupPercent !== null && (
+                        <div className="mb-3 space-y-1 shrink-0">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">전체 진도</span>
+                                <span className="text-[9px] font-mono font-black text-emerald-600">
+                                    {totalCurrent}/{totalMax} · {groupPercent}%
+                                </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-emerald-500"
+                                    style={{ width: `${Math.min(100, groupPercent)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Task list */}
+                    <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1 no-scrollbar flex-1">
                         {completedTasks.length > 0 ? (
-                            completedTasks.map((task, idx) => (
-                                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                                    <div className="w-5 h-5 rounded-full bg-neutral-800 text-white flex items-center justify-center shrink-0 mt-0.5">
-                                        <Icons.Check className="w-3.5 h-3.5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0 space-y-1">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-sm font-semibold text-neutral-800 truncate">
-                                                {task.content}
-                                            </p>
-                                            {task.is_slider && (
-                                                <span className="text-[10px] font-mono font-bold text-neutral-500 shrink-0">
-                                                    {task.current_amount}/{task.total_amount}
-                                                </span>
+                            completedTasks.map((task, idx) => {
+                                // Mid-path: between root and leaf (e.g. 단원 > 소단원)
+                                const midPath = task.path && task.path.length > 2
+                                    ? task.path.slice(1, -1).join(" > ")
+                                    : null;
+                                const pct = task.is_slider && task.total_amount > 0
+                                    ? Math.min(100, Math.round((task.current_amount / task.total_amount) * 100))
+                                    : null;
+
+                                return (
+                                    <div key={idx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-neutral-50 border border-neutral-150">
+                                        {/* Checkbox */}
+                                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 ${task.is_completed ? "border-emerald-500 bg-emerald-50" : "border-blue-400 bg-blue-50"}`}>
+                                            {task.is_completed
+                                                ? <Icons.Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                                                : <Icons.Minus className="w-2.5 h-2.5 text-blue-500 stroke-[3]" />
+                                            }
+                                        </div>
+
+                                        <div className="flex-1 min-w-0 space-y-0.5">
+                                            {midPath && (
+                                                <div className="text-[9px] font-semibold text-neutral-400 truncate">
+                                                    {midPath}
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className={`text-[11px] font-bold truncate flex-1 ${task.is_completed ? "text-neutral-700" : "text-neutral-600"}`}>
+                                                    {task.content}
+                                                </p>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {task.is_slider && task.total_amount > 0 && (
+                                                        <span className="text-[9px] font-mono font-bold text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-full">
+                                                            {task.current_amount}/{task.total_amount}
+                                                            {task.amount_text ? ` ${task.amount_text}` : ""}
+                                                        </span>
+                                                    )}
+                                                    {task.is_plus_alpha && (
+                                                        <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 uppercase">α</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Per-task progress bar */}
+                                            {pct !== null && (
+                                                <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mt-0.5">
+                                                    <div
+                                                        className="h-full rounded-full bg-emerald-400"
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            {task.is_plus_alpha && (
-                                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 uppercase tracking-wider">Alpha</span>
-                                            )}
-                                            {task.path && task.path.length > 1 ? (
-                                                <span className="text-[10px] text-neutral-400 font-bold uppercase truncate max-w-[150px]">
-                                                    {task.path[0]}
-                                                </span>
-                                            ) : task.rootContent ? (
-                                                <span className="text-[10px] text-neutral-400 font-bold uppercase truncate max-w-[150px]">
-                                                    {task.rootContent}
-                                                </span>
-                                            ) : null}
-                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="py-12 text-center space-y-2">
                                 <Icons.Inbox className="w-8 h-8 mx-auto text-neutral-300" />
-                                <p className="text-xs text-neutral-400 font-semibold uppercase font-mono">NO COMPLETED TASKS</p>
+                                <p className="text-xs text-neutral-400 font-semibold uppercase font-mono">완료된 과제가 없습니다</p>
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                <span className="text-[10px] font-bold text-neutral-500 font-mono bg-neutral-100 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0">
+                    <Icons.Clock className="w-3.5 h-3.5 text-neutral-400" /> {formatDuration(totalMs)}
+                </span>
             );
         };
+
+
 
         // Render Reflection Slide
         const renderReflection = () => {
