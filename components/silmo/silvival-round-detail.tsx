@@ -231,36 +231,40 @@ export function SilvivalRoundDetail({
                       <span className={`text-xs font-medium truncate max-w-[110px] ${id === currentUserId ? 'text-emerald-400' : 'text-neutral-300'}`}>
                         {profiles[id] || id.substring(0, 6)}
                       </span>
-                      <div className="flex items-center gap-2 text-xs font-mono">
+                      <div className="flex items-center gap-1.5 text-xs font-mono">
                         {isAbsent ? (
-                          <span className="text-[10px] text-amber-600/70 font-suit">미참여</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-suit font-medium border border-amber-500/20">미참여</span>
+                            {!activeRound.isClosed && (
+                              <button
+                                onClick={() => onToggleAbsent(activeRoundIndex, examSlot, id)}
+                                className="px-1.5 py-0.5 rounded text-[9px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold font-suit transition-colors"
+                              >
+                                참여로 변경
+                              </button>
+                            )}
+                          </div>
                         ) : submitted ? (
-                          <>
-                            <span className="text-neutral-200">{score}점</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-neutral-200 font-bold">{score}점</span>
                             {z !== undefined && (
                               <span className={`text-[10px] px-1.5 py-0.5 rounded ${z >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
                                 Z: {z.toFixed(2)}
                               </span>
                             )}
-                          </>
+                          </div>
                         ) : (
-                          <span className="text-neutral-600 text-[10px]">미입력</span>
-                        )}
-
-                        {/* 미참여 토글 버튼 (라운드 진행 중에만) */}
-                        {!activeRound.isClosed && (
-                          <button
-                            onClick={() => onToggleAbsent(activeRoundIndex, examSlot, id)}
-                            title={isAbsent ? '참여로 전환' : '미참여 처리'}
-                            className={`ml-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold font-suit transition-colors ${
-                              isAbsent
-                                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-                                : 'bg-neutral-800 text-neutral-500 hover:text-amber-400 hover:bg-amber-500/10'
-                            }`}
-                          >
-                            <UserX className="w-2.5 h-2.5" />
-                            {isAbsent ? '참여' : '미참여'}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-neutral-500 text-[10px] font-suit bg-neutral-950 px-1.5 py-0.5 rounded border border-neutral-900">미입력</span>
+                            {!activeRound.isClosed && (
+                              <button
+                                onClick={() => onToggleAbsent(activeRoundIndex, examSlot, id)}
+                                className="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold font-suit transition-colors border border-amber-500/20"
+                              >
+                                미참여 등록
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

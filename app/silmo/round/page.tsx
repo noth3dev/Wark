@@ -159,28 +159,33 @@ export default function RoundPage() {
     const recordsForExam = activeSchedule.isClosed
       ? allRecords.filter(r => r.title === activeSchedule.title)
       : Object.entries(
-          roundScores.reduce((acc: { [userId: string]: { totalScore: number; subCount: number; koreanScore?: number; mathScore?: number } }, cur) => {
+          roundScores.reduce((acc: { [userId: string]: { totalScore: number; subCount: number; koreanScore?: number; mathScore?: number; isAbsent?: boolean } }, cur) => {
             if (!acc[cur.user_id]) {
               acc[cur.user_id] = { totalScore: 0, subCount: 0 };
             }
-            if (cur.subject === 'korean' || cur.subject === 'explore') {
-              acc[cur.user_id].koreanScore = cur.score;
-            } else if (cur.subject === 'math') {
-              acc[cur.user_id].mathScore = cur.score;
+            if (cur.subject === 'absent') {
+              acc[cur.user_id].isAbsent = true;
+            } else {
+              if (cur.subject === 'korean' || cur.subject === 'explore') {
+                acc[cur.user_id].koreanScore = cur.score;
+              } else if (cur.subject === 'math') {
+                acc[cur.user_id].mathScore = cur.score;
+              }
+              acc[cur.user_id].totalScore += cur.score;
             }
-            acc[cur.user_id].totalScore += cur.score;
             acc[cur.user_id].subCount += 1;
             return acc;
           }, {})
         ).map(([userId, val]: any) => {
           const needsBoth = activeSchedule.type === 'both';
-          const submitted = needsBoth ? val.subCount >= 2 : val.subCount >= 1;
+          const submitted = val.isAbsent ? true : (needsBoth ? val.subCount >= 2 : val.subCount >= 1);
           return {
             userId,
             submitted,
-            totalScore: val.totalScore,
+            totalScore: val.isAbsent ? 0 : val.totalScore,
             koreanScore: val.koreanScore,
-            mathScore: val.mathScore
+            mathScore: val.mathScore,
+            isAbsent: val.isAbsent
           };
         });
 
@@ -188,6 +193,7 @@ export default function RoundPage() {
     const list = allLeaderboardUsers.map(u => {
       const uSchool = schools[u.id] || '소속 없음';
       const record: any = recordsForExam.find(r => r.userId === u.id);
+      const isAbsent = activeSchedule.isClosed ? false : !!record?.isAbsent;
       const submitted = activeSchedule.isClosed ? !!record : !!record?.submitted;
       const score = record ? (record.totalScore || 0) : 0;
 
@@ -196,7 +202,8 @@ export default function RoundPage() {
         name: u.name,
         school: uSchool,
         submitted,
-        score
+        score,
+        isAbsent
       };
     });
 
@@ -941,7 +948,9 @@ export default function RoundPage() {
                                       <div key={m.id} className="flex justify-between items-center text-[11px] bg-neutral-900/30 px-2.5 py-1.5 rounded border border-neutral-900">
                                         <span className="text-neutral-400">{profiles[m.id] || m.name}</span>
                                         <div className="flex items-center gap-1.5 font-mono">
-                                          {m.submitted ? (
+                                          {m.isAbsent ? (
+                                            <span className="text-amber-500 font-medium">미참여</span>
+                                          ) : m.submitted ? (
                                             <>
                                               <span className="text-emerald-400 font-medium">제출 완료</span>
                                               {canSeeDetails && (
@@ -969,10 +978,13 @@ export default function RoundPage() {
                             const hasKorean = myScoresForSchedule.some(s => s.subject === 'korean');
                             const hasMath = myScoresForSchedule.some(s => s.subject === 'math');
                             const hasExplore = myScoresForSchedule.some(s => s.subject === 'explore');
+                            const hasAbsent = myScoresForSchedule.some(s => s.subject === 'absent');
                             const alreadySubmitted =
-                              (!needsKorean || hasKorean) &&
-                              (!needsMath || hasMath) &&
-                              (!needsExplore || hasExplore);
+                              hasAbsent || (
+                                (!needsKorean || hasKorean) &&
+                                (!needsMath || hasMath) &&
+                                (!needsExplore || hasExplore)
+                              );
                             return !alreadySubmitted;
                           })() && activeTab === 'ongoing' && mySchool && (
                             <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-850 space-y-4">
@@ -1033,7 +1045,32 @@ export default function RoundPage() {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex justify-end pt-1">
+                              <div className="flex justify-end items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!activeSchedule) return;
+                                    if (!confirm('정말 이번 대항전에서 미참여로 등록하시겠습니까? (Z-score 및 팀 점수 계산에서 제외됩니다)')) return;
+                                    setIsSavingScore(true);
+                                    try {
+                                      // 대항전 round_scores에 미참여를 나타내는 식별을 위해 특수 점수(예: -1) 혹은 custom field/meta를 저장할 수 있습니다.
+                                      // 여기서는 round_scores에 subject: 'absent'로 score: 1을 저장하여 미참여자로 식별하게 처리합니다.
+                                      await saveRoundScore(activeSchedule.id, authUser.id, 'absent', 1, null, false);
+                                      alert('미참여자로 등록되었습니다.');
+                                      const scoresData = await fetchRoundScores(activeSchedule.id);
+                                      setRoundScores(scoresData || []);
+                                    } catch (e) {
+                                      console.error(e);
+                                      alert('미참여 등록에 실패했습니다.');
+                                    } finally {
+                                      setIsSavingScore(false);
+                                    }
+                                  }}
+                                  disabled={isSavingScore}
+                                  className="h-8 px-3 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-suit font-bold transition-colors"
+                                >
+                                  미참여 등록
+                                </button>
                                 <Button
                                   onClick={handleSaveMyScore}
                                   disabled={isSavingScore}
