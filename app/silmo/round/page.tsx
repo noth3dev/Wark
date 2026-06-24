@@ -92,14 +92,19 @@ export default function RoundPage() {
   // Selected schedule selection
   const activeSchedule = filteredSchedules.find(s => s.id === selectedScheduleId) || filteredSchedules[0] || null;
 
-  // Auto reset selection on tab change
+  // Auto reset selection on tab change or list change
   useEffect(() => {
-    if (activeSchedule) {
-      setSelectedScheduleId(activeSchedule.id);
+    const schedules = roundSchedules.filter(s =>
+      activeTab === 'ongoing' ? !s.isClosed : s.isClosed
+    );
+    if (schedules.length > 0) {
+      if (!schedules.some(s => s.id === selectedScheduleId)) {
+        setSelectedScheduleId(schedules[0].id);
+      }
     } else {
       setSelectedScheduleId(null);
     }
-  }, [activeTab, filteredSchedules.length]);
+  }, [activeTab, roundSchedules.length, selectedScheduleId]);
 
   // Load distributions when selected schedule changes
   useEffect(() => {
@@ -192,7 +197,7 @@ export default function RoundPage() {
     // Group participants by school
     const list = allLeaderboardUsers.map(u => {
       const uSchool = schools[u.id] || '소속 없음';
-      const record: any = recordsForExam.find(r => r.userId === u.id);
+      const record: any = recordsForExam.find((r: any) => r.userId === u.id);
       const isAbsent = activeSchedule.isClosed ? false : !!record?.isAbsent;
       const submitted = activeSchedule.isClosed ? !!record : !!record?.submitted;
       const score = record ? (record.totalScore || 0) : 0;
@@ -382,7 +387,9 @@ export default function RoundPage() {
       setMyKoreanInput('');
       setMyMathWrongInput('');
       alert('점수가 성공적으로 제출되었습니다!');
-      // Reload round scores
+      // 1. DB의 실시간 전역 상태(allRecords 등) 업데이트를 위해 fetchDbData 호출
+      await fetchDbData();
+      // 2. 로컬 라운드 스코어 리로드
       const scoresData = await fetchRoundScores(activeSchedule.id);
       setRoundScores(scoresData || []);
     } catch (e) {
@@ -1057,6 +1064,7 @@ export default function RoundPage() {
                                       // 여기서는 round_scores에 subject: 'absent'로 score: 1을 저장하여 미참여자로 식별하게 처리합니다.
                                       await saveRoundScore(activeSchedule.id, authUser.id, 'absent', 1, null, false);
                                       alert('미참여자로 등록되었습니다.');
+                                      await fetchDbData();
                                       const scoresData = await fetchRoundScores(activeSchedule.id);
                                       setRoundScores(scoresData || []);
                                     } catch (e) {
