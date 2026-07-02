@@ -5,6 +5,7 @@ import * as Icons from "lucide-react";
 import { X, Trash2, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Tag } from "../../lib/types";
+import { getSafeColor } from "../../lib/utils";
 
 import { TAG_VARIANTS } from "../../lib/tag-variants";
 
@@ -22,7 +23,7 @@ export function TagModal({ tag, dbGroups = [], onClose, onUpdate, onDelete }: Ta
     const defaultGroup = groupsToUse[0] || { icon: 'Cpu', color: '#22d3ee' };
 
     const [name, setName] = useState(tag.name);
-    const [color, setColor] = useState(hasValidGroup ? (tag.color || defaultGroup.color) : defaultGroup.color);
+    const [color, setColor] = useState(hasValidGroup ? getSafeColor(tag.color, defaultGroup.color) : defaultGroup.color);
     const [icon, setIcon] = useState(hasValidGroup ? (tag.icon || defaultGroup.icon) : defaultGroup.icon);
 
     useEffect(() => {

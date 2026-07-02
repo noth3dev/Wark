@@ -4,6 +4,8 @@ import * as Icons from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Tag } from "../../lib/types";
+import { getSafeColor } from "../../lib/utils";
+import { TAG_VARIANTS } from "../../lib/tag-variants";
 
 interface TagItemProps {
     tag: Tag;
@@ -16,7 +18,7 @@ interface TagItemProps {
 }
 
 export function TagItem({ tag, isActive, isEditMode, isFocused, dailyTime, onClick, onMouseEnter }: TagItemProps) {
-    const themeColor = tag.color || '#22d3ee';
+    const themeColor = getSafeColor(tag.color, TAG_VARIANTS.find((v) => v.icon === tag.icon)?.color || '#22d3ee');
     const IconComponent = tag.icon && (Icons as any)[tag.icon] ? (Icons as any)[tag.icon] : null;
 
     const formatTimeShort = (ms: number) => {
