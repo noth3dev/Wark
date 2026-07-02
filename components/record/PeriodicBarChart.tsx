@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TAG_VARIANTS } from "@/lib/tag-variants";
 import { getSafeColor, formatDuration } from "@/lib/utils";
-import * as Icons from "lucide-react";
 
 interface PeriodicBarChartProps {
     sessions: any[];
@@ -23,9 +22,10 @@ export function PeriodicBarChart({
     currentDate,
     groupNames,
 }: PeriodicBarChartProps) {
+    const [chartType, setChartType] = useState<"daily" | "hourly">("daily");
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-    // 1. Generate dates in range
+    // 1. Generate dates in range for daily view
     const rangeDates = useMemo(() => {
         const dates: Date[] = [];
         let start = new Date(currentDate);
@@ -62,16 +62,13 @@ export function PeriodicBarChart({
         }
     };
 
-    // 2. Aggregate data by date
+    // 2. Aggregate daily data
     const dailyData = useMemo(() => {
-        // Initialize
-        const data: Record<string, { date: Date; label: string; total: number; breakdown: Record<string, number> }> = {};
+        const data: Record<string, { label: string; total: number; breakdown: Record<string, number> }> = {};
         
         rangeDates.forEach((d) => {
-            // YYYY-MM-DD in local time
             const dateStr = d.toLocaleDateString("sv").split(" ")[0];
             data[dateStr] = {
-                date: d,
                 label: formatDateLabel(d),
                 total: 0,
                 breakdown: {},
@@ -100,13 +97,59 @@ export function PeriodicBarChart({
         });
     }, [sessions, rangeDates, groupMode, tags]);
 
-    // 3. Find max daily total to scale Y-axis (min scale 1 hour)
-    const maxTotal = useMemo(() => {
-        const maxVal = Math.max(...dailyData.map((d) => d.total));
-        return maxVal > 0 ? maxVal : 3600000; // 1 hour min scale
-    }, [dailyData]);
+    // 3. Aggregate hourly data
+    const hourlyData = useMemo(() => {
+        const data = Array.from({ length: 24 }, (_, hour) => {
+            const hStr = hour.toString().padStart(2, "0");
+            return {
+                label: `${hStr}:00`,
+                total: 0,
+                breakdown: {} as Record<string, number>,
+            };
+        });
 
-    // Map tags/groups to colors
+        sessions.forEach((s) => {
+            const start = new Date(s.created_at);
+            const durationMs = s.duration;
+            const end = new Date(start.getTime() + durationMs);
+
+            let key = s.tag_id;
+            if (groupMode === "groups") {
+                const tag = tags.find((t) => t.id === s.tag_id);
+                key = tag?.icon || "Cpu";
+            }
+
+            let current = new Date(start);
+            while (current < end) {
+                const currentHour = current.getHours();
+                const nextHour = new Date(current);
+                nextHour.setHours(currentHour + 1, 0, 0, 0);
+
+                const chunkEnd = nextHour < end ? nextHour : end;
+                const overlapMs = chunkEnd.getTime() - current.getTime();
+
+                if (currentHour >= 0 && currentHour < 24) {
+                    data[currentHour].total += overlapMs;
+                    data[currentHour].breakdown[key] = (data[currentHour].breakdown[key] || 0) + overlapMs;
+                }
+
+                current = chunkEnd;
+            }
+        });
+
+        return data;
+    }, [sessions, groupMode, tags]);
+
+    // Active dataset
+    const activeData = chartType === "daily" ? dailyData : hourlyData;
+
+    // Scale Y-axis
+    const maxTotal = useMemo(() => {
+        const maxVal = Math.max(...activeData.map((d) => d.total));
+        return maxVal > 0 ? maxVal : 3600000;
+    }, [activeData]);
+
+    // Color mapper
     const colorMap = useMemo(() => {
         const map: Record<string, string> = {};
         if (groupMode === "tags") {
@@ -114,7 +157,6 @@ export function PeriodicBarChart({
                 map[t.id] = getSafeColor(t.color, TAG_VARIANTS.find((v) => v.icon === t.icon)?.color || "#22d3ee");
             });
         } else {
-            // Group by icon
             tags.forEach((t) => {
                 const key = t.icon || "Cpu";
                 if (!map[key]) {
@@ -125,7 +167,7 @@ export function PeriodicBarChart({
         return map;
     }, [tags, groupMode]);
 
-    // Name Map
+    // Name mapper
     const nameMap = useMemo(() => {
         const map: Record<string, string> = {};
         if (groupMode === "tags") {
@@ -141,7 +183,7 @@ export function PeriodicBarChart({
         return map;
     }, [tags, groupMode, groupNames]);
 
-    // Chart Dimensions
+    // Dimensions
     const width = 800;
     const height = 240;
     const paddingX = 40;
@@ -152,19 +194,39 @@ export function PeriodicBarChart({
 
     return (
         <div className="relative bg-neutral-900/40 border border-neutral-800/60 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-800/40">
                 <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                    일별 학습 흐름
+                    {chartType === "daily" ? "일별 학습 흐름" : "시간대별 학습 분포"}
                 </span>
-                <span className="text-[10px] text-neutral-500 font-mono">
-                    최대: {formatDuration(maxTotal)}
-                </span>
+
+                <div className="flex items-center gap-1 p-1 bg-neutral-950/60 border border-neutral-800/80 rounded-xl w-fit">
+                    <button
+                        onClick={() => { setChartType("daily"); setHoveredIndex(null); }}
+                        className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                            chartType === "daily"
+                                ? "bg-neutral-800 text-neutral-100 shadow"
+                                : "text-neutral-500 hover:text-neutral-300"
+                        }`}
+                    >
+                        일별 흐름
+                    </button>
+                    <button
+                        onClick={() => { setChartType("hourly"); setHoveredIndex(null); }}
+                        className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                            chartType === "hourly"
+                                ? "bg-neutral-800 text-neutral-100 shadow"
+                                : "text-neutral-500 hover:text-neutral-300"
+                        }`}
+                    >
+                        시간대별 분포
+                    </button>
+                </div>
             </div>
 
             {/* SVG Chart */}
             <div className="relative w-full h-[240px]">
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-                    {/* Grid Lines */}
+                    {/* Y Grid Lines */}
                     {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                         const y = height - paddingBottom - ratio * chartHeight;
                         const hours = ((ratio * maxTotal) / 3600000).toFixed(1);
@@ -191,9 +253,9 @@ export function PeriodicBarChart({
                     })}
 
                     {/* Bars */}
-                    {dailyData.map((d, index) => {
-                        const numBars = dailyData.length;
-                        const barWidth = Math.max(8, (chartWidth / numBars) * 0.6);
+                    {activeData.map((d, index) => {
+                        const numBars = activeData.length;
+                        const barWidth = Math.max(6, (chartWidth / numBars) * 0.6);
                         const space = chartWidth / numBars;
                         const x = paddingX + index * space + (space - barWidth) / 2;
 
@@ -207,7 +269,7 @@ export function PeriodicBarChart({
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                             >
-                                {/* Invisible interactive zone */}
+                                {/* Interactive zone */}
                                 <rect
                                     x={paddingX + index * space}
                                     y={paddingTop}
@@ -216,7 +278,7 @@ export function PeriodicBarChart({
                                     fill="transparent"
                                 />
 
-                                {/* Stacked Bar Segments */}
+                                {/* Stacked segments */}
                                 {d.total > 0 ? (
                                     breakdownArray.map(([id, val], segmentIdx) => {
                                         const segmentHeight = (val / maxTotal) * chartHeight;
@@ -232,14 +294,13 @@ export function PeriodicBarChart({
                                                 width={barWidth}
                                                 height={segmentHeight}
                                                 fill={color}
-                                                rx={segmentIdx === breakdownArray.length - 1 ? 4 : 0}
+                                                rx={segmentIdx === breakdownArray.length - 1 ? 2 : 0}
                                                 className="transition-all duration-300"
                                                 opacity={hoveredIndex === null || hoveredIndex === index ? 1 : 0.4}
                                             />
                                         );
                                     })
                                 ) : (
-                                    // Empty day bar outline/placeholder on hover
                                     hoveredIndex === index && (
                                         <rect
                                             x={x}
@@ -247,24 +308,41 @@ export function PeriodicBarChart({
                                             width={barWidth}
                                             height={chartHeight}
                                             className="fill-neutral-800/10 stroke-neutral-800/35 stroke-[1]"
-                                            rx={4}
+                                            rx={2}
                                             strokeDasharray="2 2"
                                         />
                                     )
                                 )}
 
-                                {/* X-Axis Date Labels */}
-                                {(view === "week" || index % Math.max(1, Math.floor(numBars / 6)) === 0 || index === numBars - 1) && (
-                                    <text
-                                        x={x + barWidth / 2}
-                                        y={height - paddingBottom + 18}
-                                        textAnchor="middle"
-                                        className={`fill-neutral-500 text-[9px] font-mono transition-colors ${
-                                            hoveredIndex === index ? "fill-neutral-200 font-bold" : ""
-                                        }`}
-                                    >
-                                        {view === "week" ? d.label.split(" ")[0] : d.label}
-                                    </text>
+                                {/* X-Axis Labels */}
+                                {chartType === "daily" ? (
+                                    // Daily Label logic
+                                    (view === "week" || index % Math.max(1, Math.floor(numBars / 6)) === 0 || index === numBars - 1) && (
+                                        <text
+                                            x={x + barWidth / 2}
+                                            y={height - paddingBottom + 18}
+                                            textAnchor="middle"
+                                            className={`fill-neutral-500 text-[9px] font-mono transition-colors ${
+                                                hoveredIndex === index ? "fill-neutral-200 font-bold" : ""
+                                            }`}
+                                        >
+                                            {view === "week" ? d.label.split(" ")[0] : d.label}
+                                        </text>
+                                    )
+                                ) : (
+                                    // Hourly Label logic (Show labels every 4 hours: 00, 04, 08, 12, 16, 20)
+                                    (index % 4 === 0) && (
+                                        <text
+                                            x={x + barWidth / 2}
+                                            y={height - paddingBottom + 18}
+                                            textAnchor="middle"
+                                            className={`fill-neutral-500 text-[9px] font-mono transition-colors ${
+                                                hoveredIndex === index ? "fill-neutral-200 font-bold" : ""
+                                            }`}
+                                        >
+                                            {d.label.split(":")[0]}시
+                                        </text>
+                                    )
                                 )}
                             </g>
                         );
@@ -274,7 +352,7 @@ export function PeriodicBarChart({
 
             {/* Tooltip Overlay */}
             <AnimatePresence>
-                {hoveredIndex !== null && dailyData[hoveredIndex] && (
+                {hoveredIndex !== null && activeData[hoveredIndex] && (
                     <motion.div
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -283,16 +361,16 @@ export function PeriodicBarChart({
                     >
                         <div className="flex justify-between border-b border-neutral-800/80 pb-1.5">
                             <span className="font-bold text-neutral-200">
-                                {dailyData[hoveredIndex].label}
-                                {view === "month" && "일"}
+                                {activeData[hoveredIndex].label}
+                                {chartType === "daily" && view === "month" && "일"}
                             </span>
                             <span className="font-mono font-bold text-indigo-400">
-                                {formatDuration(dailyData[hoveredIndex].total)}
+                                {formatDuration(activeData[hoveredIndex].total)}
                             </span>
                         </div>
                         <div className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
-                            {Object.entries(dailyData[hoveredIndex].breakdown).length > 0 ? (
-                                Object.entries(dailyData[hoveredIndex].breakdown)
+                            {Object.entries(activeData[hoveredIndex].breakdown).length > 0 ? (
+                                Object.entries(activeData[hoveredIndex].breakdown)
                                     .sort((a, b) => b[1] - a[1])
                                     .map(([id, val]) => (
                                         <div key={id} className="flex items-center justify-between text-[11px]">

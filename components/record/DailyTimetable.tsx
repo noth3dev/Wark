@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Tag } from "@/lib/types";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, getSafeColor } from "@/lib/utils";
+import { TAG_VARIANTS } from "@/lib/tag-variants";
 
 interface HourSegment {
     type: 'session' | 'gap';
@@ -84,6 +85,7 @@ export function DailyTimetable({ hourData, tags, onFillGap, onFillAll, completed
                                     {hourSegments.map((seg, i) => {
                                         if (seg.type === 'session') {
                                             const tag = tags.find(t => t.id === seg.tagId);
+                                            const safeColor = tag ? getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === tag.icon)?.color || '#22d3ee') : '#333';
                                             return (
                                                 <div
                                                     key={i}
@@ -94,8 +96,8 @@ export function DailyTimetable({ hourData, tags, onFillGap, onFillAll, completed
                                                     }`}
                                                     style={{
                                                         width: `${(seg.duration / 3600000) * 100}%`,
-                                                        backgroundColor: `${tag?.color || '#333'}${seg.isSprint ? '99' : '33'}`,
-                                                        color: tag?.color || '#333'
+                                                        backgroundColor: `${safeColor}${seg.isSprint ? '99' : '33'}`,
+                                                        color: safeColor
                                                     }}
                                                     title={`${tag?.name}${seg.isSprint ? ' (Sprint)' : ''}: ${formatDuration(seg.duration)}`}
                                                 >
@@ -107,7 +109,7 @@ export function DailyTimetable({ hourData, tags, onFillGap, onFillAll, completed
                                                     )}
                                                     <div
                                                         className={`absolute inset-y-0 left-0 w-1 ${seg.isSprint ? "shadow-[0_0_15px_2px_currentcolor] bg-white" : ""}`}
-                                                        style={{ backgroundColor: seg.isSprint ? undefined : (tag?.color || '#333') }}
+                                                        style={{ backgroundColor: seg.isSprint ? undefined : safeColor }}
                                                     />
                                                 </div>
                                             );
@@ -133,7 +135,7 @@ export function DailyTimetable({ hourData, tags, onFillGap, onFillAll, completed
                                     const dotDate = new Date(dot.time);
                                     const minuteFraction = (dotDate.getMinutes() * 60 + dotDate.getSeconds()) / 3600;
                                     const tag = tags.find(t => t.id === dot.tagId);
-                                    const dotColor = tag?.color || '#34d399';
+                                    const dotColor = tag ? getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === tag.icon)?.color || '#34d399') : '#34d399';
                                     
                                     return (
                                         <div
