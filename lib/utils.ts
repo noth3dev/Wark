@@ -23,3 +23,16 @@ export function formatDurationShort(ms: number) {
     const s = Math.floor((ms % 60000) / 1000);
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
+
+export function isValidHexColor(color?: string): boolean {
+    if (!color) return false;
+    return /^#[0-9A-Fa-f]{3,8}$/.test(color);
+}
+
+export function getSafeColor(color?: string, fallback: string = '#6366f1'): string {
+    if (color && isValidHexColor(color)) {
+        return color;
+    }
+    return fallback;
+}
+

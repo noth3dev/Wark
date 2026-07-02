@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Tag } from "@/lib/types";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, getSafeColor } from "@/lib/utils";
+import { TAG_VARIANTS } from "@/lib/tag-variants";
+import { PeriodicBarChart } from "./PeriodicBarChart";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     BarChart3,
@@ -137,7 +139,7 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                 .map((tag) => ({
                     id: tag.id,
                     name: tag.name,
-                    color: tag.color,
+                    color: getSafeColor(tag.color, TAG_VARIANTS.find((v) => v.icon === tag.icon)?.color || "#22d3ee"),
                     icon: tag.icon,
                     total: tagTotals[tag.id] || 0,
                 }))
@@ -155,15 +157,19 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                     if (!groups[key]) {
                         groups[key] = {
                             key,
-                            name: groupNames[key] || "Untitled Group",
-                            color: tag.color || "#fff",
+                            name: groupNames[key] || TAG_VARIANTS.find((v) => v.icon === key)?.label || key,
+                            color: getSafeColor(tag.color, TAG_VARIANTS.find((v) => v.icon === key)?.color || "#22d3ee"),
                             icon: tag.icon || "",
                             total: 0,
                             tags: [],
                         };
                     }
                     groups[key].total += total;
-                    groups[key].tags.push({ ...tag, total });
+                    groups[key].tags.push({
+                        ...tag,
+                        color: getSafeColor(tag.color, TAG_VARIANTS.find((v) => v.icon === tag.icon)?.color || "#22d3ee"),
+                        total,
+                    });
                 }
             });
             return Object.values(groups)
@@ -341,6 +347,18 @@ export function PeriodicStats({ userId, tags, currentDate }: PeriodicStatsProps)
                     </div>
                 )}
             </div>
+
+            {/* ── Bar Chart ── */}
+            {!loading && displayStats.length > 0 && (
+                <PeriodicBarChart
+                    sessions={sessions}
+                    tags={tags}
+                    groupMode={groupMode}
+                    view={view}
+                    currentDate={currentDate}
+                    groupNames={groupNames}
+                />
+            )}
 
             {/* ── Stats List ── */}
             {loading ? (

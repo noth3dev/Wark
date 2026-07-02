@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useMemo } from "react";
 import { Tag } from "@/lib/types";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, getSafeColor } from "@/lib/utils";
 
 import * as Icons from "lucide-react";
 import { TAG_VARIANTS } from "@/lib/tag-variants";
@@ -27,7 +27,8 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, tagGroups = 
         tags.forEach(tag => {
             const key = tag.icon || 'Cpu';
             if (!uniqueGroups[key]) {
-                uniqueGroups[key] = { icon: key, color: tag.color, total: groupedTotals[key] || 0 };
+                const safeColor = getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === key)?.color || '#22d3ee');
+                uniqueGroups[key] = { icon: key, color: safeColor, total: groupedTotals[key] || 0 };
             }
         });
         return Object.values(uniqueGroups).filter(g => g.total > 0).sort((a, b) => b.total - a.total);
@@ -75,10 +76,11 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, tagGroups = 
                                         {tag.icon && (Icons as any)[tag.icon] ? (
                                             (() => {
                                                 const Icon = (Icons as any)[tag.icon];
-                                                return <Icon className="w-3 h-3" style={{ color: tag.color || '#22d3ee' }} />;
+                                                const safeColor = getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === tag.icon)?.color || '#22d3ee');
+                                                return <Icon className="w-3 h-3" style={{ color: safeColor }} />;
                                             })()
                                         ) : (
-                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color || '#22d3ee' }} />
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === tag.icon)?.color || '#22d3ee') }} />
                                         )}
                                         <span className="text-[11px] font-medium text-neutral-400 group-hover:text-white transition-colors">{tag.name}</span>
                                     </div>
@@ -91,7 +93,7 @@ export function TagDistribution({ tags, getTagTotal, groupedTotals, tagGroups = 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${percentage}%` }}
                                             className="h-full"
-                                            style={{ backgroundColor: tag.color || '#22d3ee' }}
+                                            style={{ backgroundColor: getSafeColor(tag.color, TAG_VARIANTS.find(v => v.icon === tag.icon)?.color || '#22d3ee') }}
                                         />
                                     </div>
                                     <div className="flex justify-between items-center">
